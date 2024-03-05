@@ -21,3 +21,4 @@ LinkingTo:
     RcppEigen
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
+URL: https://caravagnalab.github.io/devil/
