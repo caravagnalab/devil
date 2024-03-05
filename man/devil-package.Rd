@@ -8,6 +8,13 @@
 \description{
 An R package to perform fast and scalable single cell differential expression analysis.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://caravagnalab.github.io/devil/}
+}
+
+}
 \author{
 \strong{Maintainer}: Giovanni Santacatterina \email{santacatterinagiovanni@gmail.com}
 

@@ -24,15 +24,16 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
   # Calculate p-values in parallel
   if (!is.null(clusters)) {
 
-    p_values <- parallel::mclapply(1:nrow(input_matrix), function(gene_idx) {
+    p_values <- parallel::mclapply(1:nrow(devil.fit$input_matrix), function(gene_idx) {
       mu_test <- lfcs[gene_idx]
 
       H <- compute_sandwich(
         devil.fit$design_matrix,
-        input_matrix[gene_idx,],
+        devil.fit$input_matrix[gene_idx,],
         devil.fit$beta[gene_idx,], devil.fit$overdispersion[gene_idx],
         devil.fit$size_factors,
-        metadata$id)
+        clusters
+        )
 
       total_variance <- t(contrast) %*% H %*% contrast
       1 - stats::pchisq(mu_test^2 / total_variance, df = 1)
