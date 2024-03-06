@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://caravagnalab.github.io/devil/404.html</loc>
+    <loc>caravagnalab.github.io/rdevil/404.html</loc>
   </url>
   <url>
-    <loc>https://caravagnalab.github.io/devil/LICENSE-text.html</loc>
+    <loc>caravagnalab.github.io/rdevil/LICENSE-text.html</loc>
   </url>
   <url>
-    <loc>https://caravagnalab.github.io/devil/LICENSE.html</loc>
+    <loc>caravagnalab.github.io/rdevil/LICENSE.html</loc>
   </url>
   <url>
-    <loc>https://caravagnalab.github.io/devil/authors.html</loc>
+    <loc>caravagnalab.github.io/rdevil/authors.html</loc>
   </url>
   <url>
-    <loc>https://caravagnalab.github.io/devil/index.html</loc>
+    <loc>caravagnalab.github.io/rdevil/index.html</loc>
   </url>
   <url>
-    <loc>https://caravagnalab.github.io/devil/reference/devil-package.html</loc>
+    <loc>caravagnalab.github.io/rdevil/reference/devil-package.html</loc>
   </url>
   <url>
-    <loc>https://caravagnalab.github.io/devil/reference/fit_devil.html</loc>
+    <loc>caravagnalab.github.io/rdevil/reference/fit_devil.html</loc>
   </url>
   <url>
-    <loc>https://caravagnalab.github.io/devil/reference/index.html</loc>
+    <loc>caravagnalab.github.io/rdevil/reference/index.html</loc>
   </url>
   <url>
-    <loc>https://caravagnalab.github.io/devil/reference/test_de.html</loc>
+    <loc>caravagnalab.github.io/rdevil/reference/test_de.html</loc>
   </url>
 </urlset>

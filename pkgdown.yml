@@ -2,8 +2,8 @@ pandoc: 3.1.11
 pkgdown: 2.0.7
 pkgdown_sha: ~
 articles: {}
-last_built: 2024-03-05T11:59Z
+last_built: 2024-03-06T09:53Z
 urls:
-  reference: https://caravagnalab.github.io/devil/reference
-  article: https://caravagnalab.github.io/devil/articles
+  reference: caravagnalab.github.io/rdevil/reference
+  article: caravagnalab.github.io/rdevil/articles
 
