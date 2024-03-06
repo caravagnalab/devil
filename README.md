@@ -4,6 +4,8 @@
 
 # devil
 
+# devil <a href="caravagnalab.github.io/rdevil"><img src="man/figures/logo.png" align="right" height="139" alt="devil website" /></a>
+
 <!-- badges: start -->
 <!-- badges: end -->
 
@@ -27,3 +29,13 @@ This is a basic example which shows you how to solve a common problem:
 library(devil)
 ## basic example code
 ```
+
+------------------------------------------------------------------------
+
+#### Copyright and contacts
+
+Giulio Caravagna, Giovanni Santacatterina. Cancer Data Science (CDS)
+Laboratory.
+
+[![](https://img.shields.io/badge/CDS%20Lab%20Github-caravagnalab-seagreen.svg)](https://github.com/caravagnalab/)
+[![](https://img.shields.io/badge/CDS%20Lab%20webpage-https://www.caravagnalab.org/-red.svg)](https://www.caravagnalab.org/)
