@@ -1,4 +1,30 @@
-url: https://caravagnalab.github.io/devil/
-template:
-  bootstrap: 5
+destination: docs
 
+template:
+  params:
+    footer: G. Caravagna, PhD.
+url:
+  caravagnalab.github.io/rdevil
+
+repo:
+  url:
+    home: https://github.com/caravagnalab/devil/
+    source: https://github.com/caravagnalab/devil
+    issue: https://github.com/caravagnalab/devil/issues
+    user: https://github.com/caravagnalab
+
+
+authors:
+  Giulio Caravagna:
+    href: https://www.caravagnalab.org
+
+reference:
+- title: Fit data
+  desc:  Functions to fit scRNA data
+  contents:
+  - fit_devil
+
+- title: Test data
+  desc:  Functions to test for differentially expressed genes
+  contents:
+  - test_de
