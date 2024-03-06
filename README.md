@@ -2,8 +2,6 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 <!-- Use devtools::build_readme() to update the files -->
 
-# devil
-
 # devil <a href="caravagnalab.github.io/rdevil"><img src="man/figures/logo.png" align="right" height="139" alt="devil website" /></a>
 
 <!-- badges: start -->
