@@ -35,17 +35,24 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
   if (verbose) { message("Initialize beta estimate") }
   groups <- get_groups_for_model_matrix(design_matrix)
   if (!is.null(groups)) {
-    beta_0 <- init_beta_groups(input_matrix, groups, offset_matrix)
-  } else {
-    beta_0 <- init_beta(input_matrix, design_matrix, offset_matrix)
+    beta_0_groups <- init_beta_groups(input_matrix, groups, offset_matrix)
   }
+  beta_0 <- init_beta(input_matrix, design_matrix, offset_matrix)
 
   ngenes <- nrow(input_matrix)
   nfeatures <- ncol(design_matrix)
 
   if (verbose) { message("Fit beta coefficients") }
   tmp <- parallel::mclapply(1:ngenes, function(i) {
-    beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+    if (!(is.null(groups))) {
+      r <- beta_fit(input_matrix[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+      if (r$iter == max_iter) {
+        r <- beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+      }
+    } else {
+      r <- beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+    }
+    r
   }, mc.cores = parallel::detectCores())
 
   beta <- lapply(1:ngenes, function(i) {
