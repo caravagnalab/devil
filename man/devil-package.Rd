@@ -6,6 +6,8 @@
 \alias{devil-package}
 \title{devil: devil}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 An R package to perform fast and scalable single cell differential expression analysis.
 }
 \seealso{
