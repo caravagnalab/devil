@@ -28,3 +28,36 @@ Eigen::MatrixXd compute_hessian(Eigen::VectorXd beta, const double overdispersio
 
   return -H.inverse();
 }
+
+// [[Rcpp::export]]
+Eigen::MatrixXd compute_scores(Eigen::MatrixXd& design_matrix, Eigen::VectorXd& y, Eigen::VectorXd& beta, double overdispersion, Eigen::VectorXd& size_factors) {
+  MatrixXd xmat = design_matrix;
+  double alpha = 1.0 / overdispersion;
+
+  VectorXd mu = size_factors.array() * (xmat * beta).array().exp();
+  VectorXd residuals = (y - mu).array() / mu.array();
+  VectorXd weights = mu.array().square() / (mu.array() + mu.array().square() / alpha);
+  VectorXd wr = residuals.array() * weights.array();
+
+  return xmat.array().colwise() * wr.array();
+}
+
+// [[Rcpp::export]]
+Eigen::MatrixXd compute_clustered_meat(Eigen::MatrixXd design_matrix, Eigen::VectorXd y, Eigen::VectorXd beta, double overdispersion, Eigen::VectorXd size_factors, Eigen::VectorXi clusters) {
+
+    Eigen::MatrixXd ef = compute_scores(design_matrix, y, beta, overdispersion, size_factors);
+    int k = design_matrix.cols();
+    int n = design_matrix.rows();
+    int ng = clusters.maxCoeff();
+    double adj = double(ng) / (ng - 1);
+
+    Eigen::MatrixXd rval = Eigen::MatrixXd::Zero(k, k);
+
+    for (int j = 0; j < ng; ++j) {
+      Eigen::VectorXi mask = (clusters.array() == (j + 1)).cast<int>();
+      Eigen::MatrixXd ef_j = (ef.array().colwise() * mask.cast<double>().array()).colwise().sum();
+      rval += adj * ef_j.transpose() * ef_j;
+    }
+
+    return rval / n;
+}

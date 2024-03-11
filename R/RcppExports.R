@@ -37,3 +37,11 @@ compute_hessian <- function(beta, overdispersion, y, design_matrix, size_factors
     .Call('_devil_compute_hessian', PACKAGE = 'devil', beta, overdispersion, y, design_matrix, size_factors)
 }
 
+compute_scores <- function(design_matrix, y, beta, overdispersion, size_factors) {
+    .Call('_devil_compute_scores', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors)
+}
+
+compute_clustered_meat <- function(design_matrix, y, beta, overdispersion, size_factors, clusters) {
+    .Call('_devil_compute_clustered_meat', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors, clusters)
+}
+
