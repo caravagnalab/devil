@@ -1,12 +1,12 @@
 
-fit_dispersion <- function(beta, model_matrix, y, do_cox_reid_adjustment=TRUE) {
+fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adjustment=TRUE) {
 
 
   tab <- make_table_if_small(y, stop_if_larger = length(y)/2)
 
   if(all(y == 0)){ return(0) }
 
-  mean_vector <- exp(model_matrix %*% beta)
+  mean_vector <- exp(model_matrix %*% beta + offset_matrix)
   mean_vector[mean_vector == 0] <- 1e-6
   mu <- mean(y)
   start_value <- (stats::var(y) - mu) / mu^2
