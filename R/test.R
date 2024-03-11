@@ -43,7 +43,7 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
 
     p_values <- parallel::mclapply(1:ngenes, function(gene_idx) {
       mu_test <- lfcs[gene_idx]
-      H <- compute_hessian(devil.fit$beta[gene_idx,], devil.fit$overdispersion[gene_idx], devil.fit$input_matrix[gene_idx,], devil.fit$design_matrix, devil.fit$size_factors)
+      H <- compute_hessian(devil.fit$beta[gene_idx,], 1 / devil.fit$overdispersion[gene_idx], devil.fit$input_matrix[gene_idx,], devil.fit$design_matrix, devil.fit$size_factors)
       total_variance <- t(contrast) %*% H %*% contrast
       1 - stats::pchisq(mu_test^2 / total_variance, df = 1)
     }, mc.cores = parallel::detectCores()) %>% unlist()
