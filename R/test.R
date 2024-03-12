@@ -11,6 +11,7 @@
 #' @return A tibble containing the results of the differential expression testing.
 #' @details This function computes log fold changes and p-values for each gene in parallel and filters the results based on the maximum absolute log fold change specified.
 #' @export
+#' @rawNamespace useDynLib(devil);
 test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10, clusters = NULL) {
   # Extract necessary information
   ngenes <- nrow(devil.fit$input_matrix)
@@ -19,7 +20,8 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
   # Calculate log fold changes
   lfcs <- (devil.fit$beta %*% contrast) %>%
     unlist() %>%
-    unname()
+    unname() %>%
+    c()
 
   # Calculate p-values in parallel
   if (!is.null(clusters)) {

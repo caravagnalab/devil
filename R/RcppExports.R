@@ -2,46 +2,46 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 init_beta <- function(y, X) {
-    .Call(`_devil_init_beta`, y, X)
+    .Call('_devil_init_beta', PACKAGE = 'devil', y, X)
 }
 
 beta_fit <- function(y, X, mu_beta, off, max_iter, eps) {
-    .Call(`_devil_beta_fit`, y, X, mu_beta, off, max_iter, eps)
+    .Call('_devil_beta_fit', PACKAGE = 'devil', y, X, mu_beta, off, max_iter, eps)
 }
 
 lte_n_equal_rows <- function(matrix, n, tolerance = 1e-10) {
-    .Call(`_devil_lte_n_equal_rows`, matrix, n, tolerance)
+    .Call('_devil_lte_n_equal_rows', PACKAGE = 'devil', matrix, n, tolerance)
 }
 
 get_row_groups <- function(matrix, n_groups, tolerance = 1e-10) {
-    .Call(`_devil_get_row_groups`, matrix, n_groups, tolerance)
+    .Call('_devil_get_row_groups', PACKAGE = 'devil', matrix, n_groups, tolerance)
 }
 
 make_table_if_small <- function(x, stop_if_larger) {
-    .Call(`_devil_make_table_if_small`, x, stop_if_larger)
+    .Call('_devil_make_table_if_small', PACKAGE = 'devil', x, stop_if_larger)
 }
 
 conventional_loglikelihood_fast <- function(y, mu, log_theta, model_matrix, do_cr_adj, unique_counts = as.numeric( c()), count_frequencies = as.numeric( c())) {
-    .Call(`_devil_conventional_loglikelihood_fast`, y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
+    .Call('_devil_conventional_loglikelihood_fast', PACKAGE = 'devil', y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
 }
 
 conventional_score_function_fast <- function(y, mu, log_theta, model_matrix, do_cr_adj, unique_counts = as.numeric( c()), count_frequencies = as.numeric( c())) {
-    .Call(`_devil_conventional_score_function_fast`, y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
+    .Call('_devil_conventional_score_function_fast', PACKAGE = 'devil', y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
 }
 
 conventional_deriv_score_function_fast <- function(y, mu, log_theta, model_matrix, do_cr_adj, unique_counts = as.numeric( c()), count_frequencies = as.numeric( c())) {
-    .Call(`_devil_conventional_deriv_score_function_fast`, y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
+    .Call('_devil_conventional_deriv_score_function_fast', PACKAGE = 'devil', y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
 }
 
 compute_hessian <- function(beta, overdispersion, y, design_matrix, size_factors) {
-    .Call(`_devil_compute_hessian`, beta, overdispersion, y, design_matrix, size_factors)
+    .Call('_devil_compute_hessian', PACKAGE = 'devil', beta, overdispersion, y, design_matrix, size_factors)
 }
 
 compute_scores <- function(design_matrix, y, beta, overdispersion, size_factors) {
-    .Call(`_devil_compute_scores`, design_matrix, y, beta, overdispersion, size_factors)
+    .Call('_devil_compute_scores', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors)
 }
 
 compute_clustered_meat <- function(design_matrix, y, beta, overdispersion, size_factors, clusters) {
-    .Call(`_devil_compute_clustered_meat`, design_matrix, y, beta, overdispersion, size_factors, clusters)
+    .Call('_devil_compute_clustered_meat', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors, clusters)
 }
 

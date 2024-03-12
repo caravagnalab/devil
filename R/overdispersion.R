@@ -10,6 +10,9 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adj
   mean_vector[mean_vector == 0] <- 1e-6
   mu <- mean(y)
   start_value <- (stats::var(y) - mu) / mu^2
+  if(is.na(start_value) || start_value <= 0){
+    start_value <- 0.5
+  }
 
   far_left_value <- conventional_score_function_fast(y, mu = mean_vector, log_theta = log(1e-8),
                                                      model_matrix = model_matrix, do_cr_adj = do_cox_reid_adjustment, tab[[1]], tab[[2]])
