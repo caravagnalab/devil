@@ -21,6 +21,7 @@
 #' @return List containing fitted model parameters including beta coefficients,
 #' overdispersion parameter (if estimated), and beta sigma.
 #' @export
+#' @rawNamespace useDynLib(devil);
 fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset=0, size_factors=TRUE, verbose=FALSE, max_iter=500, eps=1e-4) {
 
   if (size_factors) {
@@ -77,7 +78,7 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
     #   fit_dispersion(beta[i,], design_matrix, input_matrix[i,])
     # }) %>% unlist()
   } else {
-    theta = 0
+    theta = rep(0, ngenes)
   }
 
   return(list(beta=beta, overdispersion=theta, sigma_beta=sigma, iterations=iterations, size_factors=sf, offset_matrix=offset_matrix, design_matrix=design_matrix, input_matrix=input_matrix))
