@@ -29,5 +29,32 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adj
                        }, lower = log(1e-16), upper = log(1e16),
                        control = list(iter.max = 200))
 
+  if(res$convergence != 0){
+    # Do the same thing again with numerical hessian as the analytical hessian
+    # is sometimes less robust than the other two functions
+    res <- nlminb(start = log(start_value),
+                  objective = function(log_theta){
+                    - conventional_loglikelihood_fast(y, mu = mean_vector, log_theta = log_theta,
+                                                      model_matrix = model_matrix, do_cr_adj = do_cox_reid_adjustment, tab[[1]], tab[[2]])
+                  }, gradient = function(log_theta){
+                    - conventional_score_function_fast(y, mu = mean_vector, log_theta = log_theta,
+                                                       model_matrix = model_matrix, do_cr_adj = do_cox_reid_adjustment, tab[[1]], tab[[2]])
+                  }, lower = log(1e-16), upper = log(1e16),
+                  control = list(iter.max = 200))
+
+    if(res$convergence != 0){
+      # Still problematic result: do the same thing without Cox-Reid adjustment
+      res <- nlminb(start = log(start_value),
+                    objective = function(log_theta){
+                      - conventional_loglikelihood_fast(y, mu = mean_vector, log_theta = log_theta,
+                                                        model_matrix = model_matrix, do_cr_adj = FALSE, tab[[1]], tab[[2]])
+                    }, gradient = function(log_theta){
+                      - conventional_score_function_fast(y, mu = mean_vector, log_theta = log_theta,
+                                                         model_matrix = model_matrix, do_cr_adj = FALSE, tab[[1]], tab[[2]])
+                    }, lower = log(1e-16), upper = log(1e16),
+                    control = list(iter.max = 200))
+    }
+  }
+
   return(exp(res$par))
 }
