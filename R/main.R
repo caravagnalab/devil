@@ -18,11 +18,12 @@
 #' @param verbose Logical indicating whether to display progress messages. Defaults to FALSE.
 #' @param max_iter Maximum number of iterations for optimization. Defaults to 500.
 #' @param eps Tolerance level for convergence criterion. Defaults to 1e-4.
+#' @param parallel Logical indicating whether to use parallel computation. Defaults to TRUE.
 #' @return List containing fitted model parameters including beta coefficients,
 #' overdispersion parameter (if estimated), and beta sigma.
 #' @export
 #' @rawNamespace useDynLib(devil);
-fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset=0, size_factors=TRUE, verbose=FALSE, max_iter=500, eps=1e-4) {
+fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset=0, size_factors=TRUE, verbose=FALSE, max_iter=500, eps=1e-4, parallel=TRUE) {
 
   if (size_factors) {
     if (verbose) { message("Compute size factors") }
@@ -44,17 +45,31 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
   nfeatures <- ncol(design_matrix)
 
   if (verbose) { message("Fit beta coefficients") }
-  tmp <- parallel::mclapply(1:ngenes, function(i) {
-    if (!(is.null(groups))) {
-      r <- beta_fit(input_matrix[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
-      if (r$iter == max_iter) {
+  if (parallel) {
+    tmp <- parallel::mclapply(1:ngenes, function(i) {
+      if (!(is.null(groups))) {
+        r <- beta_fit(input_matrix[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+        if (r$iter == max_iter) {
+          r <- beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+        }
+      } else {
         r <- beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
       }
-    } else {
-      r <- beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
-    }
-    r
-  }, mc.cores = parallel::detectCores())
+      r
+    }, mc.cores = parallel::detectCores())
+  } else {
+    tmp <- lapply(1:ngenes, function(i) {
+      if (!(is.null(groups))) {
+        r <- beta_fit(input_matrix[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+        if (r$iter == max_iter) {
+          r <- beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+        }
+      } else {
+        r <- beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+      }
+      r
+    })
+  }
 
   beta <- lapply(1:ngenes, function(i) {
     tmp[[i]]$mu_beta
@@ -71,17 +86,33 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
 
   if (overdispersion) {
     if (verbose) { message("Fit overdispersion") }
-    theta <- parallel::mclapply(1:ngenes, function(i) {
-      fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_matrix[i,])
-    }) %>% unlist()
-    # theta <- lapply(1:ngenes, function(i) {
-    #   fit_dispersion(beta[i,], design_matrix, input_matrix[i,])
-    # }) %>% unlist()
+
+    if (parallel) {
+      theta <- parallel::mclapply(1:ngenes, function(i) {
+        fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_matrix[i,])
+      }, mc.cores = parallel::detectCores()) %>% unlist()
+    } else {
+      theta <- lapply(1:ngenes, function(i) {
+        fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_matrix[i,])
+      }) %>% unlist()
+    }
+
   } else {
     theta = rep(0, ngenes)
   }
 
-  return(list(beta=beta, overdispersion=theta, sigma_beta=sigma, iterations=iterations, size_factors=sf, offset_matrix=offset_matrix, design_matrix=design_matrix, input_matrix=input_matrix))
+  return(list(
+    beta=beta,
+    overdispersion=theta,
+    sigma_beta=sigma,
+    iterations=iterations,
+    size_factors=sf,
+    offset_matrix=offset_matrix,
+    design_matrix=design_matrix,
+    input_matrix=input_matrix,
+    input_parameters=list(max_iter=max_iter, eps=eps, parallel=parallel)
+    )
+  )
 }
 
 get_groups_for_model_matrix <- function(model_matrix){
