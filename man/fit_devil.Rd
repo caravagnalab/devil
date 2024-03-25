@@ -12,7 +12,8 @@ fit_devil(
   size_factors = TRUE,
   verbose = FALSE,
   max_iter = 500,
-  eps = 1e-04
+  eps = 1e-04,
+  parallel = TRUE
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ fit_devil(
 \item{max_iter}{Maximum number of iterations for optimization. Defaults to 500.}
 
 \item{eps}{Tolerance level for convergence criterion. Defaults to 1e-4.}
+
+\item{parallel}{Logical indicating whether to use parallel computation. Defaults to TRUE.}
 }
 \value{
 List containing fitted model parameters including beta coefficients,
