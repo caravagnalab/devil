@@ -61,3 +61,11 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adj
 
   return(exp(res$par))
 }
+
+estimate_dispersion <- function(y, offset_matrix) {
+  xim <- 1/mean(DelayedMatrixStats::colMeans2(exp(offset_matrix)))
+  bv <- DelayedMatrixStats::rowVars(y)
+  bm <- DelayedMatrixStats::rowMeans2(y)
+  disp <- (bv - xim * bm) / bm^2
+  ifelse(is.na(disp) | disp < 0, 0, disp)
+}
