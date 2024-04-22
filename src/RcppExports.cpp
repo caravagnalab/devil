@@ -25,8 +25,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // beta_fit
-List beta_fit(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eigen::VectorXd off, int max_iter, float eps);
-RcppExport SEXP _devil_beta_fit(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP max_iterSEXP, SEXP epsSEXP) {
+List beta_fit(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eigen::VectorXd off, float k, int max_iter, float eps);
+RcppExport SEXP _devil_beta_fit(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kSEXP, SEXP max_iterSEXP, SEXP epsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -34,9 +34,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X(XSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type off(offSEXP);
+    Rcpp::traits::input_parameter< float >::type k(kSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
     Rcpp::traits::input_parameter< float >::type eps(epsSEXP);
-    rcpp_result_gen = Rcpp::wrap(beta_fit(y, X, mu_beta, off, max_iter, eps));
+    rcpp_result_gen = Rcpp::wrap(beta_fit(y, X, mu_beta, off, k, max_iter, eps));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -178,7 +179,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_devil_init_beta", (DL_FUNC) &_devil_init_beta, 2},
-    {"_devil_beta_fit", (DL_FUNC) &_devil_beta_fit, 6},
+    {"_devil_beta_fit", (DL_FUNC) &_devil_beta_fit, 7},
     {"_devil_lte_n_equal_rows", (DL_FUNC) &_devil_lte_n_equal_rows, 3},
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
     {"_devil_make_table_if_small", (DL_FUNC) &_devil_make_table_if_small, 2},

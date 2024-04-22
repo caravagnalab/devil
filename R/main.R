@@ -51,6 +51,8 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
   }
   beta_0 <- init_beta(input_mat, design_matrix, offset_matrix)
 
+  dispersion_init <- estimate_dispersion(input_mat, offset_matrix)
+
   ngenes <- nrow(input_matrix)
   nfeatures <- ncol(design_matrix)
 
@@ -58,12 +60,12 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
 
   tmp <- parallel::mclapply(1:ngenes, function(i) {
     if (!(is.null(groups))) {
-      r <- beta_fit(input_mat[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+      r <- beta_fit(input_mat[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = eps)
       if (r$iter == max_iter) {
-        r <- beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+        r <- beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = eps)
       }
     } else {
-      r <- beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], max_iter = max_iter, eps = eps)
+      r <- beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = eps)
     }
     r
   }, mc.cores = n.cores)

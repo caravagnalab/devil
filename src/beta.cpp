@@ -13,9 +13,10 @@ Eigen::VectorXd init_beta(Eigen::VectorXd y, Eigen::MatrixXd X) {
 }
 
 // [[Rcpp::export]]
-List beta_fit(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eigen::VectorXd off, int max_iter, float eps) {
+List beta_fit(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eigen::VectorXd off, float k, int max_iter, float eps) {
   int cols = X.cols();
   int rows = X.rows();
+  k = 1.0 / k;
   Eigen::VectorXd delta = Eigen::VectorXd::Zero(cols);
   Eigen::MatrixXd inv_sigma_beta_const = 0.01 * Eigen::MatrixXd::Identity(cols, cols);
   Eigen::MatrixXd Zigma = Eigen::MatrixXd::Identity(cols, cols);
@@ -26,9 +27,9 @@ List beta_fit(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eig
   int iter = 0;
   while (!converged && iter < max_iter) {
     w_q = (-X * mu_beta - off).array().exp();
-    mu_g = (1 + y.array()) / (1 + w_q.array());
-    Zigma = (X.transpose() * (mu_g.array() * w_q.array()).matrix().asDiagonal() * X).inverse();
-    delta = Zigma * (X.transpose() * (mu_g.array() * w_q.array() - 1).matrix());
+    mu_g = (k + y.array()) / (1 + k * w_q.array());
+    Zigma = (k * X.transpose() * (mu_g.array() * w_q.array()).matrix().asDiagonal() * X).inverse();
+    delta = Zigma * (k * X.transpose() * (mu_g.array() * w_q.array() - 1).matrix());
     mu_beta += delta;
     converged = delta.cwiseAbs().maxCoeff() < eps;
     iter++;

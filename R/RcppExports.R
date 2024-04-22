@@ -5,8 +5,8 @@ init_beta <- function(y, X) {
     .Call('_devil_init_beta', PACKAGE = 'devil', y, X)
 }
 
-beta_fit <- function(y, X, mu_beta, off, max_iter, eps) {
-    .Call('_devil_beta_fit', PACKAGE = 'devil', y, X, mu_beta, off, max_iter, eps)
+beta_fit <- function(y, X, mu_beta, off, k, max_iter, eps) {
+    .Call('_devil_beta_fit', PACKAGE = 'devil', y, X, mu_beta, off, k, max_iter, eps)
 }
 
 lte_n_equal_rows <- function(matrix, n, tolerance = 1e-10) {
