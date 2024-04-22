@@ -7,9 +7,12 @@ Description: An R package to perform fast and scalable single cell differential 
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports: 
+    DelayedArray,
     DelayedMatrixStats,
     dplyr,
+    HDF5Array,
     magrittr,
+    methods,
     Rcpp (>= 1.0.12),
     RcppArmadillo,
     RcppEigen,

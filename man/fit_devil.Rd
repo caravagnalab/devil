@@ -13,7 +13,8 @@ fit_devil(
   verbose = FALSE,
   max_iter = 500,
   eps = 1e-04,
-  parallel = TRUE
+  parallel = TRUE,
+  use_memory = TRUE
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ fit_devil(
 \item{eps}{Tolerance level for convergence criterion. Defaults to 1e-4.}
 
 \item{parallel}{Logical indicating whether to use parallel computation. Defaults to TRUE.}
+
+\item{use_memory}{Logical indicating whether the data will be stored in memory. Defaults to TRUE.}
 }
 \value{
 List containing fitted model parameters including beta coefficients,

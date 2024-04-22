@@ -14,3 +14,6 @@ init_beta_groups <- function(y, groups, offset_matrix) {
     log(DelayedMatrixStats::rowMeans2(norm_Y, cols = groups == gr))
   }))
 }
+
+
+
