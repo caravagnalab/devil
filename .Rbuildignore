@@ -6,3 +6,4 @@
 ^\.github$
 ^codecov\.yml$
 ^README\.Rmd$
+^vignettes/articles$
