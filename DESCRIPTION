@@ -6,6 +6,8 @@ Authors@R: c(person("Giovanni", "Santacatterina", role=c("aut", "cre"), email="s
 Description: An R package to perform fast and scalable single cell differential expression analysis.
 License: MIT + file LICENSE
 Encoding: UTF-8
+Suggests:
+    scRNAseq
 Imports: 
     DelayedArray,
     DelayedMatrixStats,
