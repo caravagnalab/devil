@@ -11,6 +11,7 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(devil)
+library(scRNAseq)
 ```
 
 ## Input data
