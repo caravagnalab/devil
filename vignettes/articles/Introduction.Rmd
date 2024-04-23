@@ -1,0 +1,98 @@
+---
+title: "Introduction"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(devil)
+```
+
+## Input data
+
+Let's load a single-cell RNA dataset from the `scRNAseq` package.
+
+```{r, message=FALSE, warning=FALSE}
+data <- scRNAseq::ReprocessedFluidigmData()
+```
+
+In order to obtain a devil fit you will need the RNA counts and the metadata describing the single cells' features.
+
+```{r}
+counts <- data@assays@data[[1]]
+metadata <- data@colData
+print(dim(counts))
+print(dim(metadata))
+print(head(metadata))
+colnames(metadata)
+```
+
+You can see that we have 130 cells described by 28 features along with the counts of 26255 genes.
+We remove the non-expressed genes.
+
+```{r}
+counts <- counts[rowSums(counts) > 0,]
+dim(counts)
+```
+
+We remain with ~17k genes. Now we need to produce so called `design_matrix` which is a matrix that contains a row per cell and each row contains some of the cell features. To do so, the simplest way is to use the `model.matrix` function, which requires a formula and the metadata as input.
+
+```{r}
+design_matrix <- model.matrix(~Biological_Condition, data = metadata)
+print(unique(metadata$Biological_Condition))
+head(design_matrix)
+```
+
+In this case we model each cell considering its `Biological_Condition`. In our case, the intercept represent the "GW16" condition.
+
+## Fitting
+
+We are now ready to use the `fit_devil` function.
+
+```{r}
+fit <- devil::fit_devil(counts, design_matrix, overdispersion = T, size_factors = T, verbose = T, parallel = T)
+```
+
+The obtained fit contains, along with additional values:
+
+- `beta` : matrix of coefficients (n_genes x n_features)
+- `overdispersion` : vector of coefficients (n_genes)
+
+## Testing
+
+In order to test the data you need to specify your null hypothesis using a contrast vector $c$. Considering a gene $g$ along with its inferred coefficient $\beta_g$, the null hypothesis $H_0$ is usually defined as
+
+$$ H_0 : \sum_i c_i \beta_{g,i} = 0$$
+For example, if you are interested in the genes that are differentially expressed between the "GW21" and the "NPC" condition, you need to find the genes for which we strongly reject the null hypothesis 
+
+$$ \beta_{GW21} = \beta_{NPC} \hspace{5mm} \rightarrow \hspace{5mm} \beta_{GW21} - \beta_{NPC} = 0$$
+which is equivalent to defining the contrast vector $c = (0,1,0,-1)$.
+Once the contrast vector is defined, you can test the null hypothesis using the `test_de` function.
+
+```{r}
+contrast <- c(0, 1, 0, -1)
+test_res <- devil::test_de(fit, contrast)
+colnames(test_res)
+```
+
+The results contains, for each gene
+
+- `pval` : p-value associated with the statistical test
+- `adj_pval` : p-value corrected considering multiple testing
+- `lfc` : log2 fold change of gene expression between the tested conditions
+
+You can also visualize the results using the `EnhancedVolcano` package
+
+```{r, fig.align='center', fig.width=6, fig.height=6}
+EnhancedVolcano::EnhancedVolcano(test_res, x = 'lfc', y="adj_pval", lab = test_res$name, title = 'Devil volcano plot', subtitle = "GW21 vs. NPC")
+```
+
+
+
+
+
