@@ -67,5 +67,5 @@ estimate_dispersion <- function(y, offset_matrix) {
   bv <- DelayedMatrixStats::rowVars(y)
   bm <- DelayedMatrixStats::rowMeans2(y)
   disp <- (bv - xim * bm) / bm^2
-  ifelse(is.na(disp) | disp < 0, 0, disp)
+  ifelse(is.na(disp) | disp < 0, 100, disp)
 }
