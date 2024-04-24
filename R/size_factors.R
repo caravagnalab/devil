@@ -1,5 +1,5 @@
 
-calculate_sf <- function(Y, verbose=FALSE) {
+calculate_sf <- function(Y, method, verbose=FALSE) {
   if (dim(Y)[2] <= 1) {
     if (verbose) {
       cat("Skipping size factor estimation! Only one gene is present!\n")
