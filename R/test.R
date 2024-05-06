@@ -67,8 +67,8 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
 
   # Filter results based on max_lfc
   result_df <- result_df %>%
-    dplyr::mutate(ifelse(.data$lfc >= max_lfc, max_lfc, .data$lfc)) %>%
-    dplyr::mutate(ifelse(.data$lfc <= -max_lfc, -max_lfc, .data$lfc))
+    dplyr::mutate(lfc = ifelse(.data$lfc >= max_lfc, max_lfc, .data$lfc)) %>%
+    dplyr::mutate(lfc = ifelse(.data$lfc <= -max_lfc, -max_lfc, .data$lfc))
 
   return(result_df)
 }
