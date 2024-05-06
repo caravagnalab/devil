@@ -36,7 +36,7 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
 
   if (size_factors) {
     if (verbose) { message("Compute size factors") }
-    sf <- calculate_sf(input_mat)
+    sf <- calculate_sf(input_mat, verbose = verbose)
   } else {
     sf <- rep(1, nrow(design_matrix))
   }

@@ -1,10 +1,10 @@
 
-calculate_sf <- function(Y, method, verbose=FALSE) {
-  if (dim(Y)[2] <= 1) {
+calculate_sf <- function(Y, verbose=FALSE) {
+  if (nrow(Y) <= 1) {
     if (verbose) {
       cat("Skipping size factor estimation! Only one gene is present!\n")
     }
-    return(rep(1, dim(Y)[1]))
+    return(rep(1, ncol(Y)))
   }
 
   sf <- DelayedMatrixStats::colSums2(Y)
@@ -30,8 +30,8 @@ calculate_sf <- function(Y, method, verbose=FALSE) {
 }
 
 compute_offset_matrix <- function(off, Y, size_factors) {
-  n_samples <- dim(Y)[1]
-  n_genes <- dim(Y)[2]
+  n_samples <- ncol(Y)
+  n_genes <- nrow(Y)
 
   make_offset_hdf5_mat <- methods::is(Y, "DelayedMatrix") && methods::is(DelayedArray::seed(Y), "HDF5ArraySeed")
 
@@ -40,15 +40,14 @@ compute_offset_matrix <- function(off, Y, size_factors) {
     offset_matrix <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, n_genes)))
     offset_matrix <- offset_matrix + off
   } else {
-    offset_matrix <- matrix(off, nrow = n_samples, ncol = n_genes)
+    offset_matrix <- matrix(off, nrow = n_genes, ncol = n_samples)
   }
 
   if (!(is.null(size_factors))) {
     # Update the offset_matrix with size_factors
-    lsf <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_genes, 1))) + log(size_factors)
+    lsf <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, 1))) + log(size_factors)
     offset_matrix <- DelayedArray::sweep(offset_matrix, 2, lsf, "+")
   }
-
 
   if(make_offset_hdf5_mat){
     offset_matrix <- HDF5Array::writeHDF5Array(offset_matrix)
