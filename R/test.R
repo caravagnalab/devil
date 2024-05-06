@@ -62,12 +62,13 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
     name = rownames(devil.fit$beta),
     pval = p_values,
     adj_pval = stats::p.adjust(p_values, method = pval_adjust_method),
-    lfc = lfcs
+    lfc = lfcs / log(2)
   )
 
   # Filter results based on max_lfc
   result_df <- result_df %>%
-    dplyr::filter(abs(.data$lfc) <= max_lfc)
+    dplyr::mutate(ifelse(.data$lfc >= max_lfc, max_lfc, .data$lfc)) %>%
+    dplyr::mutate(ifelse(.data$lfc <= -max_lfc, -max_lfc, .data$lfc))
 
   return(result_df)
 }
