@@ -116,7 +116,7 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
     size_factors=sf,
     offset_matrix=offset_matrix,
     design_matrix=design_matrix,
-    input_matrix=input_matrix,
+    input_matrix=input_mat,
     input_parameters=list(max_iter=max_iter, eps=eps, parallel.cores=n.cores)
     )
   )
