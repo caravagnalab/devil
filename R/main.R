@@ -15,24 +15,38 @@
 #' @param overdispersion Logical indicating whether to estimate overdispersion.
 #' @param offset Offset vector to be included in the model. Defaults to 0.
 #' @param size_factors Logical indicating whether to compute size factors. Defaults to TRUE.
+#' @param avg_counts Minimum value of counts per cell required to fit a gene. Default is 0.001.
+#' @param min_cells Minimum value of cells with non-zero counts required to fit a gene. Default is 5.
 #' @param verbose Logical indicating whether to display progress messages. Defaults to FALSE.
 #' @param max_iter Maximum number of iterations for optimization. Defaults to 500.
 #' @param eps Tolerance level for convergence criterion. Defaults to 1e-4.
-#' @param parallel Logical indicating whether to use parallel computation. Defaults to TRUE.
-#' @param use_memory Logical indicating whether the data will be stored in memory. Defaults to TRUE.
+#' @param parallel.cores Number of cores required for parallelization. Default is NULL, which use the maximum cores available.
 #' @return List containing fitted model parameters including beta coefficients,
 #' overdispersion parameter (if estimated), and beta sigma.
 #' @export
 #' @rawNamespace useDynLib(devil);
-fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset=0, size_factors=TRUE, verbose=FALSE, max_iter=500, eps=1e-4, parallel=TRUE, use_memory=TRUE) {
+fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset=0, size_factors=TRUE, avg_counts=.001, min_cells=5, verbose=FALSE, max_iter=500, eps=1e-4, parallel.cores=NULL) {
 
-  if (parallel) {
-    n.cores = parallel::detectCores()
+  max.cores <- parallel::detectCores()
+  if (is.null(parallel.cores)) {
+    n.cores = max.cores
   } else {
-    n.cores = 1
+    if (parallel.cores > max.cores) {
+      message(paste0("Requested ", parallel.cores, " cores, but only ", max.cores, " available."))
+    }
+    n.cores = min(max.cores, parallel.cores)
   }
 
-  input_mat <- handle_input_matrix(input_matrix, use_memory, verbose=verbose)
+  input_mat <- handle_input_matrix(input_matrix, verbose=verbose)
+
+  counts_per_cell <- rowMeans(input_matrix)
+  cell_per_genes <- rowSums(input_matrix > 0)
+  filter_genes <- (counts_per_cell <= avg_counts) | (cell_per_genes <= min_cells)
+  n_low_genes <- sum(filter_genes)
+  if (n_low_genes > 0) {
+    message(paste0("Removing ", n_low_genes, " lowly expressed genes."))
+    input_mat <- matrix(input_mat[!filter_genes, ], ncol = nrow(design_matrix), nrow = sum(!filter_genes))
+  }
 
   if (size_factors) {
     if (verbose) { message("Compute size factors") }
@@ -53,7 +67,7 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
 
   dispersion_init <- estimate_dispersion(input_mat, offset_matrix)
 
-  ngenes <- nrow(input_matrix)
+  ngenes <- nrow(input_mat)
   nfeatures <- ncol(design_matrix)
 
   if (verbose) { message("Fit beta coefficients") }
@@ -73,7 +87,7 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
   beta <- lapply(1:ngenes, function(i) {
     tmp[[i]]$mu_beta
   }) %>% do.call("rbind", .)
-  rownames(beta) <- rownames(input_matrix)
+  rownames(beta) <- rownames(input_mat)
 
   sigma <- lapply(1:ngenes, function(i) {
     tmp[[i]]$Zigma
@@ -103,7 +117,7 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
     offset_matrix=offset_matrix,
     design_matrix=design_matrix,
     input_matrix=input_matrix,
-    input_parameters=list(max_iter=max_iter, eps=eps, parallel=parallel)
+    input_parameters=list(max_iter=max_iter, eps=eps, parallel.cores=n.cores)
     )
   )
 }
@@ -116,38 +130,16 @@ get_groups_for_model_matrix <- function(model_matrix){
   }
 }
 
-handle_input_matrix <- function(input_matrix, use_memory, verbose) {
+handle_input_matrix <- function(input_matrix, verbose) {
   if(is.matrix(input_matrix)){
     if(!is.numeric(input_matrix)){
       stop("The input_matrix argument must consist of numeric values and not of ", mode(input_matrix), " values")
     }
-
-    if (isTRUE(use_memory)) {
-      data_mat <- input_matrix
-    } else if (isFALSE(use_memory)){
-      data_mat <- HDF5Array::writeHDF5Array(input_matrix)
-    } else {
-      stop("Illegal argument type for use_memory. Can only handle 'TRUE' or 'FALSE'")
-    }
-
+    data_mat <- input_matrix
   } else if (methods::is(input_matrix, "DelayedArray")){
-
-    if (isTRUE(use_memory)) {
-      data_mat <- input_matrix
-    } else if (isTRUE(use_memory)) {
-      data_mat <- as.matrix(input_matrix)
-    } else {
-      stop("Illegal argument type for use_memory. Can only handle TRUE' or 'FALSE'")
-    }
-
+    data_mat <- input_matrix
   } else if (methods::is(input_matrix, "dgCMatrix") || methods::is(input_matrix, "dgTMatrix")) {
-
-    if (isFALSE(use_memory)) {
-      data_mat <- HDF5Array::writeHDF5Array(input_matrix)
-    } else if (isTRUE(use_memory)) {
-      data_mat <- as.matrix(input_matrix)
-    }
-
+    data_mat <- as.matrix(input_matrix)
   }else{
     stop("Cannot handle data of class '", class(input_matrix), "'.",
          "It must be of type dense matrix object (i.e., a base matrix or DelayedArray),",

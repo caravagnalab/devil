@@ -10,11 +10,12 @@ fit_devil(
   overdispersion = TRUE,
   offset = 0,
   size_factors = TRUE,
+  avg_counts = 0.001,
+  min_cells = 5,
   verbose = FALSE,
   max_iter = 500,
   eps = 1e-04,
-  parallel = TRUE,
-  use_memory = TRUE
+  parallel.cores = NULL
 )
 }
 \arguments{
@@ -28,15 +29,17 @@ fit_devil(
 
 \item{size_factors}{Logical indicating whether to compute size factors. Defaults to TRUE.}
 
+\item{avg_counts}{Minimum value of counts per cell required to fit a gene. Default is 0.001.}
+
+\item{min_cells}{Minimum value of cells with non-zero counts required to fit a gene. Default is 5.}
+
 \item{verbose}{Logical indicating whether to display progress messages. Defaults to FALSE.}
 
 \item{max_iter}{Maximum number of iterations for optimization. Defaults to 500.}
 
 \item{eps}{Tolerance level for convergence criterion. Defaults to 1e-4.}
 
-\item{parallel}{Logical indicating whether to use parallel computation. Defaults to TRUE.}
-
-\item{use_memory}{Logical indicating whether the data will be stored in memory. Defaults to TRUE.}
+\item{parallel.cores}{Number of cores required for parallelization. Default is NULL, which use the maximum cores available.}
 }
 \value{
 List containing fitted model parameters including beta coefficients,

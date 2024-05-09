@@ -56,7 +56,7 @@ In this case we model each cell considering its `Biological_Condition`. In our c
 We are now ready to use the `fit_devil` function.
 
 ```{r}
-fit <- devil::fit_devil(counts, design_matrix, overdispersion = T, size_factors = T, verbose = T, parallel = T)
+fit <- devil::fit_devil(counts, design_matrix, overdispersion = T, size_factors = T, verbose = T)
 ```
 
 The obtained fit contains, along with additional values:
