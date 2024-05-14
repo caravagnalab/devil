@@ -70,11 +70,12 @@ It optionally estimates overdispersion based on the fitted model.</p>
 <span>  overdispersion <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  offset <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  size_factors <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  avg_counts <span class="op">=</span> <span class="fl">0.001</span>,</span>
+<span>  min_cells <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>  eps <span class="op">=</span> <span class="fl">1e-04</span>,</span>
-<span>  parallel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  use_memory <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  parallel.cores <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -100,6 +101,14 @@ It optionally estimates overdispersion based on the fitted model.</p>
 <dd><p>Logical indicating whether to compute size factors. Defaults to TRUE.</p></dd>
 
 
+<dt>avg_counts</dt>
+<dd><p>Minimum value of counts per cell required to fit a gene. Default is 0.001.</p></dd>
+
+
+<dt>min_cells</dt>
+<dd><p>Minimum value of cells with non-zero counts required to fit a gene. Default is 5.</p></dd>
+
+
 <dt>verbose</dt>
 <dd><p>Logical indicating whether to display progress messages. Defaults to FALSE.</p></dd>
 
@@ -112,20 +121,15 @@ It optionally estimates overdispersion based on the fitted model.</p>
 <dd><p>Tolerance level for convergence criterion. Defaults to 1e-4.</p></dd>
 
 
-<dt>parallel</dt>
-<dd><p>Logical indicating whether to use parallel computation. Defaults to TRUE.</p></dd>
-
-
-<dt>use_memory</dt>
-<dd><p>Logical indicating whether the data will be stored in memory. Defaults to TRUE.</p></dd>
+<dt>parallel.cores</dt>
+<dd><p>Number of cores required for parallelization. Default is NULL, which use the maximum cores available.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
     
 
-<p>List containing fitted model parameters including beta coefficients,
-overdispersion parameter (if estimated), and beta sigma.</p>
+<p>List containing fitted model parameters including beta coefficients and overdispersion parameter (if estimated).</p>
     </div>
     <div id="details">
     <h2>Details</h2>

@@ -132,8 +132,8 @@
 <span><span class="co">#&gt;     colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,</span></span>
 <span><span class="co">#&gt;     get, grep, grepl, intersect, is.unsorted, lapply, Map, mapply,</span></span>
 <span><span class="co">#&gt;     match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,</span></span>
-<span><span class="co">#&gt;     Position, rank, rbind, Reduce, rownames, sapply, setdiff, sort,</span></span>
-<span><span class="co">#&gt;     table, tapply, union, unique, unsplit, which.max, which.min</span></span>
+<span><span class="co">#&gt;     Position, rank, rbind, Reduce, rownames, sapply, setdiff, table,</span></span>
+<span><span class="co">#&gt;     tapply, union, unique, unsplit, which.max, which.min</span></span>
 <span><span class="co">#&gt; Loading required package: S4Vectors</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Attaching package: 'S4Vectors'</span></span>
@@ -160,7 +160,9 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     anyMissing, rowMedians</span></span>
 <span><span class="co">#&gt; Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by</span></span>
-<span><span class="co">#&gt; 'DelayedArray::makeNindexFromArrayViewport' when loading 'SummarizedExperiment'</span></span></code></pre></div>
+<span><span class="co">#&gt; 'DelayedArray::makeNindexFromArrayViewport' when loading 'SummarizedExperiment'</span></span>
+<span><span class="co">#&gt; Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by</span></span>
+<span><span class="co">#&gt; 'DelayedArray::makeNindexFromArrayViewport' when loading 'HDF5Array'</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="input-data">Input data<a class="anchor" aria-label="anchor" href="#input-data"></a>
 </h2>
@@ -289,7 +291,8 @@ the “GW16” condition.</p>
 </h2>
 <p>We are now ready to use the <code>fit_devil</code> function.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/fit_devil.html">fit_devil</a></span><span class="op">(</span><span class="va">counts</span>, <span class="va">design_matrix</span>, overdispersion <span class="op">=</span> <span class="cn">T</span>, size_factors <span class="op">=</span> <span class="cn">T</span>, verbose <span class="op">=</span> <span class="cn">T</span>, parallel <span class="op">=</span> <span class="cn">T</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/fit_devil.html">fit_devil</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, <span class="va">design_matrix</span>, overdispersion <span class="op">=</span> <span class="cn">T</span>, size_factors <span class="op">=</span> <span class="cn">T</span>, verbose <span class="op">=</span> <span class="cn">T</span>, parallel.cores <span class="op">=</span> <span class="fl">1</span>, min_cells <span class="op">=</span> <span class="fl">100</span>, avg_counts <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Removing 16492 lowly expressed genes.</span></span>
 <span><span class="co">#&gt; Compute size factors</span></span>
 <span><span class="co">#&gt; Initialize beta estimate</span></span>
 <span><span class="co">#&gt; Fit beta coefficients</span></span>
@@ -324,9 +327,12 @@ is defined, you can test the null hypothesis using the
 <code>test_de</code> function.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">test_res</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/test_de.html">test_de</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">contrast</span><span class="op">)</span></span>
+<span><span class="va">test_res</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/test_de.html">test_de</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">contrast</span>, max_lfc <span class="op">=</span> <span class="cn">Inf</span><span class="op">)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">'name'</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">test_res</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span> <span class="op">)</span></span>
+<span><span class="op">}</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "name"     "pval"     "adj_pval" "lfc"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "pval"     "adj_pval" "lfc"      "name"</span></span></code></pre></div>
 <p>The results contains, for each gene</p>
 <ul>
 <li>
@@ -342,9 +348,8 @@ tested conditions</li>
 <p>You can also visualize the results using the
 <code>EnhancedVolcano</code> package</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">EnhancedVolcano</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/EnhancedVolcano/man/EnhancedVolcano.html" class="external-link">EnhancedVolcano</a></span><span class="op">(</span><span class="va">test_res</span>, x <span class="op">=</span> <span class="st">'lfc'</span>, y<span class="op">=</span><span class="st">"adj_pval"</span>, lab <span class="op">=</span> <span class="va">test_res</span><span class="op">$</span><span class="va">name</span>, title <span class="op">=</span> <span class="st">'Devil volcano plot'</span>, subtitle <span class="op">=</span> <span class="st">"GW21 vs. NPC"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: One or more p-values is 0. Converting to 10^-1 * current lowest</span></span>
-<span><span class="co">#&gt; non-zero p-value...</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_volcano.html">plot_volcano</a></span><span class="op">(</span><span class="va">test_res</span>, lfc_cut <span class="op">=</span> <span class="fl">1</span>, pval_cut <span class="op">=</span> <span class="fl">.05</span>, labels <span class="op">=</span> <span class="cn">TRUE</span>, point_size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt; 2 genes have adjusted p-value equal to 0, will be set to 1e-16</span></span></code></pre></div>
 <p><img src="Introduction_files/figure-html/unnamed-chunk-8-1.png" width="576" style="display: block; margin: auto;"></p>
 </div>
   </div>
