@@ -70,5 +70,9 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
     dplyr::mutate(lfc = ifelse(.data$lfc >= max_lfc, max_lfc, .data$lfc)) %>%
     dplyr::mutate(lfc = ifelse(.data$lfc <= -max_lfc, -max_lfc, .data$lfc))
 
+  if (sum(is.na(result_df))) {
+    message('Warning: the results for some genes are unrealiable (i.e. NaN)\n This might be due to gene very lowly expressed or not expressed at all for some conditions')
+  }
+
   return(result_df)
 }

@@ -28,3 +28,8 @@ reference:
   desc:  Functions to test for differentially expressed genes
   contents:
   - test_de
+
+- title: Plot results
+  desc:  Functions to plot differential expression analysis
+  contents:
+  - plot_volcano
