@@ -56,7 +56,7 @@ In this case we model each cell considering its `Biological_Condition`. In our c
 We are now ready to use the `fit_devil` function.
 
 ```{r}
-fit <- devil::fit_devil(counts, design_matrix, overdispersion = T, size_factors = F, verbose = T)
+fit <- devil::fit_devil(counts, design_matrix, overdispersion = T, size_factors = T, verbose = T, parallel.cores = 1, min_cells = 100, avg_counts = 10)
 ```
 
 The obtained fit contains, along with additional values:
@@ -78,6 +78,7 @@ Once the contrast vector is defined, you can test the null hypothesis using the 
 ```{r}
 contrast <- c(0, 1, 0, -1)
 test_res <- devil::test_de(fit, contrast, max_lfc = 20)
+
 colnames(test_res)
 ```
 
@@ -90,5 +91,5 @@ The results contains, for each gene
 You can also visualize the results using the `EnhancedVolcano` package
 
 ```{r, fig.align='center', fig.width=6, fig.height=6}
-EnhancedVolcano::EnhancedVolcano(test_res, x = 'lfc', y="adj_pval", lab = test_res$name, title = 'Devil volcano plot', subtitle = "GW21 vs. NPC", pCutoff = .05, FCcutoff = 1)
+devil::plot_volcano(test_res, lfc_cut = 1, pval_cut = .05, labels = TRUE, point_size = 2)
 ```

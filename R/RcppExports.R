@@ -9,6 +9,10 @@ beta_fit <- function(y, X, mu_beta, off, k, max_iter, eps) {
     .Call('_devil_beta_fit', PACKAGE = 'devil', y, X, mu_beta, off, k, max_iter, eps)
 }
 
+beta_fit_group <- function(y, mu_beta, off, k, max_iter, eps) {
+    .Call('_devil_beta_fit_group', PACKAGE = 'devil', y, mu_beta, off, k, max_iter, eps)
+}
+
 lte_n_equal_rows <- function(matrix, n, tolerance = 1e-10) {
     .Call('_devil_lte_n_equal_rows', PACKAGE = 'devil', matrix, n, tolerance)
 }

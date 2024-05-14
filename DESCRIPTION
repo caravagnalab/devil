@@ -13,6 +13,7 @@ Imports:
     DelayedArray,
     DelayedMatrixStats,
     dplyr,
+    ggplot2,
     HDF5Array,
     magrittr,
     methods,

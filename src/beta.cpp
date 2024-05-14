@@ -44,6 +44,34 @@ List beta_fit(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eig
   return List::create(Named("mu_beta") = mu_beta, Named("Zigma") = Zigma, Named("iter") = iter);
 }
 
+// [[Rcpp::export]]
+List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float k, int max_iter, float eps) {
+  int rows = y.size();
+
+  k = 1.0 / k;
+  float delta = 0.0;
+  float Zigma = 0.0;
+  VectorXd mu_g = VectorXd::Zero(rows);
+  VectorXd w_q = VectorXd::Zero(rows);
+  VectorXd ones = VectorXd::Ones(rows);
+
+  bool converged = 0;
+  int iter = 0;
+  while (!converged && iter < max_iter) {
+    w_q = (-mu_beta * ones - off).array().exp();
+    mu_g = (k + y.array()) / (1 + k * w_q.array());
+    Zigma = 1.0 / (k * (mu_g.array() * w_q.array()).sum());
+
+    delta = Zigma * (k * (mu_g.array() * w_q.array() - 1).sum());
+    mu_beta += delta;
+    converged = delta < eps;
+    iter++;
+  }
+
+  // Return both mu_beta and Zigma as a List
+  return List::create(Named("mu_beta") = mu_beta, Named("iter") = iter);
+}
+
 // Check how many unique rows are in a matrix and if this number is less than or equal to n
 // This is important to determine if the model can be solved by group averages
 // (ie. the numer of unique rows == number of columns)

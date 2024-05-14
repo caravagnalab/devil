@@ -42,8 +42,7 @@ fit_devil(
 \item{parallel.cores}{Number of cores required for parallelization. Default is NULL, which use the maximum cores available.}
 }
 \value{
-List containing fitted model parameters including beta coefficients,
-overdispersion parameter (if estimated), and beta sigma.
+List containing fitted model parameters including beta coefficients and overdispersion parameter (if estimated).
 }
 \description{
 This function fits model parameters including beta coefficients, dispersion parameter,
