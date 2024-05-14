@@ -39,14 +39,14 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
   input_mat <- handle_input_matrix(input_matrix, verbose=verbose)
 
   gene_names <- rownames(input_matrix)
-  counts_per_cell <- rowMeans(input_matrix)
-  cell_per_genes <- rowSums(input_matrix > 0)
+  counts_per_cell <- rowMeans(input_mat)
+  cell_per_genes <- rowSums(input_mat > 0)
   filter_genes <- (counts_per_cell <= avg_counts) | (cell_per_genes <= min_cells)
   n_low_genes <- sum(filter_genes)
   if (n_low_genes > 0) {
     message(paste0("Removing ", n_low_genes, " lowly expressed genes."))
     input_mat <- matrix(input_mat[!filter_genes, ], ncol = nrow(design_matrix), nrow = sum(!filter_genes))
-    input_matrix <- matrix(input_matrix[!filter_genes, ], ncol = nrow(design_matrix), nrow = sum(!filter_genes))
+    input_matrix <- input_matrix[!filter_genes, ]
     gene_names <- gene_names[!filter_genes]
   }
 
