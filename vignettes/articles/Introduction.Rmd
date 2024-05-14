@@ -77,8 +77,10 @@ Once the contrast vector is defined, you can test the null hypothesis using the 
 
 ```{r}
 contrast <- c(0, 1, 0, -1)
-test_res <- devil::test_de(fit, contrast, max_lfc = 20)
-
+test_res <- devil::test_de(fit, contrast, max_lfc = Inf)
+if (!('name' %in% colnames(test_res))) {
+  test_res$name <- as.character( 1:nrow(test_res) )
+}
 colnames(test_res)
 ```
 
