@@ -158,11 +158,7 @@
 <span><span class="co">#&gt;     rowMedians</span></span>
 <span><span class="co">#&gt; The following objects are masked from 'package:matrixStats':</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     anyMissing, rowMedians</span></span>
-<span><span class="co">#&gt; Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by</span></span>
-<span><span class="co">#&gt; 'DelayedArray::makeNindexFromArrayViewport' when loading 'SummarizedExperiment'</span></span>
-<span><span class="co">#&gt; Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by</span></span>
-<span><span class="co">#&gt; 'DelayedArray::makeNindexFromArrayViewport' when loading 'HDF5Array'</span></span></code></pre></div>
+<span><span class="co">#&gt;     anyMissing, rowMedians</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="input-data">Input data<a class="anchor" aria-label="anchor" href="#input-data"></a>
 </h2>
@@ -176,10 +172,12 @@ metadata describing the single cells’ features.</p>
 <code class="sourceCode R"><span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">@</span><span class="va">assays</span><span class="op">@</span><span class="va">data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">metadata</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">@</span><span class="va">colData</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 26255   130</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 130  28</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 26255   130</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 130  28</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; DataFrame with 6 rows and 28 columns</span></span>
 <span><span class="co">#&gt;               NREADS  NALIGNED    RALIGN TOTAL_DUP    PRIMER INSERT_SZ</span></span>
 <span><span class="co">#&gt;            &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;</span></span>
@@ -236,8 +234,9 @@ metadata describing the single cells’ features.</p>
 <span><span class="co">#&gt; SRR1275251                 GW16          High     NA        III</span></span>
 <span><span class="co">#&gt; SRR1275287               GW21+3          High     1c        I  </span></span>
 <span><span class="co">#&gt; SRR1275364                 GW16          High     IIIb      III</span></span>
-<span><span class="co">#&gt; SRR1275269                 GW21          High     NA        I</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span></span>
+<span><span class="co">#&gt; SRR1275269                 GW21          High     NA        I</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span></span>
 <span><span class="co">#&gt;  [1] "NREADS"                       "NALIGNED"                    </span></span>
 <span><span class="co">#&gt;  [3] "RALIGN"                       "TOTAL_DUP"                   </span></span>
 <span><span class="co">#&gt;  [5] "PRIMER"                       "INSERT_SZ"                   </span></span>
@@ -254,7 +253,7 @@ metadata describing the single cells’ features.</p>
 <span><span class="co">#&gt; [27] "Cluster1"                     "Cluster2"</span></span></code></pre></div>
 <p>You can see that we have 130 cells described by 28 features along
 with the counts of 26255 genes. We remove the non-expressed genes.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">counts</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span>,<span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 17085   130</span></span></code></pre></div>
@@ -263,11 +262,12 @@ with the counts of 26255 genes. We remove the non-expressed genes.</p>
 cell and each row contains some of the cell features. To do so, the
 simplest way is to use the <code>model.matrix</code> function, which
 requires a formula and the metadata as input.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix</a></span><span class="op">(</span><span class="op">~</span><span class="va">Biological_Condition</span>, data <span class="op">=</span> <span class="va">metadata</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">$</span><span class="va">Biological_Condition</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "GW16"   "NPC"    "GW21+3" "GW21"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_matrix</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "GW16"   "NPC"    "GW21+3" "GW21"</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_matrix</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            (Intercept) Biological_ConditionGW21 Biological_ConditionGW21+3</span></span>
 <span><span class="co">#&gt; SRR1275356           1                        0                          0</span></span>
 <span><span class="co">#&gt; SRR1274090           1                        0                          0</span></span>
@@ -290,7 +290,7 @@ the “GW16” condition.</p>
 <h2 id="fitting">Fitting<a class="anchor" aria-label="anchor" href="#fitting"></a>
 </h2>
 <p>We are now ready to use the <code>fit_devil</code> function.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/fit_devil.html">fit_devil</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, <span class="va">design_matrix</span>, overdispersion <span class="op">=</span> <span class="cn">T</span>, size_factors <span class="op">=</span> <span class="cn">T</span>, verbose <span class="op">=</span> <span class="cn">T</span>, parallel.cores <span class="op">=</span> <span class="fl">1</span>, min_cells <span class="op">=</span> <span class="fl">100</span>, avg_counts <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Removing 16492 lowly expressed genes.</span></span>
 <span><span class="co">#&gt; Compute size factors</span></span>
@@ -325,10 +325,17 @@ hypothesis</p>
 is equivalent to defining the contrast vector <span class="math inline">\(c = (0,1,0,-1)\)</span>. Once the contrast vector
 is defined, you can test the null hypothesis using the
 <code>test_de</code> function.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">test_res</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/test_de.html">test_de</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">contrast</span>, max_lfc <span class="op">=</span> <span class="cn">Inf</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">'name'</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span><span class="co">#&gt; Warning in parallel::mclapply(1:ngenes, function(gene_idx) {: all scheduled</span></span>
+<span><span class="co">#&gt; cores encountered errors in user code</span></span>
+<span><span class="co">#&gt; Warning in stats::p.adjust(p_values, method = pval_adjust_method): NAs</span></span>
+<span><span class="co">#&gt; introduced by coercion</span></span>
+<span><span class="co">#&gt; Warning: the results for some genes are unrealiable (i.e. NaN)</span></span>
+<span><span class="co">#&gt;  This might be due to gene very lowly expressed or not expressed at all for some conditions</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">'name'</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">test_res</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span> <span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span></span>
@@ -347,9 +354,12 @@ tested conditions</li>
 </ul>
 <p>You can also visualize the results using the
 <code>EnhancedVolcano</code> package</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_volcano.html">plot_volcano</a></span><span class="op">(</span><span class="va">test_res</span>, lfc_cut <span class="op">=</span> <span class="fl">1</span>, pval_cut <span class="op">=</span> <span class="fl">.05</span>, labels <span class="op">=</span> <span class="cn">TRUE</span>, point_size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; 2 genes have adjusted p-value equal to 0, will be set to 1e-16</span></span></code></pre></div>
+<span><span class="co">#&gt; Warning: some of the reults are unrealiable (i.e. contains NaN)</span></span>
+<span><span class="co">#&gt;  Those genes will not be displayed</span></span>
+<span><span class="co">#&gt; Warning in max(abs(d$lfc)): no non-missing arguments to max; returning -Inf</span></span>
+<span><span class="co">#&gt; Warning in max(abs(d$lfc)): no non-missing arguments to max; returning -Inf</span></span></code></pre></div>
 <p><img src="Introduction_files/figure-html/unnamed-chunk-8-1.png" width="576" style="display: block; margin: auto;"></p>
 </div>
   </div>
