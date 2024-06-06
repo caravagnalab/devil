@@ -328,14 +328,7 @@ is defined, you can test the null hypothesis using the
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">test_res</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/test_de.html">test_de</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">contrast</span>, max_lfc <span class="op">=</span> <span class="cn">Inf</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in parallel::mclapply(1:ngenes, function(gene_idx) {: all scheduled</span></span>
-<span><span class="co">#&gt; cores encountered errors in user code</span></span>
-<span><span class="co">#&gt; Warning in stats::p.adjust(p_values, method = pval_adjust_method): NAs</span></span>
-<span><span class="co">#&gt; introduced by coercion</span></span>
-<span><span class="co">#&gt; Warning: the results for some genes are unrealiable (i.e. NaN)</span></span>
-<span><span class="co">#&gt;  This might be due to gene very lowly expressed or not expressed at all for some conditions</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">'name'</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">'name'</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">test_res</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span> <span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span></span>
@@ -354,12 +347,8 @@ tested conditions</li>
 </ul>
 <p>You can also visualize the results using the
 <code>EnhancedVolcano</code> package</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_volcano.html">plot_volcano</a></span><span class="op">(</span><span class="va">test_res</span>, lfc_cut <span class="op">=</span> <span class="fl">1</span>, pval_cut <span class="op">=</span> <span class="fl">.05</span>, labels <span class="op">=</span> <span class="cn">TRUE</span>, point_size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: some of the reults are unrealiable (i.e. contains NaN)</span></span>
-<span><span class="co">#&gt;  Those genes will not be displayed</span></span>
-<span><span class="co">#&gt; Warning in max(abs(d$lfc)): no non-missing arguments to max; returning -Inf</span></span>
-<span><span class="co">#&gt; Warning in max(abs(d$lfc)): no non-missing arguments to max; returning -Inf</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_volcano.html">plot_volcano</a></span><span class="op">(</span><span class="va">test_res</span>, lfc_cut <span class="op">=</span> <span class="fl">1</span>, pval_cut <span class="op">=</span> <span class="fl">.05</span>, labels <span class="op">=</span> <span class="cn">TRUE</span>, point_size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Introduction_files/figure-html/unnamed-chunk-8-1.png" width="576" style="display: block; margin: auto;"></p>
 </div>
   </div>
