@@ -35,13 +35,8 @@ List beta_fit(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eig
     iter++;
   }
 
-  w_q = (-X * mu_beta - off).array().exp();
-  mu_g = (1 + y.array()) / (1 + w_q.array());
-
-  Zigma = (X.transpose() * (mu_g.array() * w_q.array()).matrix().asDiagonal() * X).inverse();
-
   // Return both mu_beta and Zigma as a List
-  return List::create(Named("mu_beta") = mu_beta, Named("Zigma") = Zigma, Named("iter") = iter);
+  return List::create(Named("mu_beta") = mu_beta, Named("iter") = iter);
 }
 
 // [[Rcpp::export]]
