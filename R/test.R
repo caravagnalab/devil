@@ -22,6 +22,7 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
 
   # Extract necessary information
   ngenes <- nrow(devil.fit$input_matrix)
+  nsamples <- nrow(devil.fit$design_matrix)
   contrast <- as.array(contrast)
 
   # Calculate log fold changes
@@ -46,7 +47,7 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
 
       total_variance <- t(contrast) %*% H %*% contrast
       #1 - stats::pchisq(mu_test^2 / total_variance, df = 1)
-      2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = ncol(Y) - 2, lower.tail = F)
+      2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
     }, mc.cores = n.cores) %>% unlist()
 
   } else {
