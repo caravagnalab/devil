@@ -6,4 +6,4 @@ export(test_de)
 importFrom(Rcpp,evalCpp)
 importFrom(magrittr,"%>%")
 importFrom(rlang,.data)
-useDynLib(devil)
+useDynLib(devil);

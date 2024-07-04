@@ -50,6 +50,7 @@ Eigen::MatrixXd compute_clustered_meat(Eigen::MatrixXd design_matrix, Eigen::Vec
     int n = design_matrix.rows();
     int ng = clusters.maxCoeff();
     double adj = double(ng) / (ng - 1);
+    if (ng == 1) {adj = 1;}
 
     Eigen::MatrixXd rval = Eigen::MatrixXd::Zero(k, k);
 
