@@ -11,7 +11,7 @@ init_beta <- function(y, design_matrix, offset_matrix) {
 init_beta_groups <- function(y, groups, offset_matrix) {
   norm_Y <- y / exp(offset_matrix)
   do.call(cbind, lapply(unique(groups), function(gr){
-    log(DelayedMatrixStats::rowMeans2(norm_Y, cols = groups == gr), useNames=TRUE)
+    log(DelayedMatrixStats::rowMeans2(norm_Y, cols = groups == gr, useNames=TRUE))
   }))
 }
 

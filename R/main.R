@@ -36,7 +36,7 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
     n.cores = min(max.cores, parallel.cores)
   }
 
-  input_mat <- handle_input_matrix(input_matrix, verbose=verbose)
+  input_mat <- devil:::handle_input_matrix(input_matrix, verbose=verbose)
 
   gene_names <- rownames(input_matrix)
   counts_per_cell <- rowMeans(input_mat)
@@ -52,22 +52,22 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
 
   if (size_factors) {
     if (verbose) { message("Compute size factors") }
-    sf <- calculate_sf(input_matrix, verbose = verbose)
+    sf <- devil:::calculate_sf(input_matrix, verbose = verbose)
   } else {
     sf <- rep(1, nrow(design_matrix))
   }
 
-  offset_matrix = compute_offset_matrix(offset, input_mat, sf)
-  dispersion_init <- estimate_dispersion(input_matrix, offset_matrix)
+  offset_matrix = devil:::compute_offset_matrix(offset, input_mat, sf)
+  dispersion_init <- c(devil:::estimate_dispersion(input_matrix, offset_matrix))
 
   ngenes <- nrow(input_mat)
   nfeatures <- ncol(design_matrix)
 
   if (verbose) { message("Initialize beta estimate") }
-  groups <- get_groups_for_model_matrix(design_matrix)
+  groups <- devil:::get_groups_for_model_matrix(design_matrix)
 
   if (!is.null(groups)) {
-    beta_0 <- init_beta_groups(input_mat, groups, offset_matrix)
+    beta_0 <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
 
     if (verbose) { message("Fit beta coefficients") }
     tmp <- parallel::mclapply(1:ngenes, function(i) {
@@ -93,11 +93,11 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
     }, mc.cores = n.cores)
 
   } else {
-    beta_0 <- init_beta(input_mat, design_matrix, offset_matrix)
+    beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
 
     if (verbose) { message("Fit beta coefficients") }
     tmp <- parallel::mclapply(1:ngenes, function(i) {
-      beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = eps)
+      devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = eps)
     }, mc.cores = n.cores)
   }
 
@@ -115,7 +115,7 @@ fit_devil <- function(input_matrix, design_matrix, overdispersion = TRUE, offset
     if (verbose) { message("Fit overdispersion") }
 
     theta <- parallel::mclapply(1:ngenes, function(i) {
-      fit_dispersion(beta[i,], design_matrix, input_mat[i,], offset_matrix[i,])
+      devil:::fit_dispersion(beta[i,], design_matrix, input_mat[i,], offset_matrix[i,])
     }, mc.cores = n.cores) %>% unlist()
 
   } else {
