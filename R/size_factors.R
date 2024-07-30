@@ -7,7 +7,7 @@ calculate_sf <- function(Y, verbose=FALSE) {
     return(rep(1, ncol(Y)))
   }
 
-  sf <- DelayedMatrixStats::colSums2(Y)
+  sf <- DelayedMatrixStats::colSums2(Y, useNames=TRUE)
 
   # Check for all-zero columns
   all_zero_column <- is.nan(sf) | (sf <= 0)
