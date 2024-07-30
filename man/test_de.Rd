@@ -21,7 +21,8 @@ test_de(
 
 \item{max_lfc}{Maximum absolute log fold change to consider for filtering results. Default is 10.}
 
-\item{clusters}{.}
+\item{clusters}{Vector containing cluster id for each cell.
+For example, might contain donor id in a multi patient experimental setting.}
 }
 \value{
 A tibble containing the results of the differential expression testing.
