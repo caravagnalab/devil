@@ -1,18 +1,30 @@
-
 #' Test for Differential Expression
 #'
-#' This function tests for differential expression between conditions using the provided contrast matrix.
+#' This function performs differential expression testing between conditions using the provided contrast matrix, based on a fitted `devil` model.
 #'
-#' @param devil.fit The fitted devil model.
-#' @param contrast The contrast matrix for differential expression testing.
-#' @param pval_adjust_method Method for adjusting p-values. Default is "BH" (Benjamini & Hochberg).
-#' @param max_lfc Maximum absolute log fold change to consider for filtering results. Default is 10.
-#' @param clusters Vector containing cluster id for each cell.
-#'  For example, might contain donor id in a multi patient experimental setting.
-#' @return A tibble containing the results of the differential expression testing.
-#' @details This function computes log fold changes and p-values for each gene in parallel and filters the results based on the maximum absolute log fold change specified.
+#' @param devil.fit An object containing the fitted `devil` model, which is returned by the `fit_devil` function.
+#' @param contrast A numeric vector or matrix specifying the contrast of interest for differential expression testing. The contrast defines the comparison between conditions.
+#' @param pval_adjust_method A character string specifying the method to adjust p-values for multiple testing. (default is `"BH"` (Benjamini & Hochberg method))
+#' @param max_lfc A numeric value specifying the maximum absolute log fold change to consider when filtering results. (default is `10`)
+#' @param clusters An optional numeric or factor vector containing cluster IDs for each sample. This is useful in experimental settings where samples belong to different groups, such as different patients.
+#'
+#' @return A tibble containing the results of the differential expression testing. The tibble includes:
+#' \item{name}{The gene names corresponding to the rows of the `devil.fit` model.}
+#' \item{pval}{The p-values associated with the differential expression test for each gene.}
+#' \item{adj_pval}{The adjusted p-values after applying the specified p-value adjustment method.}
+#' \item{lfc}{The log fold changes for each gene, scaled by log base 2 and filtered by `max_lfc`.}
+#'
+#' @details
+#' This function calculates log fold changes and p-values for each gene in parallel.
+#' It first computes log fold changes by multiplying the beta coefficients from the fitted model with the specified contrast.
+#' Then, it calculates p-values using either the sandwich variance estimator (if `clusters` is provided) or the Hessian matrix.
+#' The results are adjusted for multiple testing using the specified p-value adjustment method.
+#'
+#' The results are filtered based on the specified maximum absolute log fold change (`max_lfc`), ensuring that extreme log fold changes are capped at this value.
+#'
 #' @export
 #' @rawNamespace useDynLib(devil);
+
 test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10, clusters = NULL) {
 
   if (devil.fit$input_parameters$parallel) {
@@ -82,38 +94,38 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
   # if (sum(is.na(result_df))) {
   #   message('Warning: the results for some genes are unrealiable (i.e. NaN)\n This might be due to gene very lowly expressed or not expressed at all for some conditions')
   # }
-  if (sum(is.na(result_df))) {
-    na_genes_idxs <- which(is.na(result_df$pval))
-    dm <- as.matrix(devil.fit$design_matrix[,contrast != 0])
-    cell_idx <- dm != 0
-    dm <- as.matrix(dm[cell_idx,])
-    tmp <- lapply(na_genes_idxs, function(gene_idx) {
-      beta0 <- devil:::init_beta(t(devil.fit$input_matrix[gene_idx,cell_idx]), design_matrix = dm, offset_matrix = devil.fit$offset_matrix[gene_idx,cell_idx])
-      new_beta <- devil:::beta_fit(devil.fit$input_matrix[gene_idx,cell_idx], X = dm, mu_beta = beta0, off = devil.fit$offset_matrix[gene_idx,cell_idx], k = 1 / devil.fit$overdispersion[gene_idx], max_iter = 500, eps = 1e-3)
-      new_beta <- new_beta$mu_beta
-      mu_test <- sum(new_beta %*% contrast)
-      if (!is.null(clusters)) {
-
-        H <- devil:::compute_sandwich(
-          devil.fit$design_matrix,
-          devil.fit$input_matrix[gene_idx,],
-          new_beta, devil.fit$overdispersion[gene_idx],
-          devil.fit$size_factors,
-          clusters
-        )
-
-        total_variance <- t(contrast) %*% H %*% contrast
-        new_pval <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
-      } else {
-        H <- devil:::compute_hessian(new_beta, 1 / devil.fit$overdispersion[gene_idx], devil.fit$input_matrix[gene_idx,], devil.fit$design_matrix, devil.fit$size_factors)
-        total_variance <- t(contrast) %*% H %*% contrast
-        new_pval <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
-      }
-      result_df$pval[gene_idx] <<- new_pval
-    })
-
-    #message('Warning: the results for some genes are unrealiable (i.e. NaN)\n This might be due to gene very lowly expressed or not expressed at all for some conditions')
-  }
+  # if (sum(is.na(result_df))) {
+  #   na_genes_idxs <- which(is.na(result_df$pval))
+  #   dm <- as.matrix(devil.fit$design_matrix[,contrast != 0])
+  #   cell_idx <- dm != 0
+  #   dm <- as.matrix(dm[cell_idx,])
+  #   tmp <- lapply(na_genes_idxs, function(gene_idx) {
+  #     beta0 <- init_beta(t(devil.fit$input_matrix[gene_idx,cell_idx]), design_matrix = dm, offset_matrix = devil.fit$offset_matrix[gene_idx,cell_idx])
+  #     new_beta <- beta_fit(devil.fit$input_matrix[gene_idx,cell_idx], X = dm, mu_beta = beta0, off = devil.fit$offset_matrix[gene_idx,cell_idx], k = 1 / devil.fit$overdispersion[gene_idx], max_iter = 500, eps = 1e-3)
+  #     new_beta <- new_beta$mu_beta
+  #     mu_test <- sum(new_beta %*% contrast)
+  #     if (!is.null(clusters)) {
+  #
+  #       H <- compute_sandwich(
+  #         devil.fit$design_matrix,
+  #         devil.fit$input_matrix[gene_idx,],
+  #         new_beta, devil.fit$overdispersion[gene_idx],
+  #         devil.fit$size_factors,
+  #         clusters
+  #       )
+  #
+  #       total_variance <- t(contrast) %*% H %*% contrast
+  #       new_pval <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
+  #     } else {
+  #       H <- compute_hessian(new_beta, 1 / devil.fit$overdispersion[gene_idx], devil.fit$input_matrix[gene_idx,], devil.fit$design_matrix, devil.fit$size_factors)
+  #       total_variance <- t(contrast) %*% H %*% contrast
+  #       new_pval <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
+  #     }
+  #     result_df$pval[gene_idx] <<- new_pval
+  #   })
+  #
+  #   #message('Warning: the results for some genes are unrealiable (i.e. NaN)\n This might be due to gene very lowly expressed or not expressed at all for some conditions')
+  # }
 
   result_df$adj_pval = stats::p.adjust(result_df$pval, method = pval_adjust_method)
 
