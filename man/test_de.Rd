@@ -13,23 +13,31 @@ test_de(
 )
 }
 \arguments{
-\item{devil.fit}{The fitted devil model.}
+\item{devil.fit}{An object containing the fitted \code{devil} model, which is returned by the \code{fit_devil} function.}
 
-\item{contrast}{The contrast matrix for differential expression testing.}
+\item{contrast}{A numeric vector or matrix specifying the contrast of interest for differential expression testing. The contrast defines the comparison between conditions.}
 
-\item{pval_adjust_method}{Method for adjusting p-values. Default is "BH" (Benjamini & Hochberg).}
+\item{pval_adjust_method}{A character string specifying the method to adjust p-values for multiple testing. (default is \code{"BH"} (Benjamini & Hochberg method))}
 
-\item{max_lfc}{Maximum absolute log fold change to consider for filtering results. Default is 10.}
+\item{max_lfc}{A numeric value specifying the maximum absolute log fold change to consider when filtering results. (default is \code{10})}
 
-\item{clusters}{Vector containing cluster id for each cell.
-For example, might contain donor id in a multi patient experimental setting.}
+\item{clusters}{An optional numeric or factor vector containing cluster IDs for each sample. This is useful in experimental settings where samples belong to different groups, such as different patients.}
 }
 \value{
-A tibble containing the results of the differential expression testing.
+A tibble containing the results of the differential expression testing. The tibble includes:
+\item{name}{The gene names corresponding to the rows of the \code{devil.fit} model.}
+\item{pval}{The p-values associated with the differential expression test for each gene.}
+\item{adj_pval}{The adjusted p-values after applying the specified p-value adjustment method.}
+\item{lfc}{The log fold changes for each gene, scaled by log base 2 and filtered by \code{max_lfc}.}
 }
 \description{
-This function tests for differential expression between conditions using the provided contrast matrix.
+This function performs differential expression testing between conditions using the provided contrast matrix, based on a fitted \code{devil} model.
 }
 \details{
-This function computes log fold changes and p-values for each gene in parallel and filters the results based on the maximum absolute log fold change specified.
+This function calculates log fold changes and p-values for each gene in parallel.
+It first computes log fold changes by multiplying the beta coefficients from the fitted model with the specified contrast.
+Then, it calculates p-values using either the sandwich variance estimator (if \code{clusters} is provided) or the Hessian matrix.
+The results are adjusted for multiple testing using the specified p-value adjustment method.
+
+The results are filtered based on the specified maximum absolute log fold change (\code{max_lfc}), ensuring that extreme log fold changes are capped at this value.
 }

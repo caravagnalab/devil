@@ -10,47 +10,54 @@ fit_devil(
   overdispersion = TRUE,
   offset = 0,
   size_factors = TRUE,
-  avg_counts = 0.001,
-  min_cells = 5,
   verbose = FALSE,
   max_iter = 500,
-  eps = 1e-04,
+  tolerance = 0.001,
+  eps = 1e-06,
   parallel.cores = NULL
 )
 }
 \arguments{
-\item{input_matrix}{Vector of response variable.}
+\item{input_matrix}{A numeric matrix representing the response variable, with rows corresponding to genes and columns to samples.}
 
-\item{design_matrix}{Matrix of predictor variables.}
+\item{design_matrix}{A numeric matrix representing the predictor variables, with rows corresponding to samples and columns to predictors.}
 
-\item{overdispersion}{Logical indicating whether to estimate overdispersion.}
+\item{overdispersion}{Logical value indicating whether to estimate the overdispersion parameter. (default is \code{TRUE})}
 
-\item{offset}{Offset vector to be included in the model. Defaults to 0.}
+\item{offset}{A numeric vector to be included as an offset in the model. (default is \code{0})}
 
-\item{size_factors}{Logical indicating whether to compute size factors. Defaults to TRUE.}
+\item{size_factors}{Logical value indicating whether to compute size factors for normalization. (default is \code{TRUE})}
 
-\item{avg_counts}{Minimum value of counts per cell required to fit a gene. Default is 0.001.}
+\item{verbose}{Logical value indicating whether to display progress messages during execution. (default is \code{FALSE})}
 
-\item{min_cells}{Minimum value of cells with non-zero counts required to fit a gene. Default is 5.}
+\item{max_iter}{Integer specifying the maximum number of iterations allowed for the optimization process. (default is \code{500})}
 
-\item{verbose}{Logical indicating whether to display progress messages. Defaults to FALSE.}
+\item{tolerance}{Numeric value indicating the tolerance level for the convergence criterion. (default is \code{1e-3})}
 
-\item{max_iter}{Maximum number of iterations for optimization. Defaults to 500.}
+\item{eps}{A small numeric value added to \code{input_matrix} to avoid issues with non-invertible matrices. (default is \code{1e-6})}
 
-\item{eps}{Tolerance level for convergence criterion. Defaults to 1e-4.}
-
-\item{parallel.cores}{Number of cores required for parallelization. Default is NULL, which use the maximum cores available.}
+\item{parallel.cores}{Integer specifying the number of CPU cores to use for parallelization. If \code{NULL}, the maximum number of available cores are used. (defaults is \code{NULL})}
 }
 \value{
-List containing fitted model parameters including beta coefficients and overdispersion parameter (if estimated).
+A list containing the following elements:
+\item{beta}{A matrix of fitted beta coefficients for each gene.}
+\item{overdispersion}{A numeric vector of overdispersion parameters for each gene (if estimated).}
+\item{iterations}{A numeric vector indicating the number of iterations taken for each gene.}
+\item{size_factors}{A numeric vector of size factors used for normalization.}
+\item{offset_matrix}{A numeric matrix of offset values used in the model.}
+\item{design_matrix}{The design matrix provided as input.}
+\item{input_matrix}{The input matrix used after processing.}
+\item{input_parameters}{A list of input parameters used in the function, including \code{max_iter}, \code{tolerance}, and \code{parallel.cores}.}
 }
 \description{
-This function fits model parameters including beta coefficients, dispersion parameter,
-and beta sigma using provided predictor variables (input_matrix) and response variable (design_matrix).
-It optionally estimates overdispersion based on the fitted model.
+\code{fit_devil} performs model fitting by estimating beta coefficients, dispersion parameters,
+and beta sigma. The function uses predictor variables provided in the \code{design_matrix} and a response
+variable provided in the \code{input_matrix}. Optional features include the estimation of overdispersion
+and the computation of size factors. The function supports parallel processing and allows customization
+of various parameters such as the number of iterations, convergence tolerance, and more.
 }
 \details{
-This function fits model parameters including beta coefficients, dispersion parameter,
-and beta sigma using provided predictor variables (X) and response variable (y).
+This function fits model parameters, including beta coefficients, the dispersion parameter,
+and beta sigma, using the provided predictor variables (\code{design_matrix}) and response variable (\code{input_matrix}).
 It optionally estimates overdispersion based on the fitted model.
 }
