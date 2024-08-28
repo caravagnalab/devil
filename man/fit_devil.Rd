@@ -14,7 +14,7 @@ fit_devil(
   max_iter = 500,
   tolerance = 0.001,
   eps = 1e-06,
-  CUDA = TRUE,
+  CUDA = FALSE,
   batch_size = 1024L,
   parallel.cores = NULL
 )
@@ -37,6 +37,10 @@ fit_devil(
 \item{tolerance}{Numeric value indicating the tolerance level for the convergence criterion. (default is \code{1e-3})}
 
 \item{eps}{A small numeric value added to \code{input_matrix} to avoid issues with non-invertible matrices. (default is \code{1e-6})}
+
+\item{CUDA}{Logical value indicating whether to use GPU version of the code (default is \code{FALSE})}
+
+\item{batch_size}{Integer specifying the number of genes that will be fit in each batch if \code{CUDA = TRUE}. (default is 1024)}
 
 \item{parallel.cores}{Integer specifying the number of CPU cores to use for parallelization. If \code{NULL}, the maximum number of available cores are used. (defaults is \code{NULL})}
 }

@@ -208,7 +208,7 @@ fit_devil <- function(
     if (verbose) { message("Fit overdispersion") }
 
     theta <- parallel::mclapply(1:ngenes, function(i) {
-      devil:::fit_dispersion(beta[i,], design_matrix, input_mat[i,], offset_matrix[i,])
+      devil:::fit_dispersion(beta[i,], design_matrix, input_mat[i,], offset_matrix[i,], tolerance = tolerance, max_iter = max_iter)
     }, mc.cores = n.cores) %>% unlist()
 
   } else {
