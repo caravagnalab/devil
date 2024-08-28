@@ -11,7 +11,7 @@ fit_devil(
   offset = 0,
   size_factors = TRUE,
   verbose = FALSE,
-  max_iter = 500,
+  max_iter = 200,
   tolerance = 0.001,
   eps = 1e-06,
   CUDA = FALSE,
