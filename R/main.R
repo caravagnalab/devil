@@ -103,12 +103,12 @@ fit_devil <- function(
   groups <- devil:::get_groups_for_model_matrix(design_matrix)
 
   if (!is.null(groups)) {
-    beta_0_groups <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
+    beta_0 <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
   } else {
     beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
   }
 
-  beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
+  #beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
 
   if (CUDA & CUDA_is_available) {
     message("Messing with CUDA! Implementation still needed")
