@@ -45,7 +45,7 @@ fit_devil <- function(
     #avg_counts=.001,
     #min_cells=5,
     verbose=FALSE,
-    max_iter=500,
+    max_iter=200,
     tolerance=1e-3,
     eps=1e-6,
     CUDA = FALSE,
@@ -100,13 +100,13 @@ fit_devil <- function(
   nfeatures <- ncol(design_matrix)
 
   if (verbose) { message("Initialize beta estimate") }
-  # groups <- devil:::get_groups_for_model_matrix(design_matrix)
-  #
-  # if (!is.null(groups)) {
-  #   beta_0 <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
-  # } else {
-  #   beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
-  # }
+  groups <- devil:::get_groups_for_model_matrix(design_matrix)
+
+  if (!is.null(groups)) {
+    beta_0_groups <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
+  } else {
+    beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
+  }
 
   beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
 
@@ -122,8 +122,6 @@ fit_devil <- function(
       batch_sizes <- batch_sizes[batch_sizes <= ngenes]
       batch_size <- batch_sizes[which.min(abs(batch_sizes - batch_size))]
     }
-
-
 
     remainder = ngenes %% batch_size
     extra_genes = batch_size - remainder
@@ -154,9 +152,7 @@ fit_devil <- function(
 
     if (verbose) { message("Fit beta coefficients") }
     tmp <- parallel::mclapply(1:ngenes, function(i) {
-      r <- devil:::beta_fit(input_mat[i,] - eps, design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-      if (sum(is.na(r$mu_beta))) { r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 10, max_iter = max_iter, eps = tolerance) }
-      r
+      devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
     }, mc.cores = n.cores)
 
     # if (!is.null(groups)) {
@@ -194,14 +190,10 @@ fit_devil <- function(
     #   }, mc.cores = n.cores)
     # }
 
-    beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-    rownames(beta) <- gene_names
     # if (!(is.null(groups))) {
     #   first_occurence_in_groups <- match(unique(groups), groups)
     #   beta <- t(solve(design_matrix[first_occurence_in_groups, ,drop=FALSE], t(beta)))
     # }
-
-    iterations <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
   }
 
   if (overdispersion) {
