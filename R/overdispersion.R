@@ -1,5 +1,5 @@
 
-fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adjustment=TRUE) {
+fit_dispersion <- function(beta, model_matrix, y, offset_matrix, tolerance, max_iter, do_cox_reid_adjustment=TRUE) {
 
 
   tab <- make_table_if_small(y, stop_if_larger = length(y)/2)
@@ -18,6 +18,11 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adj
                                                      model_matrix = model_matrix, do_cr_adj = do_cox_reid_adjustment, tab[[1]], tab[[2]])
   if(far_left_value < 0) { return(0) }
 
+  nlminb_control_list <- list(
+    iter.max = max_iter,
+    rel.tol = tolerance
+  )
+
   res <- stats::nlminb(start = log(start_value),
                        objective = function(log_theta){
                          - conventional_loglikelihood_fast(y, mu = mean_vector, log_theta = log_theta,
@@ -30,7 +35,7 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adj
                                                                        model_matrix = model_matrix, do_cr_adj = do_cox_reid_adjustment, tab[[1]], tab[[2]])
                          matrix(- res, nrow = 1, ncol = 1)
                        }, lower = log(1e-16), upper = log(1e16),
-                       control = list(iter.max = 200))
+                       control = nlminb_control_list)
 
   if(res$convergence != 0){
     # Do the same thing again with numerical hessian as the analytical hessian
@@ -43,7 +48,7 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adj
                     - conventional_score_function_fast(y, mu = mean_vector, log_theta = log_theta,
                                                        model_matrix = model_matrix, do_cr_adj = do_cox_reid_adjustment, tab[[1]], tab[[2]])
                   }, lower = log(1e-16), upper = log(1e16),
-                  control = list(iter.max = 200))
+                  control = nlminb_control_list)
 
     if(res$convergence != 0){
       # Still problematic result: do the same thing without Cox-Reid adjustment
@@ -55,7 +60,7 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, do_cox_reid_adj
                       - conventional_score_function_fast(y, mu = mean_vector, log_theta = log_theta,
                                                          model_matrix = model_matrix, do_cr_adj = FALSE, tab[[1]], tab[[2]])
                     }, lower = log(1e-16), upper = log(1e16),
-                    control = list(iter.max = 200))
+                    control = nlminb_control_list)
     }
   }
 
