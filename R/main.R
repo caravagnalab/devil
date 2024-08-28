@@ -155,6 +155,10 @@ fit_devil <- function(
       devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
     }, mc.cores = n.cores)
 
+    beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
+    rownames(beta) <- gene_names
+    iterations <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
+
     # if (!is.null(groups)) {
     #   beta_0 <- init_beta_groups(input_mat, groups, offset_matrix)
     #
