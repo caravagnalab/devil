@@ -151,10 +151,12 @@ fit_devil <- function(
     # beta <- beta[1:ngenes,]
 
   } else {
+
     if (verbose) { message("Fit beta coefficients") }
     tmp <- parallel::mclapply(1:ngenes, function(i) {
-      devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-      #devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 1, max_iter = max_iter, eps = tolerance)
+      r <- devil:::beta_fit(input_mat[i,] - eps, design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+      if (sum(is.na(r$mu_beta))) { r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 10, max_iter = max_iter, eps = tolerance) }
+      r
     }, mc.cores = n.cores)
 
     # if (!is.null(groups)) {
@@ -201,8 +203,6 @@ fit_devil <- function(
 
     iterations <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
   }
-
-
 
   if (overdispersion) {
     if (verbose) { message("Fit overdispersion") }
