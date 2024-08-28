@@ -33,6 +33,8 @@ List beta_fit(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eig
     mu_beta += delta;
     converged = delta.cwiseAbs().maxCoeff() < eps;
     iter++;
+    if (delta[0] != delta[0]) {converged = TRUE;}
+
   }
 
   // Return both mu_beta and Zigma as a List
@@ -56,6 +58,8 @@ List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float
     w_q = (-mu_beta * ones - off).array().exp();
     mu_g = (k + y.array()) / (1 + k * w_q.array());
     Zigma = 1.0 / (k * (mu_g.array() * w_q.array()).sum());
+
+
 
     delta = Zigma * (k * (mu_g.array() * w_q.array() - 1).sum());
     mu_beta += delta;
