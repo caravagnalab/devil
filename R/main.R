@@ -103,7 +103,8 @@ fit_devil <- function(
   groups <- devil:::get_groups_for_model_matrix(design_matrix)
 
   if (!is.null(groups)) {
-    beta_0 <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
+    beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
+    beta_0_groups <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
   } else {
     beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
   }
@@ -151,9 +152,20 @@ fit_devil <- function(
   } else {
 
     if (verbose) { message("Fit beta coefficients") }
-    tmp <- parallel::mclapply(1:ngenes, function(i) {
-      devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    }, mc.cores = n.cores)
+
+    i <- 1
+    if (!is.null(groups)) {
+      tmp <- parallel::mclapply(1:ngenes, function(i) {
+        r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+        if (sum(is.na(r$mu_beta))) {r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)}
+        r
+      }, mc.cores = n.cores)
+    } else {
+      tmp <- parallel::mclapply(1:ngenes, function(i) {
+        r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+        r
+      }, mc.cores = n.cores)
+    }
 
     beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
     rownames(beta) <- gene_names
