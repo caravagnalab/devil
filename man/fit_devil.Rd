@@ -14,6 +14,8 @@ fit_devil(
   max_iter = 500,
   tolerance = 0.001,
   eps = 1e-06,
+  CUDA = TRUE,
+  batch_size = 1024L,
   parallel.cores = NULL
 )
 }

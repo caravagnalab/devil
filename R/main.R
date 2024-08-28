@@ -20,6 +20,8 @@
 #' @param max_iter Integer specifying the maximum number of iterations allowed for the optimization process. (default is `500`)
 #' @param tolerance Numeric value indicating the tolerance level for the convergence criterion. (default is `1e-3`)
 #' @param eps A small numeric value added to `input_matrix` to avoid issues with non-invertible matrices. (default is `1e-6`)
+#' @param CUDA Logical value indicating whether to use GPU version of the code (default is `FALSE`)
+#' @param batch_size Integer specifying the number of genes that will be fit in each batch if `CUDA = TRUE`. (default is 1024)
 #' @param parallel.cores Integer specifying the number of CPU cores to use for parallelization. If `NULL`, the maximum number of available cores are used. (defaults is `NULL`)
 #'
 #' @return A list containing the following elements:
@@ -46,6 +48,8 @@ fit_devil <- function(
     max_iter=500,
     tolerance=1e-3,
     eps=1e-6,
+    CUDA = FALSE,
+    batch_size = 1024L,
     parallel.cores=NULL) {
 
   max.cores <- parallel::detectCores()
@@ -58,10 +62,17 @@ fit_devil <- function(
     n.cores = min(max.cores, parallel.cores)
   }
 
+  # Check if CUDA is available
+  CUDA_is_available <- FALSE
+  if (CUDA) {
+    message("Check CUDA availability function need to be implemented")
+    CUDA_is_available <- TRUE
+  }
+
   # Add epsilon to input_matrix to avoid non invertible matrices
   input_matrix <- input_matrix + eps
 
-  input_mat <- handle_input_matrix(input_matrix, verbose=verbose)
+  input_mat <- devil:::handle_input_matrix(input_matrix, verbose=verbose)
 
   gene_names <- rownames(input_matrix)
   # counts_per_cell <- rowMeans(input_mat)
@@ -77,7 +88,7 @@ fit_devil <- function(
 
   if (size_factors) {
     if (verbose) { message("Compute size factors") }
-    sf <- calculate_sf(input_matrix, verbose = verbose)
+    sf <- devil:::calculate_sf(input_matrix, verbose = verbose)
   } else {
     sf <- rep(1, nrow(design_matrix))
   }
@@ -99,55 +110,99 @@ fit_devil <- function(
 
   beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
 
-  if (verbose) { message("Fit beta coefficients") }
-  tmp <- parallel::mclapply(1:ngenes, function(i) {
-    devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    #devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 1, max_iter = max_iter, eps = tolerance)
-  }, mc.cores = n.cores)
+  if (CUDA & CUDA_is_available) {
+    message("Messing with CUDA! Implementation still needed")
 
-  # if (!is.null(groups)) {
-  #   beta_0 <- init_beta_groups(input_mat, groups, offset_matrix)
-  #
-  #   if (verbose) { message("Fit beta coefficients") }
-  #   tmp <- parallel::mclapply(1:ngenes, function(i) {
-  #     r_groups <- lapply(unique(groups), function(g) {
-  #       group_filter <- groups == g
-  #       y <- input_mat[i,group_filter,drop=FALSE]
-  #       if (sum(y) != 0) {
-  #         beta_fit_group(y,
-  #                                beta_0[i,g==unique(groups),drop=T],
-  #                                offset_matrix[i,group_filter, drop=F],
-  #                                dispersion_init[i],
-  #                                max_iter = max_iter,
-  #                                eps = eps)
-  #       } else {
-  #         list(mu_beta = -1e08, iter = 1)
-  #       }
-  #
-  #     })
-  #     r <- list(
-  #       mu_beta = do.call(cbind, lapply(r_groups, function(x) {x$mu_beta})),
-  #       iter = mean(unlist(lapply(r_groups, function(x) {x$iter})))
-  #     )
-  #   }, mc.cores = n.cores)
-  #
-  # } else {
-  #   beta_0 <- init_beta(input_mat, design_matrix, offset_matrix)
-  #
-  #   if (verbose) { message("Fit beta coefficients") }
-  #   tmp <- parallel::mclapply(1:ngenes, function(i) {
-  #     beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-  #   }, mc.cores = n.cores)
-  # }
+    if (batch_size > ngenes) {
+      message("Lowering batch size because of too few genes")
+      batch_size <- 2^floor(log2(ngenes))
+    } else if (batch_size != 2^floor(log2(batch_size))) {
+      message("Converting batch size to closest power of two")
+      batch_sizes <- c(2^floor(log2(batch_size)), 2^ceiling(log2(batch_size)))
+      batch_sizes <- batch_sizes[batch_sizes <= ngenes]
+      batch_size <- batch_sizes[which.min(abs(batch_sizes - batch_size))]
+    }
 
-  beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-  rownames(beta) <- gene_names
-  # if (!(is.null(groups))) {
-  #   first_occurence_in_groups <- match(unique(groups), groups)
-  #   beta <- t(solve(design_matrix[first_occurence_in_groups, ,drop=FALSE], t(beta)))
-  # }
 
-  iterations <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
+
+    remainder = ngenes %% batch_size
+    extra_genes = batch_size - remainder
+
+    extra_input_mat <- matrix(exp(.1), nrow = extra_genes, ncol = ncol(input_mat))
+    extra_offset_mat <- matrix(1, nrow = extra_genes, ncol = ncol(input_mat))
+    extra_dispersion_init <- rep(1, extra_genes)
+    extra_beta_0 <- matrix(.1, nrow = extra_genes, ncol = nfeatures)
+
+    # Bind new matrices
+    l_input_mat <- rbind(input_mat, extra_input_mat)
+    l_offset_matrix <- rbind(offset_matrix, extra_offset_mat)
+    l_beta0 <- rbind(beta_0, extra_beta_0)
+    l_dispersion_init <- c(dispersion_init, extra_dispersion_init)
+
+    stop("beta_fit_gpu not yet implemented")
+    beta <- beta_fit_gpu(l_input_mat, design_matrix, l_beta0, l_offset_matrix, l_dispersion_init, max_iter = max_iter, eps = tolerance, batch_size = batch_size)
+    beta <- beta[1:ngenes,]
+
+    # tmp <- parallel::mclapply(1:(ngenes+extra_genes), function(i) {
+    #   devil:::beta_fit(l_input_mat[i,], design_matrix, l_beta0[i,], l_offset_matrix[i,], l_dispersion_init[i], max_iter = max_iter, eps = tolerance)
+    #   #devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 1, max_iter = max_iter, eps = tolerance)
+    # }, mc.cores = n.cores)
+    # beta <- lapply(1:length(tmp), function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
+    # beta <- beta[1:ngenes,]
+
+  } else {
+    if (verbose) { message("Fit beta coefficients") }
+    tmp <- parallel::mclapply(1:ngenes, function(i) {
+      devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+      #devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 1, max_iter = max_iter, eps = tolerance)
+    }, mc.cores = n.cores)
+
+    # if (!is.null(groups)) {
+    #   beta_0 <- init_beta_groups(input_mat, groups, offset_matrix)
+    #
+    #   if (verbose) { message("Fit beta coefficients") }
+    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
+    #     r_groups <- lapply(unique(groups), function(g) {
+    #       group_filter <- groups == g
+    #       y <- input_mat[i,group_filter,drop=FALSE]
+    #       if (sum(y) != 0) {
+    #         beta_fit_group(y,
+    #                                beta_0[i,g==unique(groups),drop=T],
+    #                                offset_matrix[i,group_filter, drop=F],
+    #                                dispersion_init[i],
+    #                                max_iter = max_iter,
+    #                                eps = eps)
+    #       } else {
+    #         list(mu_beta = -1e08, iter = 1)
+    #       }
+    #
+    #     })
+    #     r <- list(
+    #       mu_beta = do.call(cbind, lapply(r_groups, function(x) {x$mu_beta})),
+    #       iter = mean(unlist(lapply(r_groups, function(x) {x$iter})))
+    #     )
+    #   }, mc.cores = n.cores)
+    #
+    # } else {
+    #   beta_0 <- init_beta(input_mat, design_matrix, offset_matrix)
+    #
+    #   if (verbose) { message("Fit beta coefficients") }
+    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
+    #     beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+    #   }, mc.cores = n.cores)
+    # }
+
+    beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
+    rownames(beta) <- gene_names
+    # if (!(is.null(groups))) {
+    #   first_occurence_in_groups <- match(unique(groups), groups)
+    #   beta <- t(solve(design_matrix[first_occurence_in_groups, ,drop=FALSE], t(beta)))
+    # }
+
+    iterations <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
+  }
+
+
 
   if (overdispersion) {
     if (verbose) { message("Fit overdispersion") }
