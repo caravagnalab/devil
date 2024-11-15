@@ -72,12 +72,12 @@ of various parameters such as the number of iterations, convergence tolerance, a
 <span>  <span class="va">input_matrix</span>,</span>
 <span>  <span class="va">design_matrix</span>,</span>
 <span>  overdispersion <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  offset <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  init_overdispersion <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  offset <span class="op">=</span> <span class="fl">1e-06</span>,</span>
 <span>  size_factors <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">200</span>,</span>
 <span>  tolerance <span class="op">=</span> <span class="fl">0.001</span>,</span>
-<span>  eps <span class="op">=</span> <span class="fl">1e-06</span>,</span>
 <span>  CUDA <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  batch_size <span class="op">=</span> <span class="fl">1024L</span>,</span>
 <span>  parallel.cores <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -101,7 +101,7 @@ of various parameters such as the number of iterations, convergence tolerance, a
 
 
 <dt id="arg-offset">offset<a class="anchor" aria-label="anchor" href="#arg-offset"></a></dt>
-<dd><p>A numeric vector to be included as an offset in the model. (default is <code>0</code>)</p></dd>
+<dd><p>A numeric vector to be included as an offset in the model. Can be used to avoid issues with non-invertible matrices.(default is <code>0</code>)</p></dd>
 
 
 <dt id="arg-size-factors">size_factors<a class="anchor" aria-label="anchor" href="#arg-size-factors"></a></dt>
@@ -118,10 +118,6 @@ of various parameters such as the number of iterations, convergence tolerance, a
 
 <dt id="arg-tolerance">tolerance<a class="anchor" aria-label="anchor" href="#arg-tolerance"></a></dt>
 <dd><p>Numeric value indicating the tolerance level for the convergence criterion. (default is <code>1e-3</code>)</p></dd>
-
-
-<dt id="arg-eps">eps<a class="anchor" aria-label="anchor" href="#arg-eps"></a></dt>
-<dd><p>A small numeric value added to <code>input_matrix</code> to avoid issues with non-invertible matrices. (default is <code>1e-6</code>)</p></dd>
 
 
 <dt id="arg-cuda">CUDA<a class="anchor" aria-label="anchor" href="#arg-cuda"></a></dt>
@@ -183,7 +179,7 @@ It optionally estimates overdispersion based on the fitted model.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.0.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
       </footer></div>

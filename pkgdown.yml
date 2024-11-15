@@ -1,9 +1,9 @@
 pandoc: 3.1.11
-pkgdown: 2.1.0
+pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   articles/Introduction: Introduction.html
-last_built: 2024-08-28T15:51Z
+last_built: 2024-11-15T12:02Z
 urls:
   reference: caravagnalab.github.io/rdevil/reference
   article: caravagnalab.github.io/rdevil/articles
