@@ -8,6 +8,7 @@ fit_devil(
   input_matrix,
   design_matrix,
   overdispersion = TRUE,
+  init_overdispersion = TRUE,
   offset = 1e-06,
   size_factors = TRUE,
   verbose = FALSE,
@@ -25,7 +26,7 @@ fit_devil(
 
 \item{overdispersion}{Logical value indicating whether to estimate the overdispersion parameter. (default is \code{TRUE})}
 
-\item{offset}{A numeric vector to be included as an offset in the model. (default is \code{0})}
+\item{offset}{A numeric vector to be included as an offset in the model. Can be used to avoid issues with non-invertible matrices.(default is \code{0})}
 
 \item{size_factors}{Logical value indicating whether to compute size factors for normalization. (default is \code{TRUE})}
 
@@ -40,8 +41,6 @@ fit_devil(
 \item{batch_size}{Integer specifying the number of genes that will be fit in each batch if \code{CUDA = TRUE}. (default is 1024)}
 
 \item{parallel.cores}{Integer specifying the number of CPU cores to use for parallelization. If \code{NULL}, the maximum number of available cores are used. (defaults is \code{NULL})}
-
-\item{eps}{A small numeric value added to \code{input_matrix} to avoid issues with non-invertible matrices. (default is \code{1e-6})}
 }
 \value{
 A list containing the following elements:

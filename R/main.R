@@ -14,12 +14,11 @@
 #' @param input_matrix A numeric matrix representing the response variable, with rows corresponding to genes and columns to samples.
 #' @param design_matrix A numeric matrix representing the predictor variables, with rows corresponding to samples and columns to predictors.
 #' @param overdispersion Logical value indicating whether to estimate the overdispersion parameter. (default is `TRUE`)
-#' @param offset A numeric vector to be included as an offset in the model. (default is `0`)
+#' @param offset A numeric vector to be included as an offset in the model. Can be used to avoid issues with non-invertible matrices.(default is `0`)
 #' @param size_factors Logical value indicating whether to compute size factors for normalization. (default is `TRUE`)
 #' @param verbose Logical value indicating whether to display progress messages during execution. (default is `FALSE`)
 #' @param max_iter Integer specifying the maximum number of iterations allowed for the optimization process. (default is `500`)
 #' @param tolerance Numeric value indicating the tolerance level for the convergence criterion. (default is `1e-3`)
-#' @param eps A small numeric value added to `input_matrix` to avoid issues with non-invertible matrices. (default is `1e-6`)
 #' @param CUDA Logical value indicating whether to use GPU version of the code (default is `FALSE`)
 #' @param batch_size Integer specifying the number of genes that will be fit in each batch if `CUDA = TRUE`. (default is 1024)
 #' @param parallel.cores Integer specifying the number of CPU cores to use for parallelization. If `NULL`, the maximum number of available cores are used. (defaults is `NULL`)
@@ -40,6 +39,7 @@ fit_devil <- function(
     input_matrix,
     design_matrix,
     overdispersion = TRUE,
+    init_overdispersion = TRUE,
     offset=1e-6,
     size_factors=TRUE,
     #avg_counts=.001,
@@ -72,16 +72,6 @@ fit_devil <- function(
   #input_mat <- devil:::handle_input_matrix(input_matrix, verbose=verbose)
 
   gene_names <- rownames(input_matrix)
-  # counts_per_cell <- rowMeans(input_mat)
-  # cell_per_genes <- rowSums(input_mat > 0)
-  # filter_genes <- (counts_per_cell <= avg_counts) | (cell_per_genes <= min_cells)
-  # n_low_genes <- sum(filter_genes)
-  # if (n_low_genes > 0) {
-  #   message(paste0("Removing ", n_low_genes, " lowly expressed genes."))
-  #   input_mat <- matrix(input_mat[!filter_genes, ], ncol = nrow(design_matrix), nrow = sum(!filter_genes))
-  #   input_matrix <- input_matrix[!filter_genes, ]
-  #   gene_names <- gene_names[!filter_genes]
-  # }
 
   if (size_factors) {
     if (verbose) { message("Compute size factors") }
@@ -91,8 +81,12 @@ fit_devil <- function(
   }
 
   offset_matrix = devil:::compute_offset_matrix(offset, input_matrix, sf)
-  #offset_matrix = devil:::compute_offset_matrix(offset, input_mat, sf)
-  dispersion_init <- c(devil:::estimate_dispersion(input_matrix, offset_matrix))
+
+  if (init_overdispersion) {
+    dispersion_init <- c(devil:::estimate_dispersion(input_matrix, offset_matrix))
+  } else {
+    dispersion_init <- rep(100, nrow(input_matrix))
+  }
 
   ngenes <- nrow(input_matrix)
   nfeatures <- ncol(design_matrix)
@@ -100,15 +94,17 @@ fit_devil <- function(
   if (verbose) { message("Initialize beta estimate") }
   groups <- devil:::get_groups_for_model_matrix(design_matrix)
 
-  if (!is.null(groups)) {
-    beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_matrix)
-    beta_0_groups <- devil:::init_beta_groups(input_matrix, groups, offset_matrix)
-    # beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
-    # beta_0_groups <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
-  } else {
-    beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_matrix)
-    #beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
-  }
+  # if (!is.null(groups)) {
+  #   beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_matrix)
+  #   beta_0_groups <- devil:::init_beta_groups(input_matrix, groups, offset_matrix)
+  #   # beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
+  #   # beta_0_groups <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
+  # } else {
+  #   beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_matrix)
+  #   #beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
+  # }
+
+  beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_matrix)
 
   #beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
 
@@ -128,13 +124,13 @@ fit_devil <- function(
     remainder = ngenes %% batch_size
     extra_genes = batch_size - remainder
 
-    extra_input_mat <- matrix(exp(.1), nrow = extra_genes, ncol = ncol(input_mat))
-    extra_offset_mat <- matrix(1, nrow = extra_genes, ncol = ncol(input_mat))
+    extra_input_mat <- matrix(exp(.1), nrow = extra_genes, ncol = ncol(input_matrix))
+    extra_offset_mat <- matrix(1, nrow = extra_genes, ncol = ncol(input_matrix))
     extra_dispersion_init <- rep(1, extra_genes)
     extra_beta_0 <- matrix(.1, nrow = extra_genes, ncol = nfeatures)
 
     # Bind new matrices
-    l_input_mat <- rbind(input_mat, extra_input_mat)
+    l_input_mat <- rbind(input_matrix, extra_input_mat)
     l_offset_matrix <- rbind(offset_matrix, extra_offset_mat)
     l_beta0 <- rbind(beta_0, extra_beta_0)
     l_dispersion_init <- c(dispersion_init, extra_dispersion_init)
@@ -154,22 +150,30 @@ fit_devil <- function(
 
     if (verbose) { message("Fit beta coefficients") }
 
+    dim(offset_matrix)
+
     i <- 1
-    if (!is.null(groups)) {
-      tmp <- parallel::mclapply(1:ngenes, function(i) {
-        # r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-        # if (sum(is.na(r$mu_beta))) {r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)}
-        r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0_groups[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-        if (sum(is.na(r$mu_beta))) {r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)}
-        r
-      }, mc.cores = n.cores)
-    } else {
-      tmp <- parallel::mclapply(1:ngenes, function(i) {
-        r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-        #r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-        r
-      }, mc.cores = n.cores)
-    }
+
+    tmp <- parallel::mclapply(1:ngenes, function(i) {
+      devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+      #devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 1, max_iter = max_iter, eps = tolerance)
+    }, mc.cores = n.cores)
+
+    # if (!is.null(groups)) {
+    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
+    #     # r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+    #     # if (sum(is.na(r$mu_beta))) {r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)}
+    #     r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0_groups[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+    #     if (sum(is.na(r$mu_beta))) {r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)}
+    #     r
+    #   }, mc.cores = n.cores)
+    # } else {
+    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
+    #     r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[1], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+    #     #r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
+    #     r
+    #   }, mc.cores = n.cores)
+    # }
 
     beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
     rownames(beta) <- gene_names
@@ -236,7 +240,7 @@ fit_devil <- function(
     size_factors=sf,
     offset_matrix=c(offset_matrix),
     design_matrix=design_matrix,
-    input_matrix=input_mat,
+    input_matrix=input_matrix,
     input_parameters=list(max_iter=max_iter, tolerance=tolerance, parallel.cores=n.cores)
     )
   )
