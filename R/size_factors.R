@@ -29,34 +29,31 @@ calculate_sf <- function(Y, verbose=FALSE) {
   return(sf)
 }
 
-compute_offset_matrix <- function(off, Y, size_factors) {
+compute_offset_matrix <- function (off, Y, size_factors) {
   n_samples <- ncol(Y)
   n_genes <- nrow(Y)
 
-  make_offset_hdf5_mat <- methods::is(Y, "DelayedMatrix") && methods::is(DelayedArray::seed(Y), "HDF5ArraySeed")
+  offset_matrix <- matrix(off, nrow = n_genes, ncol = n_samples)
 
-  # Create the offset matrix
-  offset_matrix <- matrix(off, nrow = 1, ncol = n_samples)
-  if (!is.null(size_factors)) {
-    offset_matrix <- offset_matrix + log(size_factors)
+  if (!(is.null(size_factors))) {
+    lsf <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, 1))) + log(size_factors)
+    offset_matrix <- DelayedArray::sweep(offset_matrix, 2, lsf, "+")
   }
 
-  # if (make_offset_hdf5_mat) {
-  #   offset_matrix <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, n_genes)))
-  #   offset_matrix <- offset_matrix + off
-  # } else {
-  #   offset_matrix <- matrix(off, nrow = n_genes, ncol = n_samples)
-  # }
-  # if (!(is.null(size_factors))) {
-  #   # Update the offset_matrix with size_factors
-  #   lsf <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, 1))) + log(size_factors)
-  #   offset_matrix <- DelayedArray::sweep(offset_matrix, 2, lsf, "+")
-  # }
-  # if(make_offset_hdf5_mat){
-  #   offset_matrix <- HDF5Array::writeHDF5Array(offset_matrix)
-  # }
-
-  # Return the result
   return(offset_matrix)
+}
+
+compute_offset_vector <- function(off, Y, size_factors) {
+  n_samples <- ncol(Y)
+  n_genes <- nrow(Y)
+
+  # Create the offset vector
+  offset_vec <- rep(off, n_samples)
+
+  if (!is.null(size_factors)) {
+    offset_vec <- offset_vec + log(size_factors)
+  }
+
+  offset_vec
 }
 
