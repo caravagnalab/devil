@@ -8,7 +8,8 @@ fit_devil(
   input_matrix,
   design_matrix,
   overdispersion = TRUE,
-  init_overdispersion = TRUE,
+  init_overdispersion = NULL,
+  do_cox_reid_adjustment = TRUE,
   offset = 1e-06,
   size_factors = TRUE,
   verbose = FALSE,
@@ -25,6 +26,10 @@ fit_devil(
 \item{design_matrix}{A numeric matrix representing the predictor variables, with rows corresponding to samples and columns to predictors.}
 
 \item{overdispersion}{Logical value indicating whether to estimate the overdispersion parameter. (default is \code{TRUE})}
+
+\item{init_overdispersion}{.}
+
+\item{do_cox_reid_adjustment}{.}
 
 \item{offset}{A numeric vector to be included as an offset in the model. Can be used to avoid issues with non-invertible matrices.(default is \code{0})}
 

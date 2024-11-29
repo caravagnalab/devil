@@ -14,6 +14,8 @@
 #' @param input_matrix A numeric matrix representing the response variable, with rows corresponding to genes and columns to samples.
 #' @param design_matrix A numeric matrix representing the predictor variables, with rows corresponding to samples and columns to predictors.
 #' @param overdispersion Logical value indicating whether to estimate the overdispersion parameter. (default is `TRUE`)
+#' @param init_overdispersion If `NULL`, a initial overdispersion value will be estimated. If a numerical value is passed, it will be used as starting value. (default is `NULL`, recommended numerical is `100`)
+#' @param do_cox_reid_adjustment .
 #' @param offset A numeric vector to be included as an offset in the model. Can be used to avoid issues with non-invertible matrices.(default is `0`)
 #' @param size_factors Logical value indicating whether to compute size factors for normalization. (default is `TRUE`)
 #' @param verbose Logical value indicating whether to display progress messages during execution. (default is `FALSE`)
@@ -39,19 +41,23 @@ fit_devil <- function(
     input_matrix,
     design_matrix,
     overdispersion = TRUE,
-    init_overdispersion = TRUE,
+    init_overdispersion = NULL,
+    do_cox_reid_adjustment = TRUE,
     offset=1e-6,
     size_factors=TRUE,
-    #avg_counts=.001,
-    #min_cells=5,
     verbose=FALSE,
     max_iter=200,
     tolerance=1e-3,
-    #eps=1e-6,
     CUDA = FALSE,
     batch_size = 1024L,
     parallel.cores=NULL) {
 
+  # Read general info about input matrix and design matrix
+  gene_names <- rownames(input_matrix)
+  ngenes <- nrow(input_matrix)
+  nfeatures <- ncol(design_matrix)
+
+  # Detect cores to use
   max.cores <- parallel::detectCores()
   if (is.null(parallel.cores)) {
     n.cores = max.cores
@@ -69,10 +75,7 @@ fit_devil <- function(
     CUDA_is_available <- TRUE
   }
 
-  #input_mat <- devil:::handle_input_matrix(input_matrix, verbose=verbose)
-
-  gene_names <- rownames(input_matrix)
-
+  # Compute size factors
   if (size_factors) {
     if (verbose) { message("Compute size factors") }
     sf <- devil:::calculate_sf(input_matrix, verbose = verbose)
@@ -80,144 +83,87 @@ fit_devil <- function(
     sf <- rep(1, nrow(design_matrix))
   }
 
-  offset_matrix = devil:::compute_offset_matrix(offset, input_matrix, sf)
+  # Calculate offset vector
+  offset_vector = devil:::compute_offset_vector(offset, input_matrix, sf)
+  #offset_matrix = devil:::compute_offset_matrix(offset, input_matrix, sf)
 
-  if (init_overdispersion) {
-    dispersion_init <- c(devil:::estimate_dispersion(input_matrix, offset_matrix))
+  # Initialize overdispersion
+  if (is.null(init_overdispersion)) {
+    dispersion_init <- c(devil:::estimate_dispersion(input_matrix, offset_vector))
   } else {
-    dispersion_init <- rep(100, nrow(input_matrix))
+    dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
   }
 
-  ngenes <- nrow(input_matrix)
-  nfeatures <- ncol(design_matrix)
+  # if (verbose) { message("Initialize beta estimate") }
+  # groups <- devil:::get_groups_for_model_matrix(design_matrix)
 
   if (verbose) { message("Initialize beta estimate") }
-  groups <- devil:::get_groups_for_model_matrix(design_matrix)
-
-  # if (!is.null(groups)) {
-  #   beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_matrix)
-  #   beta_0_groups <- devil:::init_beta_groups(input_matrix, groups, offset_matrix)
-  #   # beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
-  #   # beta_0_groups <- devil:::init_beta_groups(input_mat, groups, offset_matrix)
-  # } else {
-  #   beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_matrix)
-  #   #beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
-  # }
-
-  beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_matrix)
-
-  #beta_0 <- devil:::init_beta(input_mat, design_matrix, offset_matrix)
+  beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_vector)
 
   if (CUDA & CUDA_is_available) {
     message("Messing with CUDA! Implementation still needed")
 
-    if (batch_size > ngenes) {
-      message("Lowering batch size because of too few genes")
-      batch_size <- 2^floor(log2(ngenes))
-    } else if (batch_size != 2^floor(log2(batch_size))) {
-      message("Converting batch size to closest power of two")
-      batch_sizes <- c(2^floor(log2(batch_size)), 2^ceiling(log2(batch_size)))
-      batch_sizes <- batch_sizes[batch_sizes <= ngenes]
-      batch_size <- batch_sizes[which.min(abs(batch_sizes - batch_size))]
+    remainder = ngenes %% batch_size
+    extra_genes = remainder
+    genes_batch = ngenes - extra_genes
+
+    message("Fit beta CUDA")
+    start_time <- Sys.time()
+
+    res_beta_fit <- devil:::beta_fit_gpu(
+      input_matrix[1:genes_batch,],
+      design_matrix,
+      beta_0[1:genes_batch,],
+      offset_vector,
+      dispersion_init[1:genes_batch],
+      max_iter = max_iter,
+      eps = tolerance,
+      batch_size = batch_size
+    )
+
+    if (remainder > 0) {
+      res_beta_fit_extra <- devil:::beta_fit_gpu(
+        input_matrix[(genes_batch+1):ngenes,],
+        design_matrix,
+        beta_0[(genes_batch+1):ngenes,],
+        offset_vector,
+        dispersion_init[(genes_batch+1):ngenes],
+        max_iter = max_iter,
+        eps = tolerance,
+        batch_size = extra_genes
+      )
     }
 
-    remainder = ngenes %% batch_size
-    extra_genes = batch_size - remainder
+    end_time <- Sys.time()
+    message("BETA GPU RUNTIME:")
+    message(as.numeric(difftime(end_time, start_time, units = "secs")))
 
-    extra_input_mat <- matrix(exp(.1), nrow = extra_genes, ncol = ncol(input_matrix))
-    extra_offset_mat <- matrix(1, nrow = extra_genes, ncol = ncol(input_matrix))
-    extra_dispersion_init <- rep(1, extra_genes)
-    extra_beta_0 <- matrix(.1, nrow = extra_genes, ncol = nfeatures)
+    beta = res_beta_fit$mu_beta
 
-    # Bind new matrices
-    l_input_mat <- rbind(input_matrix, extra_input_mat)
-    l_offset_matrix <- rbind(offset_matrix, extra_offset_mat)
-    l_beta0 <- rbind(beta_0, extra_beta_0)
-    l_dispersion_init <- c(dispersion_init, extra_dispersion_init)
+    if (remainder > 0) {
+      beta_extra = res_beta_fit_extra$mu_beta
+      beta <- rbind(beta, beta_extra)
+      iterations=c(res_beta_fit$iter, res_beta_fit_extra$iter)
+    } else {
+      iterations=c(res_beta_fit$iter)
+    }
 
-    stop("beta_fit_gpu not yet implemented")
-    beta <- beta_fit_gpu(l_input_mat, design_matrix, l_beta0, l_offset_matrix, l_dispersion_init, max_iter = max_iter, eps = tolerance, batch_size = batch_size)
-    beta <- beta[1:ngenes,]
-
-    # tmp <- parallel::mclapply(1:(ngenes+extra_genes), function(i) {
-    #   devil:::beta_fit(l_input_mat[i,], design_matrix, l_beta0[i,], l_offset_matrix[i,], l_dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    #   #devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 1, max_iter = max_iter, eps = tolerance)
-    # }, mc.cores = n.cores)
-    # beta <- lapply(1:length(tmp), function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-    # beta <- beta[1:ngenes,]
+    if (is.null(dim(beta))) {
+      beta = matrix(beta, ncol = 1)
+    }
 
   } else {
 
     if (verbose) { message("Fit beta coefficients") }
 
-    dim(offset_matrix)
-
-    i <- 1
-
     tmp <- parallel::mclapply(1:ngenes, function(i) {
-      devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-      #devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], 1, max_iter = max_iter, eps = tolerance)
+      devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)
     }, mc.cores = n.cores)
-
-    # if (!is.null(groups)) {
-    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
-    #     # r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0_groups[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    #     # if (sum(is.na(r$mu_beta))) {r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)}
-    #     r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0_groups[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    #     if (sum(is.na(r$mu_beta))) {r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[1,], dispersion_init[i], max_iter = max_iter, eps = tolerance)}
-    #     r
-    #   }, mc.cores = n.cores)
-    # } else {
-    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
-    #     r <- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_matrix[1], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    #     #r <- devil:::beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    #     r
-    #   }, mc.cores = n.cores)
-    # }
 
     beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
     rownames(beta) <- gene_names
     iterations <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
 
-    # if (!is.null(groups)) {
-    #   beta_0 <- init_beta_groups(input_mat, groups, offset_matrix)
-    #
-    #   if (verbose) { message("Fit beta coefficients") }
-    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
-    #     r_groups <- lapply(unique(groups), function(g) {
-    #       group_filter <- groups == g
-    #       y <- input_mat[i,group_filter,drop=FALSE]
-    #       if (sum(y) != 0) {
-    #         beta_fit_group(y,
-    #                                beta_0[i,g==unique(groups),drop=T],
-    #                                offset_matrix[i,group_filter, drop=F],
-    #                                dispersion_init[i],
-    #                                max_iter = max_iter,
-    #                                eps = eps)
-    #       } else {
-    #         list(mu_beta = -1e08, iter = 1)
-    #       }
-    #
-    #     })
-    #     r <- list(
-    #       mu_beta = do.call(cbind, lapply(r_groups, function(x) {x$mu_beta})),
-    #       iter = mean(unlist(lapply(r_groups, function(x) {x$iter})))
-    #     )
-    #   }, mc.cores = n.cores)
-    #
-    # } else {
-    #   beta_0 <- init_beta(input_mat, design_matrix, offset_matrix)
-    #
-    #   if (verbose) { message("Fit beta coefficients") }
-    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
-    #     beta_fit(input_mat[i,], design_matrix, beta_0[i,], offset_matrix[i,], dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    #   }, mc.cores = n.cores)
-    # }
-
-    # if (!(is.null(groups))) {
-    #   first_occurence_in_groups <- match(unique(groups), groups)
-    #   beta <- t(solve(design_matrix[first_occurence_in_groups, ,drop=FALSE], t(beta)))
-    # }
   }
 
   s <- Sys.time()
@@ -225,8 +171,7 @@ fit_devil <- function(
     if (verbose) { message("Fit overdispersion") }
 
     theta <- parallel::mclapply(1:ngenes, function(i) {
-      #devil:::fit_dispersion(beta[i,], design_matrix, input_mat[i,], offset_matrix[i,], tolerance = tolerance, max_iter = max_iter)
-      devil:::fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_matrix[1,], tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = T)
+      devil:::fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_vector, tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = do_cox_reid_adjustment)
     }, mc.cores = n.cores) %>% unlist()
 
   } else {
@@ -238,7 +183,7 @@ fit_devil <- function(
     overdispersion=theta,
     iterations=iterations,
     size_factors=sf,
-    offset_matrix=c(offset_matrix),
+    offset_vector=offset_vector,
     design_matrix=design_matrix,
     input_matrix=input_matrix,
     input_parameters=list(max_iter=max_iter, tolerance=tolerance, parallel.cores=n.cores)
