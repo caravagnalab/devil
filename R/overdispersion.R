@@ -67,8 +67,16 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, tolerance, max_
   return(exp(res$par))
 }
 
-estimate_dispersion <- function(y, offset_matrix) {
-  xim <- 1/mean(DelayedMatrixStats::colMeans2(exp(offset_matrix), useNames=T))
+# estimate_dispersion_mat <- function(y, offset_matrix) {
+#   xim <- 1/mean(DelayedMatrixStats::colMeans2(exp(offset_matrix), useNames=T))
+#   bv <- DelayedMatrixStats::rowVars(y, useNames=T)
+#   bm <- DelayedMatrixStats::rowMeans2(y, useNames=T)
+#   disp <- (bv - xim * bm) / bm^2
+#   ifelse(is.na(disp) | disp < 0, 100, disp)
+# }
+
+estimate_dispersion <- function(y, offset_vector) {
+  xim <- 1/mean(exp(offset_vector))
   bv <- DelayedMatrixStats::rowVars(y, useNames=T)
   bm <- DelayedMatrixStats::rowMeans2(y, useNames=T)
   disp <- (bv - xim * bm) / bm^2

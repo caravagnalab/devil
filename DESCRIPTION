@@ -7,8 +7,7 @@ Description: An R package to perform fast and scalable single cell differential 
 License: MIT + file LICENSE
 Encoding: UTF-8
 Suggests:
-    scRNAseq,
-    EnhancedVolcano
+    scRNAseq
 Imports: 
     DelayedArray,
     DelayedMatrixStats,
