@@ -1,27 +1,3 @@
-CXX_STD = CXX17
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -L/u/area/ntosato/.local/lib/cutensor/ -L/orfeo/cephfs/opt/programs/intel/almalinux9/cutensor/2.0.2.5/lib -L$(CUDA_HOME)/lib64 -L/usr/local/cuda-12.2/lib64/  -lcutensor -lcuda -lcudart -lcusolver -lcublas
-PKG_CPPFLAGS =   -Wno-ignored-attributes
-SHELL := /bin/bash
-
-BUILD_DIR = ../_builds
-INSTALL_DIR = ../_install
-
-PKG_LIBS += -L$(INSTALL_DIR)/lib64/ -lBETA_FIT
-PKG_CXXFLAGS += -I$(INSTALL_DIR)/include/
-
-LIBBETA = $(INSTALL_DIR)/lib64/libBETA_FIT.so
-
-all: $(LIBBETA) 
-
-$(LIBBETA):
-	#ls ../devil-cuda/src/
-	cmake -S . -H../devil-cuda/ -B$(BUILD_DIR) -DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR)
-	cmake --build $(BUILD_DIR)
-	cmake --install $(BUILD_DIR)
-#	ls  $(INSTALL_DIR)/lib64/
-	#cat $(INSTALL_DIR)/include/batch.hpp
-	cp $(INSTALL_DIR)/lib64/*FIT.a $(LIBBETA)
-.PHONY: all clean
-
-clean:
-	rm -f $(OBJECTS) $(SHLIB) $(BUILD_DIR)
+CXX_STD = CXX11
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+PKG_CPPFLAGS =  -I../inst/include/
