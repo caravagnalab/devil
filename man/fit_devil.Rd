@@ -27,7 +27,7 @@ fit_devil(
 
 \item{overdispersion}{Logical value indicating whether to estimate the overdispersion parameter. (default is \code{TRUE})}
 
-\item{init_overdispersion}{.}
+\item{init_overdispersion}{If \code{NULL}, a initial overdispersion value will be estimated. If a numerical value is passed, it will be used as starting value. (default is \code{NULL}, recommended numerical is \code{100})}
 
 \item{do_cox_reid_adjustment}{.}
 
