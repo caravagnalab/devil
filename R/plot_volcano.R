@@ -46,8 +46,9 @@ plot_volcano <- function(
 
 
   if (sum(d$adj_pval == 0) > 0) {
-    message(paste0(sum(d$adj_pval == 0), ' genes have adjusted p-value equal to 0, will be set to 1e-16'))
-    d$adj_pval[d$adj_pval == 0] <- 1e-16
+    min_value = min(d$adj_pval[d$adj_pval > 0])
+    message(paste0(sum(d$adj_pval == 0), ' genes have adjusted p-value equal to 0, will be set to ', min_value))
+    d$adj_pval[d$adj_pval == 0] <- min_value
   }
 
   p <- d %>%
