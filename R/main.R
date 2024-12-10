@@ -19,7 +19,7 @@
 #' @param offset A numeric vector to be included as an offset in the model. Can be used to avoid issues with non-invertible matrices.(default is `0`)
 #' @param size_factors Logical value indicating whether to compute size factors for normalization. (default is `TRUE`)
 #' @param verbose Logical value indicating whether to display progress messages during execution. (default is `FALSE`)
-#' @param max_iter Integer specifying the maximum number of iterations allowed for the optimization process. (default is `500`)
+#' @param max_iter Integer specifying the maximum number of iterations allowed for the optimization process. (default is `100`)
 #' @param tolerance Numeric value indicating the tolerance level for the convergence criterion. (default is `1e-3`)
 #' @param CUDA Logical value indicating whether to use GPU version of the code (default is `FALSE`)
 #' @param batch_size Integer specifying the number of genes that will be fit in each batch if `CUDA = TRUE`. (default is 1024)
@@ -46,7 +46,7 @@ fit_devil <- function(
     offset=1e-6,
     size_factors=TRUE,
     verbose=FALSE,
-    max_iter=200,
+    max_iter=100,
     tolerance=1e-3,
     CUDA = FALSE,
     batch_size = 1024L,
