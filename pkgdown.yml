@@ -3,7 +3,7 @@ pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   articles/Introduction: Introduction.html
-last_built: 2024-12-05T15:21Z
+last_built: 2024-12-10T09:40Z
 urls:
   reference: caravagnalab.github.io/rdevil/reference
   article: caravagnalab.github.io/rdevil/articles
