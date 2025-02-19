@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Introduction to  • devil</title>
+<title>Getting Started with `devil`: Differential Expression Analysis in scRNA-seq • devil</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
 <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <script src="../bootstrap-toc.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
 <!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
-<script src="../pkgdown.js"></script><meta property="og:title" content="Introduction to ">
+<script src="../pkgdown.js"></script><meta property="og:title" content="Getting Started with `devil`: Differential Expression Analysis in scRNA-seq">
 <!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
@@ -55,7 +55,7 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="../articles/Introduction.html">Introduction to </a>
+      <a href="../articles/Introduction.html">Getting Started with `devil`: Differential Expression Analysis in scRNA-seq</a>
     </li>
   </ul>
 </li>
@@ -80,7 +80,8 @@
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
-      <h1 data-toc-skip>Introduction to</h1>
+      <h1 data-toc-skip>Getting Started with <code>devil</code>:
+Differential Expression Analysis in scRNA-seq</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/caravagnalab/devil/vignettes/articles/Introduction.Rmd" class="external-link"><code>vignettes/articles/Introduction.Rmd</code></a></small>
@@ -90,6 +91,14 @@
 
     
     
+<p>This tutorial guides you through the use of the <code>devil</code>
+package for analyzing differential gene expression in single-cell RNA
+sequencing (scRNA-seq) data.</p>
+<div class="section level3">
+<h3 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
+</h3>
+<p>Before we begin, make sure you have the required packages
+installed</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://caravagnalab.github.io/devil/" class="external-link">devil</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">scRNAseq</span><span class="op">)</span></span>
@@ -161,185 +170,98 @@
 <span><span class="co">#&gt; 'DelayedArray::makeNindexFromArrayViewport' when loading 'SummarizedExperiment'</span></span>
 <span><span class="co">#&gt; Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by</span></span>
 <span><span class="co">#&gt; 'DelayedArray::makeNindexFromArrayViewport' when loading 'HDF5Array'</span></span></code></pre></div>
-<p>This vignette provides a step-by-step guide to using the devil
-package for differential expression analysis of single-cell RNA
-sequencing (scRNA-seq) data. We’ll start by loading a dataset, preparing
-the data, fitting the model, and then testing for differential
-expression between conditions. Finally, we’ll visualize the results
-using a volcano plot.</p>
-<div class="section level2">
-<h2 id="input-data">Input data<a class="anchor" aria-label="anchor" href="#input-data"></a>
-</h2>
-<p>First, we load a single-cell RNA dataset from the
-<code>scRNAseq</code> package. This dataset contains RNA counts for
-individual cells and metadata describing the features of each cell.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu">scRNAseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/scRNAseq/man/ReprocessedData.html" class="external-link">ReprocessedFluidigmData</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
 <div class="section level3">
-<h3 id="extracting-counts-and-metadata">Extracting Counts and Metadata<a class="anchor" aria-label="anchor" href="#extracting-counts-and-metadata"></a>
+<h3 id="loading-and-preparing-your-data">Loading and preparing your data<a class="anchor" aria-label="anchor" href="#loading-and-preparing-your-data"></a>
 </h3>
-<p>To fit a model using <code>devil</code>, we need to extract the RNA
-counts and the associated metadata.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">@</span><span class="va">assays</span><span class="op">@</span><span class="va">data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<p>Let’s start by loading a sample dataset from the
+<code>scRNAseq</code> package</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Load the example dataset</span></span>
+<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu">scRNAseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/scRNAseq/man/BaronPancreasData.html" class="external-link">BaronPancreasData</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Extract counts and metadata</span></span>
+<span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">@</span><span class="va">assays</span><span class="op">@</span><span class="va">data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">metadata</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">@</span><span class="va">colData</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Dimensions of the counts matrix</span></span>
-<span><span class="co">#&gt; [1] 26255   130</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Dimensions of the metadata</span></span>
-<span><span class="co">#&gt; [1] 130  28</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Display the first few rows of metadata</span></span>
-<span><span class="co">#&gt; DataFrame with 6 rows and 28 columns</span></span>
-<span><span class="co">#&gt;               NREADS  NALIGNED    RALIGN TOTAL_DUP    PRIMER INSERT_SZ</span></span>
-<span><span class="co">#&gt;            &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;</span></span>
-<span><span class="co">#&gt; SRR1275356  10554900   7555880   71.5862   58.4931 0.0217638       208</span></span>
-<span><span class="co">#&gt; SRR1274090    196162    182494   93.0323   14.5122 0.0366826       247</span></span>
-<span><span class="co">#&gt; SRR1275251   8524470   5858130   68.7213   65.0428 0.0351827       230</span></span>
-<span><span class="co">#&gt; SRR1275287   7229920   5891540   81.4884   49.7609 0.0208685       222</span></span>
-<span><span class="co">#&gt; SRR1275364   5403640   4482910   82.9609   66.5788 0.0298284       228</span></span>
-<span><span class="co">#&gt; SRR1275269  10729700   7806230   72.7536   50.4285 0.0204349       245</span></span>
-<span><span class="co">#&gt;            INSERT_SZ_STD COMPLEXITY     NDUPR PCT_RIBOSOMAL_BASES</span></span>
-<span><span class="co">#&gt;                &lt;numeric&gt;  &lt;numeric&gt; &lt;numeric&gt;           &lt;numeric&gt;</span></span>
-<span><span class="co">#&gt; SRR1275356            63   0.868928  0.343113               2e-06</span></span>
-<span><span class="co">#&gt; SRR1274090           133   0.997655  0.935730               0e+00</span></span>
-<span><span class="co">#&gt; SRR1275251            89   0.789252  0.201082               0e+00</span></span>
-<span><span class="co">#&gt; SRR1275287            78   0.898100  0.538191               0e+00</span></span>
-<span><span class="co">#&gt; SRR1275364            76   0.890693  0.391660               0e+00</span></span>
-<span><span class="co">#&gt; SRR1275269            99   0.879414  0.431169               0e+00</span></span>
-<span><span class="co">#&gt;            PCT_CODING_BASES PCT_UTR_BASES PCT_INTRONIC_BASES</span></span>
-<span><span class="co">#&gt;                   &lt;numeric&gt;     &lt;numeric&gt;          &lt;numeric&gt;</span></span>
-<span><span class="co">#&gt; SRR1275356         0.125806      0.180954           0.613229</span></span>
-<span><span class="co">#&gt; SRR1274090         0.309822      0.412917           0.205185</span></span>
-<span><span class="co">#&gt; SRR1275251         0.398461      0.473884           0.039886</span></span>
-<span><span class="co">#&gt; SRR1275287         0.196420      0.227592           0.498944</span></span>
-<span><span class="co">#&gt; SRR1275364         0.138617      0.210406           0.543941</span></span>
-<span><span class="co">#&gt; SRR1275269         0.333077      0.354635           0.248331</span></span>
-<span><span class="co">#&gt;            PCT_INTERGENIC_BASES PCT_MRNA_BASES MEDIAN_CV_COVERAGE</span></span>
-<span><span class="co">#&gt;                       &lt;numeric&gt;      &lt;numeric&gt;          &lt;numeric&gt;</span></span>
-<span><span class="co">#&gt; SRR1275356             0.080008       0.306760           1.495770</span></span>
-<span><span class="co">#&gt; SRR1274090             0.072076       0.722739           1.007580</span></span>
-<span><span class="co">#&gt; SRR1275251             0.087770       0.872345           1.242990</span></span>
-<span><span class="co">#&gt; SRR1275287             0.077044       0.424013           0.775981</span></span>
-<span><span class="co">#&gt; SRR1275364             0.107035       0.349024           1.441370</span></span>
-<span><span class="co">#&gt; SRR1275269             0.063957       0.687712           0.617100</span></span>
-<span><span class="co">#&gt;            MEDIAN_5PRIME_BIAS MEDIAN_3PRIME_BIAS MEDIAN_5PRIME_TO_3PRIME_BIAS</span></span>
-<span><span class="co">#&gt;                     &lt;numeric&gt;          &lt;numeric&gt;                    &lt;numeric&gt;</span></span>
-<span><span class="co">#&gt; SRR1275356           0.000000           0.166122                     1.036250</span></span>
-<span><span class="co">#&gt; SRR1274090           0.181742           0.698991                     0.293510</span></span>
-<span><span class="co">#&gt; SRR1275251           0.000000           0.340046                     0.201518</span></span>
-<span><span class="co">#&gt; SRR1275287           0.010251           0.350915                     0.292838</span></span>
-<span><span class="co">#&gt; SRR1275364           0.000000           0.204074                     0.619863</span></span>
-<span><span class="co">#&gt; SRR1275269           0.057960           0.345502                     0.284480</span></span>
-<span><span class="co">#&gt;            sample_id.x           Lane_ID LibraryName avgLength     spots</span></span>
-<span><span class="co">#&gt;            &lt;character&gt;       &lt;character&gt; &lt;character&gt; &lt;integer&gt; &lt;integer&gt;</span></span>
-<span><span class="co">#&gt; SRR1275356   SRX534610 D24VYACXX130502:4      GW16_2       202   9818076</span></span>
-<span><span class="co">#&gt; SRR1274090   SRX534823                 1       NPC_9        60     95454</span></span>
-<span><span class="co">#&gt; SRR1275251   SRX534623 D24VYACXX130502:4      GW16_8       202   7935952</span></span>
-<span><span class="co">#&gt; SRR1275287   SRX534641 D24VYACXX130502:1    GW21+3_2       202   6531944</span></span>
-<span><span class="co">#&gt; SRR1275364   SRX534614 D24VYACXX130502:7     GW16_23       202   4919561</span></span>
-<span><span class="co">#&gt; SRR1275269   SRX534632 D24VYACXX130502:4      GW21_8       202   9969377</span></span>
-<span><span class="co">#&gt;            Biological_Condition Coverage_Type Cluster1 Cluster2</span></span>
-<span><span class="co">#&gt;                     &lt;character&gt;   &lt;character&gt; &lt;factor&gt; &lt;factor&gt;</span></span>
-<span><span class="co">#&gt; SRR1275356                 GW16          High     IIIb      III</span></span>
-<span><span class="co">#&gt; SRR1274090                  NPC           Low     1a        I  </span></span>
-<span><span class="co">#&gt; SRR1275251                 GW16          High     NA        III</span></span>
-<span><span class="co">#&gt; SRR1275287               GW21+3          High     1c        I  </span></span>
-<span><span class="co">#&gt; SRR1275364                 GW16          High     IIIb      III</span></span>
-<span><span class="co">#&gt; SRR1275269                 GW21          High     NA        I</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span>  <span class="co"># Display the column names of metadata</span></span>
-<span><span class="co">#&gt;  [1] "NREADS"                       "NALIGNED"                    </span></span>
-<span><span class="co">#&gt;  [3] "RALIGN"                       "TOTAL_DUP"                   </span></span>
-<span><span class="co">#&gt;  [5] "PRIMER"                       "INSERT_SZ"                   </span></span>
-<span><span class="co">#&gt;  [7] "INSERT_SZ_STD"                "COMPLEXITY"                  </span></span>
-<span><span class="co">#&gt;  [9] "NDUPR"                        "PCT_RIBOSOMAL_BASES"         </span></span>
-<span><span class="co">#&gt; [11] "PCT_CODING_BASES"             "PCT_UTR_BASES"               </span></span>
-<span><span class="co">#&gt; [13] "PCT_INTRONIC_BASES"           "PCT_INTERGENIC_BASES"        </span></span>
-<span><span class="co">#&gt; [15] "PCT_MRNA_BASES"               "MEDIAN_CV_COVERAGE"          </span></span>
-<span><span class="co">#&gt; [17] "MEDIAN_5PRIME_BIAS"           "MEDIAN_3PRIME_BIAS"          </span></span>
-<span><span class="co">#&gt; [19] "MEDIAN_5PRIME_TO_3PRIME_BIAS" "sample_id.x"                 </span></span>
-<span><span class="co">#&gt; [21] "Lane_ID"                      "LibraryName"                 </span></span>
-<span><span class="co">#&gt; [23] "avgLength"                    "spots"                       </span></span>
-<span><span class="co">#&gt; [25] "Biological_Condition"         "Coverage_Type"               </span></span>
-<span><span class="co">#&gt; [27] "Cluster1"                     "Cluster2"</span></span></code></pre></div>
-<p>The output shows that we have 130 cells described by 28 features,
-along with RNA counts for 26,255 genes.</p>
+<span><span class="co"># Display dataset dimensions</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of genes:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Number of genes: 20125</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of cells:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Number of cells: 8569</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Metadata features:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Metadata features: 2</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="preprocessing-filtering-non-expressed-genes">Preprocessing: Filtering Non-Expressed Genes<a class="anchor" aria-label="anchor" href="#preprocessing-filtering-non-expressed-genes"></a>
+<h3 id="data-cleaning">Data cleaning<a class="anchor" aria-label="anchor" href="#data-cleaning"></a>
 </h3>
-<p>Before proceeding, let’s remove genes that are not expressed in any
-of the cells. This helps in reducing the noise and computational
-load.</p>
+<div class="section level4">
+<h4 id="filtering-cell-types">Filtering cell types<a class="anchor" aria-label="anchor" href="#filtering-cell-types"></a>
+</h4>
+<p>To focus our analysis, we retain only the three most abundant cell
+types.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Select the three most expressed cell types</span></span>
+<span><span class="va">top_3_ct</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">$</span><span class="va">label</span><span class="op">)</span>, decreasing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">cell_filter</span> <span class="op">&lt;-</span> <span class="va">metadata</span><span class="op">$</span><span class="va">label</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">top_3_ct</span></span>
+<span><span class="va">metadata</span> <span class="op">&lt;-</span> <span class="va">metadata</span><span class="op">[</span><span class="va">cell_filter</span>,<span class="op">]</span></span>
+<span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">counts</span><span class="op">[</span>, <span class="va">cell_filter</span><span class="op">]</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Remaining cells after filtering:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Remaining cells after filtering: 5928</span></span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="filtering-low-expression-genes">Filtering Low-Expression Genes<a class="anchor" aria-label="anchor" href="#filtering-low-expression-genes"></a>
+</h4>
+<p>We remove genes with extremely low expression to improve statistical
+power.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">counts</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span>,<span class="op">]</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 17085   130</span></span></code></pre></div>
-<p>After filtering, we retain approximately 17,000 genes.</p>
+<code class="sourceCode R"><span><span class="co"># Keep only genes with expression in at least some cells</span></span>
+<span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">counts</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">500</span>,<span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Remaining genes after filtering:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Remaining genes after filtering: 7402</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level3">
-<h3 id="creating-the-design-matrix">Creating the Design Matrix<a class="anchor" aria-label="anchor" href="#creating-the-design-matrix"></a>
+<h3 id="setting-up-the-design-matrix">Setting up the Design matrix<a class="anchor" aria-label="anchor" href="#setting-up-the-design-matrix"></a>
 </h3>
-<p>Next, we create a <code>design_matrix</code>, which is a matrix that
-includes the features of each cell. The <code>model.matrix</code>
-function is an easy way to generate this matrix, requiring a formula and
-the metadata as input.</p>
+<p>The design matrix specifies the experimental conditions for each
+cell:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">design_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix</a></span><span class="op">(</span><span class="op">~</span><span class="va">Biological_Condition</span>, data <span class="op">=</span> <span class="va">metadata</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">$</span><span class="va">Biological_Condition</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Display unique biological conditions</span></span>
-<span><span class="co">#&gt; [1] "GW16"   "NPC"    "GW21+3" "GW21"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_matrix</span><span class="op">)</span>  <span class="co"># Display the first few rows of the design matrix</span></span>
-<span><span class="co">#&gt;            (Intercept) Biological_ConditionGW21 Biological_ConditionGW21+3</span></span>
-<span><span class="co">#&gt; SRR1275356           1                        0                          0</span></span>
-<span><span class="co">#&gt; SRR1274090           1                        0                          0</span></span>
-<span><span class="co">#&gt; SRR1275251           1                        0                          0</span></span>
-<span><span class="co">#&gt; SRR1275287           1                        0                          1</span></span>
-<span><span class="co">#&gt; SRR1275364           1                        0                          0</span></span>
-<span><span class="co">#&gt; SRR1275269           1                        1                          0</span></span>
-<span><span class="co">#&gt;            Biological_ConditionNPC</span></span>
-<span><span class="co">#&gt; SRR1275356                       0</span></span>
-<span><span class="co">#&gt; SRR1274090                       1</span></span>
-<span><span class="co">#&gt; SRR1275251                       0</span></span>
-<span><span class="co">#&gt; SRR1275287                       0</span></span>
-<span><span class="co">#&gt; SRR1275364                       0</span></span>
-<span><span class="co">#&gt; SRR1275269                       0</span></span></code></pre></div>
-<p>Here, the design matrix models each cell based on its
-<code>Biological_Condition</code>. The intercept in this model
-represents the “GW16” condition.</p>
+<code class="sourceCode R"><span><span class="co"># Create design matrix based on biological conditions</span></span>
+<span><span class="va">design_matrix</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix</a></span><span class="op">(</span><span class="op">~</span><span class="va">label</span>, data <span class="op">=</span> <span class="va">metadata</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># View unique conditions in your data</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">metadata</span><span class="op">$</span><span class="va">label</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "beta"   "ductal" "alpha"</span></span></code></pre></div>
 </div>
-</div>
-<div class="section level2">
-<h2 id="fitting-the-model">Fitting the model<a class="anchor" aria-label="anchor" href="#fitting-the-model"></a>
-</h2>
-<p>With the data prepared, we can now fit the model using the
-<code>fit_devil</code> function. This function estimates the
-coefficients (<code>beta</code>) and overdispersion for each gene across
-different conditions.</p>
+<div class="section level3">
+<h3 id="model-fitting">Model fitting<a class="anchor" aria-label="anchor" href="#model-fitting"></a>
+</h3>
+<p>Next, we fit the statistical model to the filtered dataset using the
+<code><a href="../reference/fit_devil.html">devil::fit_devil()</a></code> function.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/fit_devil.html">fit_devil</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, </span>
-<span>  <span class="va">design_matrix</span>, </span>
-<span>  overdispersion <span class="op">=</span> <span class="cn">T</span>, </span>
-<span>  size_factors <span class="op">=</span> <span class="cn">T</span>, </span>
-<span>  verbose <span class="op">=</span> <span class="cn">T</span>, </span>
-<span>  parallel.cores <span class="op">=</span> <span class="fl">1</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>,</span>
+<span>  <span class="va">design_matrix</span>,</span>
+<span>  overdispersion <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  size_factors <span class="op">=</span> <span class="cn">TRUE</span>, </span>
+<span>  init_overdispersion <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  parallel.cores <span class="op">=</span> <span class="fl">1</span>, </span>
+<span>  offset <span class="op">=</span> <span class="fl">1e-6</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; Compute size factors</span></span>
 <span><span class="co">#&gt; Initialize beta estimate</span></span>
 <span><span class="co">#&gt; Fit beta coefficients</span></span>
 <span><span class="co">#&gt; Fit overdispersion</span></span></code></pre></div>
-<p>The <code>fit</code> object contains several important components,
-including:</p>
-<ul>
-<li>
-<code>beta</code> : matrix of coefficients (n_genes x
-n_features)</li>
-<li>
-<code>overdispersion</code> : vector of coefficients (n_genes)</li>
-</ul>
 </div>
-<div class="section level2">
-<h2 id="testing-for-differential-expression">Testing for Differential Expression<a class="anchor" aria-label="anchor" href="#testing-for-differential-expression"></a>
-</h2>
+<div class="section level3">
+<h3 id="testing-for-differential-expression">Testing for Differential Expression<a class="anchor" aria-label="anchor" href="#testing-for-differential-expression"></a>
+</h3>
+<div class="section level4">
+<h4 id="understanding-contrast-vectors">Understanding Contrast Vectors<a class="anchor" aria-label="anchor" href="#understanding-contrast-vectors"></a>
+</h4>
 <p>In order to test the data you need to specify your null hypothesis
 using a contrast vector
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>.
@@ -352,71 +274,63 @@ the null hypothesis
 is usually defined as</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>H</mi><mn>0</mn></msub><mo>:</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>c</mi><mi>i</mi></msub><msub><mi>β</mi><mrow><mi>g</mi><mo>,</mo><mi>i</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex"> H_0 : \sum_i c_i \beta_{g,i} = 0</annotation></semantics></math>
 For example, if you are interested in the genes that are differentially
-expressed between the “GW21” and the “NPC” condition, you need to find
+expressed between the “beta” and “ductal” cell types, you need to find
 the genes for which we strongly reject the null hypothesis</p>
-<p><span class="math display">$$ \beta_{GW21} = \beta_{NPC} \hspace{5mm}
-\rightarrow \hspace{5mm} \beta_{GW21} - \beta_{NPC} = 0$$</span> which
-is equivalent to defining the contrast vector
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>0</mn><mo>,</mo><mo>−</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">c = (0,1,0,-1)</annotation></semantics></math>.
+<p><span class="math display">$$ \beta_{beta} = \beta_{ductal}
+\hspace{5mm} \rightarrow \hspace{5mm} \beta_{beta} - \beta_{ductal} =
+0$$</span></p>
+<p>which is equivalent to defining the contrast vector
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mo>−</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">c = (0,1,-1)</annotation></semantics></math>.
 Once the contrast vector is defined, you can test the null hypothesis
 using the <code>test_de</code> function.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">test_res</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/test_de.html">test_de</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">contrast</span>, max_lfc <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">'name'</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">test_res</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span> <span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">test_res</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 4</span></span></span>
-<span><span class="co">#&gt;     pval adj_pval    lfc name </span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> 1.00      1.00  -<span style="color: #BB0000;">20</span>    1    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> 1.00      1.00  -<span style="color: #BB0000;">20</span>    2    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> 1.00      1.00  -<span style="color: #BB0000;">20</span>    3    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> 0.011<span style="text-decoration: underline;">5</span>    0.112   6.70 4    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> 1.00      1.00  -<span style="color: #BB0000;">20</span>    5    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> 1.00      1.00  -<span style="color: #BB0000;">20</span>    6</span></span></code></pre></div>
-<p>The results contains, for each gene</p>
+<code class="sourceCode R"><span><span class="co"># Test differential expression between conditions</span></span>
+<span><span class="va">contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">test_results</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/test_de.html">test_de</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">contrast</span>, max_lfc <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Add gene names if missing</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">'name'</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test_results</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">test_results</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test_results</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<p>The test results include:</p>
 <ul>
 <li>
-<code>pval</code> : p-value associated with the statistical
-test</li>
+<code>pval</code> : raw p-value</li>
 <li>
-<code>adj_pval</code> : p-value corrected considering multiple
-testing</li>
+<code>adj_pval</code> : adjusted p-value (corrected for multiple
+testing)</li>
 <li>
-<code>lfc</code> : log2 fold change of gene expression between the
-tested conditions</li>
+<code>lfc</code> : log2 fold change between conditions</li>
 </ul>
 </div>
-<div class="section level2">
-<h2 id="visualizing-the-results-with-a-volcano-plot">Visualizing the Results with a Volcano Plot<a class="anchor" aria-label="anchor" href="#visualizing-the-results-with-a-volcano-plot"></a>
-</h2>
-<p>Finally, we can visualize the results using a volcano plot, which
-highlights genes based on their log-fold change (<code>lfc</code>) and
-adjusted p-values (<code>adj_pval</code>). The <code>plot_volcano</code>
-function from devil makes this easy.</p>
+<div class="section level4">
+<h4 id="visualizing-results">Visualizing Results<a class="anchor" aria-label="anchor" href="#visualizing-results"></a>
+</h4>
+<p>Create a volcano plot to visualize significant genes</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_volcano.html">plot_volcano</a></span><span class="op">(</span><span class="va">test_res</span>, lfc_cut <span class="op">=</span> <span class="fl">1</span>, pval_cut <span class="op">=</span> <span class="fl">.05</span>, labels <span class="op">=</span> <span class="cn">TRUE</span>, point_size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: some of the reults are unrealiable (i.e. contains NaN)</span></span>
-<span><span class="co">#&gt;  Those genes will not be displayed</span></span>
-<span><span class="co">#&gt; 3 genes have adjusted p-value equal to 0, will be set to 2.63964710758017e-16</span></span></code></pre></div>
-<p><img src="Introduction_files/figure-html/unnamed-chunk-8-1.png" width="576" style="display: block; margin: auto;"></p>
-<p>This plot provides a clear view of the most significant genes, making
-it easier to identify those that are likely to be biologically
-relevant.</p>
+<code class="sourceCode R"><span><span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_volcano.html">plot_volcano</a></span><span class="op">(</span></span>
+<span>  <span class="va">test_results</span>,</span>
+<span>  lfc_cut <span class="op">=</span> <span class="fl">1</span>,          <span class="co"># Log fold-change cutoff</span></span>
+<span>  pval_cut <span class="op">=</span> <span class="fl">0.05</span>,      <span class="co"># P-value significance threshold</span></span>
+<span>  labels <span class="op">=</span> <span class="cn">TRUE</span>,        <span class="co"># Show gene labels</span></span>
+<span>  point_size <span class="op">=</span> <span class="fl">2</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; 82 genes have adjusted p-value equal to 0, will be set to 1.3394613724402e-319</span></span></code></pre></div>
+<p><img src="Introduction_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
 </div>
-<div class="section level2">
-<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
-</h2>
-<p>In this vignette, we’ve demonstrated how to:</p>
-<pre><code>1.  Load and preprocess scRNA-seq data.
-2.  Fit a model using the devil package.
-3.  Perform differential expression testing between conditions.
-4.  Visualize the results using a volcano plot.</code></pre>
-<p>The <code>devil</code> package offers a powerful and flexible
-framework for analyzing single-cell RNA sequencing data, helping
-researchers uncover meaningful biological insights.</p>
+</div>
+<div class="section level3">
+<h3 id="conclusion">Conclusion<a class="anchor" aria-label="anchor" href="#conclusion"></a>
+</h3>
+<p>In this tutorial, we covered the essential workflow for differential
+expression analysis using the devil package, including:</p>
+<ul>
+<li>Loading and preprocessing scRNA-seq data</li>
+<li>Filtering low-quality genes and selecting cell types</li>
+<li>Constructing a design matrix for statistical modeling</li>
+<li>Fitting the devil model and testing for differential expression</li>
+<li>Visualizing significant results with a volcano plot</li>
+</ul>
 </div>
   </div>
 
