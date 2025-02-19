@@ -1,12 +1,16 @@
 #include <RcppEigen.h>
 #include <iostream>
-// #include <chrono>
-// #include <Eigen/Dense>
-// #include "batch.hpp"
 // [[Rcpp::depends(RcppEigen)]]
 using namespace Rcpp;
 using namespace Eigen;
 
+/**
+ * Initializes beta coefficients using log-linear regression
+ *
+ * @param y Vector of response values
+ * @param X Design matrix
+ * @return Initial estimates of beta coefficients
+ */
 // [[Rcpp::export]]
 Eigen::VectorXd init_beta(Eigen::VectorXd y, Eigen::MatrixXd X) {
   VectorXd norm_log_count_mat = y.array().log1p();
@@ -77,20 +81,20 @@ List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float
 //   auto t1 = std::chrono::high_resolution_clock::now();
 //   auto y_float = y.transpose().eval();
 //   auto X_float = X.transpose().eval();
-//   auto mu_beta_float = mu_beta.transpose().eval(); 
-  
+//   auto mu_beta_float = mu_beta.transpose().eval();
+
 //   auto t2 = std::chrono::high_resolution_clock::now();
 //   auto elapsed{t2-t1};
 //   std::cout << "TIME Reorder cost " << std::chrono::duration<double, std::milli>(elapsed).count()
 //             << " ms" << std::endl;
 //   std::cout << "Start GPU "
-//             << "Iteration max:" << max_iter << ", EPS:" << eps << ", batch_size: " << batch_size 
+//             << "Iteration max:" << max_iter << ", EPS:" << eps << ", batch_size: " << batch_size
 //             << std::endl;
 //   std::vector<int> iterations(y.rows());
-  
+
 
 //  t1 = std::chrono::high_resolution_clock::now();
-//  //create iteration vector, pass by reference. 
+//  //create iteration vector, pass by reference.
 //  auto result= beta_fit_gpu_external(y_float, X_float, mu_beta_float, off, k, max_iter,
 // 				    eps,batch_size,iterations);
 //   t2  =std::chrono::high_resolution_clock::now();
@@ -103,8 +107,16 @@ List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float
 //  //  Return both mu_beta and Zigma as a List
 
 //  return List::create(Named("mu_beta") = result.cast<double>().transpose(), Named("iter") = iterations);
- 
+
 // }
+
+
+/*
+ *
+ * This code was copied from glmGamPoi
+ * https://github.com/const-ae/glmGamPoi
+ *
+ */
 
 // Check how many unique rows are in a matrix and if this number is less than or equal to n
 // This is important to determine if the model can be solved by group averages

@@ -13,31 +13,63 @@ test_de(
 )
 }
 \arguments{
-\item{devil.fit}{An object containing the fitted \code{devil} model, which is returned by the \code{fit_devil} function.}
+\item{devil.fit}{A fitted model object from fit_devil().
+Must contain beta coefficients, design matrix, and overdispersion parameters.}
 
-\item{contrast}{A numeric vector or matrix specifying the contrast of interest for differential expression testing. The contrast defines the comparison between conditions.}
+\item{contrast}{Numeric vector or matrix specifying the comparison of interest.
+Length must match number of coefficients in the model.
+For example, c(0, 1, -1) tests difference between second and third coefficient.}
 
-\item{pval_adjust_method}{A character string specifying the method to adjust p-values for multiple testing. (default is \code{"BH"} (Benjamini & Hochberg method))}
+\item{pval_adjust_method}{Character. Method for p-value adjustment.
+Passed to stats::p.adjust(). Common choices:
+\itemize{
+\item "BH": Benjamini-Hochberg (default)
+\item "bonferroni": Bonferroni correction
+\item "holm": Holm's step-down method
+}}
 
-\item{max_lfc}{A numeric value specifying the maximum absolute log fold change to consider when filtering results. (default is \code{10})}
+\item{max_lfc}{Numeric. Maximum absolute log2 fold change to report.
+Larger values are capped at ±max_lfc. Default: 10}
 
-\item{clusters}{An optional numeric or factor vector containing cluster IDs for each sample. This is useful in experimental settings where samples belong to different groups, such as different patients.}
+\item{clusters}{Numeric vector or factor. Sample cluster assignments for robust
+variance estimation. Length must match number of samples. Default: NULL}
 }
 \value{
-A tibble containing the results of the differential expression testing. The tibble includes:
-\item{name}{The gene names corresponding to the rows of the \code{devil.fit} model.}
-\item{pval}{The p-values associated with the differential expression test for each gene.}
-\item{adj_pval}{The adjusted p-values after applying the specified p-value adjustment method.}
-\item{lfc}{The log fold changes for each gene, scaled by log base 2 and filtered by \code{max_lfc}.}
+A tibble with columns:
+\describe{
+\item{name}{Character. Gene identifiers from input data}
+\item{pval}{Numeric. Raw p-values from statistical tests}
+\item{adj_pval}{Numeric. Adjusted p-values after multiple testing correction}
+\item{lfc}{Numeric. Log2 fold changes, capped at ±max_lfc}
+}
 }
 \description{
-This function performs differential expression testing between conditions using the provided contrast matrix, based on a fitted \code{devil} model.
+Performs statistical testing for differential expression using results from a fitted
+devil model. Supports both standard and robust (clustered) variance estimation,
+with multiple testing correction and customizable fold change thresholds.
 }
 \details{
-This function calculates log fold changes and p-values for each gene in parallel.
-It first computes log fold changes by multiplying the beta coefficients from the fitted model with the specified contrast.
-Then, it calculates p-values using either the sandwich variance estimator (if \code{clusters} is provided) or the Hessian matrix.
-The results are adjusted for multiple testing using the specified p-value adjustment method.
+The function implements the following analysis pipeline:
+\enumerate{
+\item Calculates log fold changes using contrast vectors/matrices
+\item Computes test statistics using either standard or robust variance estimation
+\item Calculates p-values using t-distribution with appropriate degrees of freedom
+\item Adjusts p-values for multiple testing
+\item Applies fold change thresholding
+}
 
-The results are filtered based on the specified maximum absolute log fold change (\code{max_lfc}), ensuring that extreme log fold changes are capped at this value.
+The variance estimation can account for sample clustering (e.g., multiple samples
+from the same patient) using a sandwich estimator for robust inference.
+}
+\examples{
+\dontrun{
+# Basic differential expression test
+results <- test_de(fit, contrast = c(0, 1, -1))
+
+# With sample clustering and stricter fold change threshold
+results <- test_de(fit, contrast = c(0, 1, -1),
+                   clusters = patient_ids,
+                   max_lfc = 5)
+}
+
 }

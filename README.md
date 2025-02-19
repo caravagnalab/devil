@@ -1,15 +1,25 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
+
 <!-- Use devtools::build_readme() to update the files -->
 
 # devil <a href="caravagnalab.github.io/rdevil"><img src="man/figures/logo.png" align="right" height="139" alt="devil website" /></a>
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
-`devil` is a package to perform differential expression analysis for
-scRNA-seq dataset considering either single- or multi-patients
-experimental designs
+`devil` is an R package for differential expression analysis in
+single-cell RNA sequencing (scRNA-seq) data. It supports both single-
+and multi-patient experimental designs, implementing robust statistical
+methods to identify differentially expressed genes while accounting for
+technical and biological variability.
+
+Key features are:
+
+1.  Flexible experimental design support (single/multiple patients)
+2.  Robust statistical testing framework
+3.  Efficient implementation for large-scale datasets
 
 ## Installation
 
@@ -30,7 +40,6 @@ library(devil)
 y <- t(as.matrix(rnbinom(1000, 1, .1)))
 fit <- devil::fit_devil(input_matrix=y, design_matrix=matrix(1, ncol = 1, nrow = 1000), verbose=T, size_factors=T, overdispersion = T)
 #> Compute size factors
-#> Skipping size factor estimation! Only one gene is present!
 #> Initialize beta estimate
 #> Fit beta coefficients
 #> Fit overdispersion
