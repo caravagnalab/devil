@@ -4,6 +4,18 @@
 using namespace Rcpp;
 // [[Rcpp::depends(RcppArmadillo)]]
 
+/*
+ * Functions originally from DESeq2:
+ * Love, M.I., Huber, W., Anders, S. (2014)
+ * "Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2"
+ * Genome Biology, 15:550.
+ * https://github.com/mikelove/DESeq2/blob/master/src/DESeq2.cpp
+ *
+ * This code was copied from glmGamPoi, which adapted the original DESeq2 code
+ * with some modifications:
+ * https://github.com/const-ae/glmGamPoi
+ */
+
 // This correction factor is necessary to avoid estimates of
 // theta that are basically +Inf. The problem is that for
 // some combination of the y, mu, and X the term
@@ -11,6 +23,10 @@ using namespace Rcpp;
 // with W = diag(1/(1/mu + theta)) canceled each other
 // exactly out for large theta.
 const double cr_correction_factor = 0.99;
+
+// Creates a frequency table of values in vector x, but only if the number of unique values
+//is less than or equal to stop_if_larger. This is used for optimization in likelihood calculations
+// when dealing with count data.
 
 // [[Rcpp::export]]
 List make_table_if_small(const NumericVector& x, int stop_if_larger){
@@ -28,33 +44,6 @@ List make_table_if_small(const NumericVector& x, int stop_if_larger){
   transform(counts.begin(), counts.end(), values.begin(), [](std::pair<int, size_t> pair){return (double) pair.second;});
   return List::create(keys, values);
 }
-
-
-//--------------------------------------------------------------------------------------------------//
-// The following code was originally copied from https://github.com/mikelove/DESeq2/blob/master/src/DESeq2.cpp
-// I adapted it to the needs of this project by:
-//  * renaming alpha -> theta for consitency
-//  * removing the part for the prior on theta
-//  * renaming x -> model_matrix
-//  * additional small changes
-//  * adding capability to calculate digamma/trigamma only
-//    on unique counts
-
-
-
-/*
- * DESeq2 C++ functions
- *
- * Author: Michael I. Love, Constantin Ahlmann-Eltze
- * Last modified: May 21, 2020
- * License: LGPL (>= 3)
- *
- * Note: The canonical, up-to-date DESeq2.cpp lives in
- * the DESeq2 library, the development branch of which
- * can be viewed here:
- *
- * https://github.com/mikelove/DESeq2/blob/master/src/DESeq2.cpp
- */
 
 // this function returns the log posterior of dispersion parameter alpha, for negative binomial variables
 // given the counts y, the expected means mu, the design matrix x (used for calculating the Cox-Reid adjustment),

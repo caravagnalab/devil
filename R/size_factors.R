@@ -1,30 +1,27 @@
 
+#' Calculate Size Factors for Count Data Normalization
+#'
+#' @description Computes normalization factors for count data, handling edge cases
+#'   like all-zero columns. Uses geometric mean normalization approach.
+#'
+#' @param Y Count data matrix with genes in rows and samples in columns
+#' @param verbose Logical indicating whether to print progress messages
+#'
+#' @return Vector of size factors, one per sample
 calculate_sf <- function(Y, verbose=FALSE) {
-  if (nrow(Y) <= 1) {
-    if (verbose) {
-      cat("Skipping size factor estimation! Only one gene is present!\n")
-    }
-    return(rep(1, ncol(Y)))
-  }
+  if (nrow(Y) <= 1) { return(rep(1, ncol(Y))) }
 
   sf <- DelayedMatrixStats::colSums2(Y, useNames=TRUE)
 
   # Check for all-zero columns
-  all_zero_column <- is.nan(sf) | (sf <= 0)
+  all_zero_genes <- (sf == 0)
 
-  # Replace all-zero columns with NA
-  sf[all_zero_column] <- 0
-
-  if (any(all_zero_column)) {
-    warning_message <- paste(sum(all_zero_column), "columns contain too many zeros to calculate a size factor. The size factor will be fixed to 0.001")
-    cat(warning_message, "\n")
-
-    # Apply the required transformations
-    sf <- sf / exp(mean(log(sf[!all_zero_column]), na.rm=TRUE))
-    sf[all_zero_column] <- 0.001
-  } else {
-    sf <- sf / exp(mean(log(sf), na.rm=TRUE))
+  if (any(all_zero_genes)) {
+    stop("Error: At least one column (i.e. gene) contains all zeros, unable to compute size factor. Please filter out non-expressed genes from input matrix")
   }
+
+  # Compute size factors
+  sf <- sf / exp(mean(log(sf), na.rm=TRUE))
 
   return(sf)
 }
@@ -43,6 +40,16 @@ compute_offset_matrix <- function (off, Y, size_factors) {
   return(offset_matrix)
 }
 
+#' Compute Offset Matrix for Statistical Model
+#'
+#' @description Creates an offset matrix incorporating base offsets and optional
+#'   size factors for model fitting.
+#'
+#' @param off Base offset value
+#' @param Y Count data matrix with genes in rows and samples in columns
+#' @param size_factors Optional vector of size factors for normalization
+#'
+#' @return Matrix of offset values for each gene-sample combination
 compute_offset_vector <- function(off, Y, size_factors) {
   n_samples <- ncol(Y)
   n_genes <- nrow(Y)

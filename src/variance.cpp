@@ -1,11 +1,23 @@
 #include <RcppEigen.h>
 #include <cmath>
-
 // [[Rcpp::depends(RcppEigen)]]
-
 using namespace Rcpp;
 using namespace Eigen;
 
+/**
+ * Computes the Hessian matrix for a generalized linear model with overdispersion
+ *
+ * This function calculates the inverse of the negative Hessian matrix of the log-likelihood
+ * with respect to the regression coefficients (beta). It accounts for overdispersion
+ * in the model using a quasi-likelihood approach.
+ *
+ * @param beta Vector of regression coefficients
+ * @param overdispersion Overdispersion parameter (phi)
+ * @param y Vector of response values
+ * @param design_matrix Matrix of predictor variables
+ * @param size_factors Vector of normalization factors
+ * @return Inverse of the negative Hessian matrix
+ */
 // [[Rcpp::export]]
 Eigen::MatrixXd compute_hessian(Eigen::VectorXd beta, const double overdispersion, Eigen::VectorXd y, Eigen::MatrixXd design_matrix, Eigen::VectorXd size_factors) {
   const double alpha = 1 / overdispersion;
@@ -29,6 +41,20 @@ Eigen::MatrixXd compute_hessian(Eigen::VectorXd beta, const double overdispersio
   return -H.inverse();
 }
 
+/**
+ * Computes score residuals for a generalized linear model
+ *
+ * Calculates the score residuals (derivative of the log-likelihood with respect
+ * to the regression coefficients) for each observation, accounting for overdispersion
+ * and size factors.
+ *
+ * @param design_matrix Matrix of predictor variables
+ * @param y Vector of response values
+ * @param beta Vector of regression coefficients
+ * @param overdispersion Overdispersion parameter (phi)
+ * @param size_factors Vector of normalization factors
+ * @return Matrix of score residuals
+ */
 // [[Rcpp::export]]
 Eigen::MatrixXd compute_scores(Eigen::MatrixXd& design_matrix, Eigen::VectorXd& y, Eigen::VectorXd& beta, double overdispersion, Eigen::VectorXd& size_factors) {
   MatrixXd xmat = design_matrix;
@@ -42,6 +68,22 @@ Eigen::MatrixXd compute_scores(Eigen::MatrixXd& design_matrix, Eigen::VectorXd& 
   return xmat.array().colwise() * wr.array();
 }
 
+
+/**
+ * Computes clustered "meat" matrix for sandwich variance estimator
+ *
+ * Calculates the middle matrix of the sandwich variance estimator, accounting for
+ * clustering in the data. This implementation uses the cluster-robust variance
+ * estimation method with a finite sample adjustment.
+ *
+ * @param design_matrix Matrix of predictor variables
+ * @param y Vector of response values
+ * @param beta Vector of regression coefficients
+ * @param overdispersion Overdispersion parameter (phi)
+ * @param size_factors Vector of normalization factors
+ * @param clusters Vector of cluster assignments
+ * @return Clustered "meat" matrix for sandwich variance estimation
+ */
 // [[Rcpp::export]]
 Eigen::MatrixXd compute_clustered_meat(Eigen::MatrixXd design_matrix, Eigen::VectorXd y, Eigen::VectorXd beta, double overdispersion, Eigen::VectorXd size_factors, Eigen::VectorXi clusters) {
 

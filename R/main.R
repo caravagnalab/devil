@@ -1,39 +1,73 @@
-#' Fit Model Parameters
-#'
-#' This function fits model parameters, including beta coefficients, the dispersion parameter,
-#' and beta sigma, using the provided predictor variables (`design_matrix`) and response variable (`input_matrix`).
-#' It optionally estimates overdispersion based on the fitted model.
+#' Fit Statistical Model for Count Data
 #'
 #' @description
-#' `fit_devil` performs model fitting by estimating beta coefficients, dispersion parameters,
-#' and beta sigma. The function uses predictor variables provided in the `design_matrix` and a response
-#' variable provided in the `input_matrix`. Optional features include the estimation of overdispersion
-#' and the computation of size factors. The function supports parallel processing and allows customization
-#' of various parameters such as the number of iterations, convergence tolerance, and more.
+#' Fits a statistical model to count data, particularly designed for RNA sequencing data analysis.
+#' The function estimates multiple parameters including regression coefficients (beta),
+#' overdispersion parameters, and normalizes data using size factors. It supports both CPU
+#' and GPU-based computation with parallel processing capabilities.
 #'
-#' @param input_matrix A numeric matrix representing the response variable, with rows corresponding to genes and columns to samples.
-#' @param design_matrix A numeric matrix representing the predictor variables, with rows corresponding to samples and columns to predictors.
-#' @param overdispersion Logical value indicating whether to estimate the overdispersion parameter. (default is `TRUE`)
-#' @param init_overdispersion If `NULL`, a initial overdispersion value will be estimated. If a numerical value is passed, it will be used as starting value. (default is `NULL`, recommended numerical is `100`)
-#' @param do_cox_reid_adjustment .
-#' @param offset A numeric vector to be included as an offset in the model. Can be used to avoid issues with non-invertible matrices.(default is `0`)
-#' @param size_factors Logical value indicating whether to compute size factors for normalization. (default is `TRUE`)
-#' @param verbose Logical value indicating whether to display progress messages during execution. (default is `FALSE`)
-#' @param max_iter Integer specifying the maximum number of iterations allowed for the optimization process. (default is `100`)
-#' @param tolerance Numeric value indicating the tolerance level for the convergence criterion. (default is `1e-3`)
-#' @param CUDA Logical value indicating whether to use GPU version of the code (default is `FALSE`)
-#' @param batch_size Integer specifying the number of genes that will be fit in each batch if `CUDA = TRUE`. (default is 1024)
-#' @param parallel.cores Integer specifying the number of CPU cores to use for parallelization. If `NULL`, the maximum number of available cores are used. (defaults is `NULL`)
+#' @details
+#' The function implements a negative binomial regression model with the following steps:
+#' 1. Computes size factors for data normalization (if requested)
+#' 2. Initializes model parameters including beta coefficients and overdispersion
+#' 3. Fits the model using either CPU (parallel) or GPU computation
+#' 4. Optionally estimates overdispersion parameters
 #'
-#' @return A list containing the following elements:
-#' \item{beta}{A matrix of fitted beta coefficients for each gene.}
-#' \item{overdispersion}{A numeric vector of overdispersion parameters for each gene (if estimated).}
-#' \item{iterations}{A numeric vector indicating the number of iterations taken for each gene.}
-#' \item{size_factors}{A numeric vector of size factors used for normalization.}
-#' \item{offset_matrix}{A numeric matrix of offset values used in the model.}
-#' \item{design_matrix}{The design matrix provided as input.}
-#' \item{input_matrix}{The input matrix used after processing.}
-#' \item{input_parameters}{A list of input parameters used in the function, including `max_iter`, `tolerance`, and `parallel.cores`.}
+#' The model fitting process uses iterative optimization with configurable convergence
+#' criteria and maximum iterations. For large datasets, the GPU implementation processes
+#' genes in batches for improved memory efficiency.
+#'
+#' @param input_matrix A numeric matrix of count data (genes × samples).
+#'   Rows represent genes/features, columns represent samples/cells.
+#' @param design_matrix A numeric matrix of predictor variables (samples × predictors).
+#'   Each row corresponds to a sample, each column to a predictor variable.
+#' @param overdispersion Logical. Whether to estimate the overdispersion parameter.
+#'   Set to FALSE for Poisson regression. Default: TRUE
+#' @param init_overdispersion Numeric or NULL. Initial value for overdispersion parameter.
+#'   If NULL, estimates initial value from data. Recommended value if specified: 100.
+#'   Default: NULL
+#' @param do_cox_reid_adjustment Logical. Whether to apply Cox-Reid adjustment in
+#'   overdispersion estimation. Default: TRUE
+#' @param offset Numeric. Value added to counts to avoid numerical issues with zero counts.
+#'   Default: 1e-6
+#' @param size_factors Logical. Whether to compute normalization factors for different
+#'   sequencing depths. Default: TRUE
+#' @param verbose Logical. Whether to print progress messages during execution.
+#'   Default: FALSE
+#' @param max_iter Integer. Maximum number of iterations for parameter optimization.
+#'   Default: 100
+#' @param tolerance Numeric. Convergence criterion for parameter optimization.
+#'   Default: 1e-3
+#' @param CUDA Logical. Whether to use GPU acceleration (requires CUDA support).
+#'   Default: FALSE
+#' @param batch_size Integer. Number of genes to process per batch in GPU mode.
+#'   Only relevant if CUDA = TRUE. Default: 1024
+#' @param parallel.cores Integer or NULL. Number of CPU cores for parallel processing.
+#'   If NULL, uses all available cores. Default: NULL
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{beta}{Matrix of fitted coefficients (genes × predictors)}
+#'   \item{overdispersion}{Vector of fitted overdispersion parameters (one per gene)}
+#'   \item{iterations}{Vector of iteration counts for convergence (one per gene)}
+#'   \item{size_factors}{Vector of computed size factors (one per sample)}
+#'   \item{offset_vector}{Vector of offset values used in the model}
+#'   \item{design_matrix}{Input design matrix (as provided)}
+#'   \item{input_matrix}{Input count matrix (as provided)}
+#'   \item{input_parameters}{List of used parameter values (max_iter, tolerance, parallel.cores)}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Basic usage with default parameters
+#' fit <- fit_devil(counts, design)
+#'
+#' # Using GPU acceleration with custom batch size
+#' fit <- fit_devil(counts, design, CUDA = TRUE, batch_size = 2048)
+#'
+#' # Disable overdispersion estimation (Poisson model)
+#' fit <- fit_devil(counts, design, overdispersion = FALSE)
+#' }
 #'
 #' @export
 #' @rawNamespace useDynLib(devil);

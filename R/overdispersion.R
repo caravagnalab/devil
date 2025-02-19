@@ -1,6 +1,27 @@
 
+#' Fit Dispersion Parameter for Negative Binomial Model
+#'
+#' @description Estimates the dispersion parameter in a negative binomial GLM using
+#'   maximum likelihood estimation. Implementation from the glmGamPoi package.
+#'
+#' @details This implementation comes from the glmGamPoi package:
+#'   https://github.com/const-ae/glmGamPoi
+#'
+#'   Original publication:
+#'   Ahlmann-Eltze, C., Huber, W. (2020). glmGamPoi: Fitting Gamma-Poisson
+#'   Generalized Linear Models on Single Cell Count Data. Bioinformatics.
+#'   https://doi.org/10.1093/bioinformatics/btaa1009
+#'
+#' @param beta Vector of coefficient estimates
+#' @param model_matrix Design matrix of predictor variables
+#' @param y Vector of response variables (counts)
+#' @param offset_matrix Matrix of offset values
+#' @param tolerance Convergence tolerance for optimization
+#' @param max_iter Maximum number of iterations for optimization
+#' @param do_cox_reid_adjustment Logical indicating whether to apply Cox-Reid adjustment
+#'
+#' @return Estimated dispersion parameter
 fit_dispersion <- function(beta, model_matrix, y, offset_matrix, tolerance, max_iter, do_cox_reid_adjustment=TRUE) {
-
 
   tab <- make_table_if_small(y, stop_if_larger = length(y)/2)
 
@@ -67,18 +88,20 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, tolerance, max_
   return(exp(res$par))
 }
 
-# estimate_dispersion_mat <- function(y, offset_matrix) {
-#   xim <- 1/mean(DelayedMatrixStats::colMeans2(exp(offset_matrix), useNames=T))
-#   bv <- DelayedMatrixStats::rowVars(y, useNames=T)
-#   bm <- DelayedMatrixStats::rowMeans2(y, useNames=T)
-#   disp <- (bv - xim * bm) / bm^2
-#   ifelse(is.na(disp) | disp < 0, 100, disp)
-# }
-
-estimate_dispersion <- function(y, offset_vector) {
-  xim <- 1/mean(exp(offset_vector))
-  bv <- DelayedMatrixStats::rowVars(y, useNames=T)
-  bm <- DelayedMatrixStats::rowMeans2(y, useNames=T)
-  disp <- (bv - xim * bm) / bm^2
-  ifelse(is.na(disp) | disp < 0, 100, disp)
+#' Estimate Dispersion Parameters for Count Matrix
+#'
+#' @description Calculates per-gene dispersion estimates for a count matrix using
+#'   a method of moments approach. Handles edge cases by setting a default high
+#'   dispersion value.
+#'
+#' @param count_matrix Matrix of count data with genes in rows and samples in columns
+#' @param offset_vector Vector of offset values for normalization
+#'
+#' @return Vector of dispersion estimates, one per gene
+estimate_dispersion <- function(count_matrix, offset_vector) {
+  mean_offset_inverse <- 1 / mean(exp(offset_vector))
+  variance <- DelayedMatrixStats::rowVars(count_matrix, useNames=TRUE)
+  mean_counts <- DelayedMatrixStats::rowMeans2(count_matrix, useNames=TRUE)
+  dispersion <- (variance - mean_offset_inverse * mean_counts) / mean_counts^2
+  ifelse(is.na(dispersion) | dispersion < 0, 100, dispersion)
 }

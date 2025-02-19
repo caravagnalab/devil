@@ -19,7 +19,13 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-`devil` is a package to perform differential expression analysis for scRNA-seq dataset considering either single- or multi-patients experimental designs
+`devil` is an R package for differential expression analysis in single-cell RNA sequencing (scRNA-seq) data. It supports both single- and multi-patient experimental designs, implementing robust statistical methods to identify differentially expressed genes while accounting for technical and biological variability.
+
+Key features are:
+
+1.  Flexible experimental design support (single/multiple patients)
+2.  Robust statistical testing framework
+3.  Efficient implementation for large-scale datasets
 
 ## Installation
 
