@@ -87,7 +87,13 @@
 </h1></div>
 <!-- badges: start -->
 <!-- badges: end -->
-<p><code>devil</code> is a package to perform differential expression analysis for scRNA-seq dataset considering either single- or multi-patients experimental designs</p>
+<p><code>devil</code> is an R package for differential expression analysis in single-cell RNA sequencing (scRNA-seq) data. It supports both single- and multi-patient experimental designs, implementing robust statistical methods to identify differentially expressed genes while accounting for technical and biological variability.</p>
+<p>Key features are:</p>
+<ol style="list-style-type: decimal">
+<li>Flexible experimental design support (single/multiple patients)</li>
+<li>Robust statistical testing framework</li>
+<li>Efficient implementation for large-scale datasets</li>
+</ol>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -104,7 +110,6 @@
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/NegBinomial.html" class="external-link">rnbinom</a></span><span class="op">(</span><span class="fl">1000</span>, <span class="fl">1</span>, <span class="fl">.1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="reference/fit_devil.html">fit_devil</a></span><span class="op">(</span>input_matrix<span class="op">=</span><span class="va">y</span>, design_matrix<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">1</span>, ncol <span class="op">=</span> <span class="fl">1</span>, nrow <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span>, verbose<span class="op">=</span><span class="cn">T</span>, size_factors<span class="op">=</span><span class="cn">T</span>, overdispersion <span class="op">=</span> <span class="cn">T</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Compute size factors</span></span>
-<span><span class="co">#&gt; Skipping size factor estimation! Only one gene is present!</span></span>
 <span><span class="co">#&gt; Initialize beta estimate</span></span>
 <span><span class="co">#&gt; Fit beta coefficients</span></span>
 <span><span class="co">#&gt; Fit overdispersion</span></span>

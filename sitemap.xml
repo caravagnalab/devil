@@ -6,9 +6,16 @@
 <url><loc>caravagnalab.github.io/rdevil/articles/index.html</loc></url>
 <url><loc>caravagnalab.github.io/rdevil/authors.html</loc></url>
 <url><loc>caravagnalab.github.io/rdevil/index.html</loc></url>
+<url><loc>caravagnalab.github.io/rdevil/reference/calculate_sf.html</loc></url>
+<url><loc>caravagnalab.github.io/rdevil/reference/compute_offset_vector.html</loc></url>
+<url><loc>caravagnalab.github.io/rdevil/reference/compute_sandwich.html</loc></url>
 <url><loc>caravagnalab.github.io/rdevil/reference/devil-package.html</loc></url>
+<url><loc>caravagnalab.github.io/rdevil/reference/estimate_dispersion.html</loc></url>
 <url><loc>caravagnalab.github.io/rdevil/reference/fit_devil.html</loc></url>
+<url><loc>caravagnalab.github.io/rdevil/reference/fit_dispersion.html</loc></url>
 <url><loc>caravagnalab.github.io/rdevil/reference/index.html</loc></url>
+<url><loc>caravagnalab.github.io/rdevil/reference/init_beta.html</loc></url>
+<url><loc>caravagnalab.github.io/rdevil/reference/init_beta_groups.html</loc></url>
 <url><loc>caravagnalab.github.io/rdevil/reference/plot_volcano.html</loc></url>
 <url><loc>caravagnalab.github.io/rdevil/reference/test_de.html</loc></url>
 </urlset>
