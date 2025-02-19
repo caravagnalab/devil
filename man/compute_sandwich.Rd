@@ -33,3 +33,4 @@ Matrix containing the sandwich estimator
 Calculates the sandwich estimator for robust covariance estimation,
 particularly useful in clustered or heteroskedastic data scenarios.
 }
+\keyword{internal}

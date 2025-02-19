@@ -45,3 +45,4 @@ Ahlmann-Eltze, C., Huber, W. (2020). glmGamPoi: Fitting Gamma-Poisson
 Generalized Linear Models on Single Cell Count Data. Bioinformatics.
 https://doi.org/10.1093/bioinformatics/btaa1009
 }
+\keyword{internal}

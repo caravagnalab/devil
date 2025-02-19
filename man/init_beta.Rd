@@ -20,3 +20,4 @@ Matrix of initial beta coefficients
 Initializes regression coefficients using QR decomposition
 of the design matrix and normalized log counts.
 }
+\keyword{internal}

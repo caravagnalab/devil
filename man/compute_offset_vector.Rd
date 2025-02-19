@@ -20,3 +20,4 @@ Matrix of offset values for each gene-sample combination
 Creates an offset matrix incorporating base offsets and optional
 size factors for model fitting.
 }
+\keyword{internal}
