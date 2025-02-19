@@ -18,3 +18,4 @@ Vector of size factors, one per sample
 Computes normalization factors for count data, handling edge cases
 like all-zero columns. Uses geometric mean normalization approach.
 }
+\keyword{internal}

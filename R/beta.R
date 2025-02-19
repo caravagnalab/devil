@@ -9,6 +9,8 @@
 #' @param offset_matrix Matrix of offset values
 #'
 #' @return Matrix of initial beta coefficients
+#'
+#' @keywords internal
 init_beta <- function(y, design_matrix, offset_matrix) {
   qrx <- qr(design_matrix)
   Q <- qr.Q(qrx)[seq_len(nrow(design_matrix)),,drop=FALSE]
@@ -30,6 +32,8 @@ init_beta <- function(y, design_matrix, offset_matrix) {
 #' @param offset_matrix Matrix of offset values
 #'
 #' @return Matrix of initial beta coefficients by group
+#'
+#' @keywords internal
 init_beta_groups <- function(y, groups, offset_matrix) {
   #norm_Y <- y / exp(offset_matrix)
   norm_Y <- y / exp(offset_matrix[1,])

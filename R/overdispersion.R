@@ -21,6 +21,8 @@
 #' @param do_cox_reid_adjustment Logical indicating whether to apply Cox-Reid adjustment
 #'
 #' @return Estimated dispersion parameter
+#'
+#' @keywords internal
 fit_dispersion <- function(beta, model_matrix, y, offset_matrix, tolerance, max_iter, do_cox_reid_adjustment=TRUE) {
 
   tab <- make_table_if_small(y, stop_if_larger = length(y)/2)
@@ -98,6 +100,8 @@ fit_dispersion <- function(beta, model_matrix, y, offset_matrix, tolerance, max_
 #' @param offset_vector Vector of offset values for normalization
 #'
 #' @return Vector of dispersion estimates, one per gene
+#'
+#' @keywords internal
 estimate_dispersion <- function(count_matrix, offset_vector) {
   mean_offset_inverse <- 1 / mean(exp(offset_vector))
   variance <- DelayedMatrixStats::rowVars(count_matrix, useNames=TRUE)

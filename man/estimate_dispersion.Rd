@@ -19,3 +19,4 @@ Calculates per-gene dispersion estimates for a count matrix using
 a method of moments approach. Handles edge cases by setting a default high
 dispersion value.
 }
+\keyword{internal}

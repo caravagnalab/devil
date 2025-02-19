@@ -8,6 +8,8 @@
 #' @param verbose Logical indicating whether to print progress messages
 #'
 #' @return Vector of size factors, one per sample
+#'
+#' @keywords internal
 calculate_sf <- function(Y, verbose=FALSE) {
   if (nrow(Y) <= 1) { return(rep(1, ncol(Y))) }
 
@@ -50,6 +52,8 @@ compute_offset_matrix <- function (off, Y, size_factors) {
 #' @param size_factors Optional vector of size factors for normalization
 #'
 #' @return Matrix of offset values for each gene-sample combination
+#'
+#' @keywords internal
 compute_offset_vector <- function(off, Y, size_factors) {
   n_samples <- ncol(Y)
   n_genes <- nrow(Y)

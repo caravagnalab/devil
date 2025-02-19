@@ -20,3 +20,4 @@ Matrix of initial beta coefficients by group
 Initializes regression coefficients based on group-wise
 means of normalized counts.
 }
+\keyword{internal}
