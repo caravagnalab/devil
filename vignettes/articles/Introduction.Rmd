@@ -1,5 +1,6 @@
 ---
-title: "Introduction to "
+title: "Getting Started with `devil`: Differential Expression Analysis in scRNA-seq"
+output: html_document
 ---
 
 ```{r, include = FALSE}
@@ -9,123 +10,140 @@ knitr::opts_chunk$set(
 )
 ```
 
+This tutorial guides you through the use of the `devil` package for analyzing differential gene expression in single-cell RNA sequencing (scRNA-seq) data.
+
+### Prerequisites
+
+Before we begin, make sure you have the required packages installed
+
 ```{r setup}
 library(devil)
 library(scRNAseq)
 ```
 
-This vignette provides a step-by-step guide to using the devil package for differential expression analysis of single-cell RNA sequencing (scRNA-seq) data. We’ll start by loading a dataset, preparing the data, fitting the model, and then testing for differential expression between conditions. Finally, we’ll visualize the results using a volcano plot.
+### Loading and preparing your data
 
-## Input data
-
-First, we load a single-cell RNA dataset from the `scRNAseq` package. This dataset contains RNA counts for individual cells and metadata describing the features of each cell.
+Let's start by loading a sample dataset from the `scRNAseq` package
 
 ```{r, message=FALSE, warning=FALSE}
-data <- scRNAseq::ReprocessedFluidigmData()
-```
+# Load the example dataset
+data <- scRNAseq::BaronPancreasData()
 
-### Extracting Counts and Metadata
-
-To fit a model using `devil`, we need to extract the RNA counts and the associated metadata.
-
-```{r}
+# Extract counts and metadata
 counts <- data@assays@data[[1]]
 metadata <- data@colData
 
-print(dim(counts))  # Dimensions of the counts matrix
-print(dim(metadata))  # Dimensions of the metadata
-print(head(metadata))  # Display the first few rows of metadata
-colnames(metadata)  # Display the column names of metadata
+# Display dataset dimensions
+cat("Number of genes:", nrow(counts), "\n")
+cat("Number of cells:", ncol(counts), "\n")
+cat("Metadata features:", ncol(metadata), "\n")
 ```
 
-The output shows that we have 130 cells described by 28 features, along with RNA counts for 26,255 genes.
+### Data cleaning
 
-### Preprocessing: Filtering Non-Expressed Genes
+#### Filtering cell types
 
-Before proceeding, let’s remove genes that are not expressed in any of the cells. This helps in reducing the noise and computational load.
+To focus our analysis, we retain only the three most abundant cell types.
 
 ```{r}
-counts <- counts[rowSums(counts) > 0,]
-dim(counts)
+# Select the three most expressed cell types
+top_3_ct <- names(sort(table(metadata$label), decreasing = TRUE)[1:3])
+cell_filter <- metadata$label %in% top_3_ct
+metadata <- metadata[cell_filter,]
+counts <- counts[, cell_filter]
+
+cat("Remaining cells after filtering:", nrow(metadata), "\n")
 ```
 
-After filtering, we retain approximately 17,000 genes.
+#### Filtering Low-Expression Genes
 
-### Creating the Design Matrix
-
-Next, we create a `design_matrix`, which is a matrix that includes the features of each cell. The `model.matrix` function is an easy way to generate this matrix, requiring a formula and the metadata as input.
+We remove genes with extremely low expression to improve statistical power.
 
 ```{r}
-design_matrix <- model.matrix(~Biological_Condition, data = metadata)
-print(unique(metadata$Biological_Condition))  # Display unique biological conditions
-head(design_matrix)  # Display the first few rows of the design matrix
+# Keep only genes with expression in at least some cells
+counts <- counts[rowSums(counts) > 500,]
+cat("Remaining genes after filtering:", nrow(counts), "\n")
 ```
 
-Here, the design matrix models each cell based on its `Biological_Condition`. The intercept in this model represents the “GW16” condition.
+### Setting up the Design matrix
 
-## Fitting the model
+The design matrix specifies the experimental conditions for each cell:
 
-With the data prepared, we can now fit the model using the `fit_devil` function. This function estimates the coefficients (`beta`) and overdispersion for each gene across different conditions.
+```{r}
+# Create design matrix based on biological conditions
+design_matrix <- model.matrix(~label, data = metadata)
+
+# View unique conditions in your data
+print(unique(metadata$label))
+```
+
+### Model fitting
+
+Next, we fit the statistical model to the filtered dataset using the `devil::fit_devil()` function.
 
 ```{r}
 fit <- devil::fit_devil(
-  as.matrix(counts), 
-  design_matrix, 
-  overdispersion = T, 
-  size_factors = T, 
-  verbose = T, 
-  parallel.cores = 1
+  as.matrix(counts),
+  design_matrix,
+  overdispersion = TRUE,
+  size_factors = TRUE, 
+  init_overdispersion = 100,
+  verbose = TRUE,
+  parallel.cores = 1, 
+  offset = 1e-6
 )
 ```
+### Testing for Differential Expression
 
-The `fit` object contains several important components, including:
-
-- `beta` : matrix of coefficients (n_genes x n_features)
-- `overdispersion` : vector of coefficients (n_genes)
-
-## Testing for Differential Expression
+#### Understanding Contrast Vectors
 
 In order to test the data you need to specify your null hypothesis using a contrast vector $c$. Considering a gene $g$ along with its inferred coefficient $\beta_g$, the null hypothesis $H_0$ is usually defined as
 
 $$ H_0 : \sum_i c_i \beta_{g,i} = 0$$
-For example, if you are interested in the genes that are differentially expressed between the "GW21" and the "NPC" condition, you need to find the genes for which we strongly reject the null hypothesis 
+For example, if you are interested in the genes that are differentially expressed between the "beta" and "ductal" cell types, you need to find the genes for which we strongly reject the null hypothesis 
 
-$$ \beta_{GW21} = \beta_{NPC} \hspace{5mm} \rightarrow \hspace{5mm} \beta_{GW21} - \beta_{NPC} = 0$$
-which is equivalent to defining the contrast vector $c = (0,1,0,-1)$.
+$$ \beta_{beta} = \beta_{ductal} \hspace{5mm} \rightarrow \hspace{5mm} \beta_{beta} - \beta_{ductal} = 0$$
+
+which is equivalent to defining the contrast vector $c = (0,1,-1)$.
 Once the contrast vector is defined, you can test the null hypothesis using the `test_de` function.
 
 ```{r}
-contrast <- c(0, 1, 0, -1)
-test_res <- devil::test_de(fit, contrast, max_lfc = 20)
-if (!('name' %in% colnames(test_res))) {
-  test_res$name <- as.character( 1:nrow(test_res) )
+# Test differential expression between conditions
+contrast <- c(0, 1, -1)
+test_results <- devil::test_de(fit, contrast, max_lfc = 20)
+
+# Add gene names if missing
+if (!('name' %in% colnames(test_results))) {
+  test_results$name <- as.character(1:nrow(test_results))
 }
-head(test_res)
 ```
 
-The results contains, for each gene
+The test results include:
 
-- `pval` : p-value associated with the statistical test
-- `adj_pval` : p-value corrected considering multiple testing
-- `lfc` : log2 fold change of gene expression between the tested conditions
+- `pval` : raw p-value
+- `adj_pval` : adjusted p-value (corrected for multiple testing)
+- `lfc` : log2 fold change between conditions
 
-## Visualizing the Results with a Volcano Plot
+#### Visualizing Results
 
-Finally, we can visualize the results using a volcano plot, which highlights genes based on their log-fold change (`lfc`) and adjusted p-values (`adj_pval`). The `plot_volcano` function from devil makes this easy.
+Create a volcano plot to visualize significant genes
 
-```{r, fig.align='center', fig.width=6, fig.height=6}
-devil::plot_volcano(test_res, lfc_cut = 1, pval_cut = .05, labels = TRUE, point_size = 2)
+```{r}
+devil::plot_volcano(
+  test_results,
+  lfc_cut = 1,          # Log fold-change cutoff
+  pval_cut = 0.05,      # P-value significance threshold
+  labels = TRUE,        # Show gene labels
+  point_size = 2
+)
 ```
 
-This plot provides a clear view of the most significant genes, making it easier to identify those that are likely to be biologically relevant.
+### Conclusion 
 
-## Summary
+In this tutorial, we covered the essential workflow for differential expression analysis using the devil package, including:
 
-In this vignette, we’ve demonstrated how to:
-
-	1.	Load and preprocess scRNA-seq data.
-	2.	Fit a model using the devil package.
-	3.	Perform differential expression testing between conditions.
-	4.	Visualize the results using a volcano plot.
-
-The `devil` package offers a powerful and flexible framework for analyzing single-cell RNA sequencing data, helping researchers uncover meaningful biological insights.
+- Loading and preprocessing scRNA-seq data
+- Filtering low-quality genes and selecting cell types
+- Constructing a design matrix for statistical modeling
+- Fitting the devil model and testing for differential expression
+- Visualizing significant results with a volcano plot 
