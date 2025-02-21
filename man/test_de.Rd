@@ -9,7 +9,8 @@ test_de(
   contrast,
   pval_adjust_method = "BH",
   max_lfc = 10,
-  clusters = NULL
+  clusters = NULL,
+  parallel.cores = NULL
 )
 }
 \arguments{
@@ -33,6 +34,9 @@ Larger values are capped at ±max_lfc. Default: 10}
 
 \item{clusters}{Numeric vector or factor. Sample cluster assignments for robust
 variance estimation. Length must match number of samples. Default: NULL}
+
+\item{parallel.cores}{Integer or NULL. Number of CPU cores for parallel processing.
+If NULL, uses all available cores. Default: NULL}
 }
 \value{
 A tibble with columns:

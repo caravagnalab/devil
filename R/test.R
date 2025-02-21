@@ -30,6 +30,8 @@
 #'   Larger values are capped at ±max_lfc. Default: 10
 #' @param clusters Numeric vector or factor. Sample cluster assignments for robust
 #'   variance estimation. Length must match number of samples. Default: NULL
+#' @param parallel.cores Integer or NULL. Number of CPU cores for parallel processing.
+#'   If NULL, uses all available cores. Default: NULL
 #'
 #' @return A tibble with columns:
 #' \describe{
@@ -52,12 +54,17 @@
 #'
 #' @export
 #' @rawNamespace useDynLib(devil);
-test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10, clusters = NULL) {
+test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10, clusters = NULL, parallel.cores=NULL) {
 
-  if (devil.fit$input_parameters$parallel) {
-    n.cores = parallel::detectCores()
+  # Detect cores to use
+  max.cores <- parallel::detectCores()
+  if (is.null(parallel.cores)) {
+    n.cores = max.cores
   } else {
-    n.cores = 1
+    if (parallel.cores > max.cores) {
+      message(paste0("Requested ", parallel.cores, " cores, but only ", max.cores, " available."))
+    }
+    n.cores = min(max.cores, parallel.cores)
   }
 
   # Extract necessary information
