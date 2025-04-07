@@ -1,5 +1,5 @@
 CXX_STD = CXX17
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -L$(CUTENSOR_HOME) -L$(CUDA_HOME)/lib64 -L/usr/local/cuda-12.2/lib64/  -lcutensor -lcuda -lcudart -lcusolver -lcublas
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -L$(CUTENSOR_HOME)/lib -L$(CUDA_HOME)/lib64 -L/usr/local/cuda-12.2/lib64/  -lcutensor -lcuda -lcudart -lcusolver -lcublas
 PKG_CPPFLAGS =   -Wno-ignored-attributes
 SHELL := /bin/bash
 
