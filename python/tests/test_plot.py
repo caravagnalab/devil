@@ -11,6 +11,7 @@ from unittest.mock import patch, MagicMock
 import warnings
 
 from devil.plot import plot_volcano
+import devil
 
 
 # Set matplotlib to non-interactive backend for testing

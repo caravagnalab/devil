@@ -79,6 +79,19 @@ def plot_volcano(
     # Create copy to avoid modifying original
     plot_data = de_results.copy()
     
+    # Handle empty DataFrame
+    if len(plot_data) == 0:
+        warnings.warn("No data points to plot")
+        # Create empty plot with proper labels
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        ax.set_xlabel(xlabel or r'$\log_2$ Fold Change')
+        ax.set_ylabel(ylabel or r'$-\log_{10}$ Adjusted P-value')
+        ax.set_title(title)
+        ax.text(0.5, 0.5, 'No data to display', transform=ax.transAxes, 
+                ha='center', va='center', fontsize=12, alpha=0.7)
+        return ax
+    
     # Remove rows with missing values
     n_missing = plot_data[['lfc', pval_col]].isna().any(axis=1).sum()
     if n_missing > 0:
@@ -88,8 +101,36 @@ def plot_volcano(
         )
         plot_data = plot_data.dropna(subset=['lfc', pval_col])
     
+    # Remove rows with infinite values (only if data remains)
+    if len(plot_data) > 0:
+        n_infinite = (~np.isfinite(plot_data[['lfc', pval_col]])).any(axis=1).sum()
+        if n_infinite > 0:
+            warnings.warn(
+                f"Removing {n_infinite} genes with infinite values. "
+                "These may be problematic genes with extreme statistics."
+            )
+            plot_data = plot_data[np.isfinite(plot_data[['lfc', pval_col]]).all(axis=1)]
+    
+    # Handle empty DataFrame after filtering
+    if len(plot_data) == 0:
+        warnings.warn("No valid data points to plot after filtering")
+        # Create empty plot with proper labels
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        ax.set_xlabel(xlabel or r'$\log_2$ Fold Change')
+        ax.set_ylabel(ylabel or r'$-\log_{10}$ Adjusted P-value')
+        ax.set_title(title)
+        ax.text(0.5, 0.5, 'No data to display', transform=ax.transAxes, 
+                ha='center', va='center', fontsize=12, alpha=0.7)
+        return ax
+    
     # Handle p-values of 0
-    min_nonzero_pval = plot_data[plot_data[pval_col] > 0][pval_col].min()
+    nonzero_pvals = plot_data[plot_data[pval_col] > 0][pval_col]
+    if len(nonzero_pvals) > 0:
+        min_nonzero_pval = nonzero_pvals.min()
+    else:
+        min_nonzero_pval = 1e-300  # Default minimum for when all p-values are 0
+    
     n_zero_pval = (plot_data[pval_col] == 0).sum()
     if n_zero_pval > 0:
         warnings.warn(
@@ -112,7 +153,7 @@ def plot_volcano(
         (plot_data['significant_pval']) & (plot_data['significant_lfc'])
     ]
     categories = ['Non-significant', 'LFC only', 'P-value only', 'Both']
-    plot_data['category'] = np.select(conditions, categories)
+    plot_data['category'] = np.select(conditions, categories, default='Non-significant')
     
     # Set default colors if not provided
     if colors is None:
@@ -180,8 +221,15 @@ def plot_volcano(
     ax.legend(loc='best', frameon=True, framealpha=0.9)
     
     # Center x-axis at 0
-    max_abs_lfc = np.abs(plot_data['lfc']).max()
-    ax.set_xlim(-max_abs_lfc * 1.1, max_abs_lfc * 1.1)
+    finite_lfc = plot_data['lfc'][np.isfinite(plot_data['lfc'])]
+    if len(finite_lfc) > 0:
+        max_abs_lfc = np.abs(finite_lfc).max()
+        if np.isfinite(max_abs_lfc) and max_abs_lfc > 0:
+            ax.set_xlim(-max_abs_lfc * 1.1, max_abs_lfc * 1.1)
+        else:
+            ax.set_xlim(-1.0, 1.0)  # Default range if max is 0 or problematic
+    else:
+        ax.set_xlim(-1.0, 1.0)  # Default range if no finite values
     
     # Add grid
     ax.grid(True, alpha=0.3)
