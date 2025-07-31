@@ -89,8 +89,10 @@ class TestInitBeta:
         """Test that QR decomposition is used correctly."""
         counts, design, offset = test_data
         
-        # Manually perform QR decomposition to compare
-        Q, R = linalg.qr(design)
+        # Manually perform QR decomposition to compare.  Use the economic
+        # decomposition so that `R` is square and matches the implementation in
+        # :func:`init_beta` which relies on a reduced QR factorisation.
+        Q, R = linalg.qr(design, mode="economic")
         norm_log_counts = np.log1p((counts.T / np.exp(offset)[:, np.newaxis]))
         expected_beta = linalg.solve_triangular(R, Q.T @ norm_log_counts, lower=False).T
         
