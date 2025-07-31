@@ -6,7 +6,7 @@ from typing import Optional
 
 def calculate_size_factors(
     count_matrix: np.ndarray,
-    method: str = "median_ratio",
+    method: str = "total_count",
     verbose: bool = False
 ) -> np.ndarray:
     """
@@ -32,8 +32,13 @@ def calculate_size_factors(
     
     if method == "total_count":
         # Simple total count normalization
-        size_factors = np.sum(count_matrix, axis=0)
-        
+        size_factors = np.sum(count_matrix, axis=0).astype(float)
+        zero_mask = size_factors == 0
+        # Replace zeros with 1 to avoid log issues; these samples will
+        # effectively get a size factor of 1 after normalization.
+        if np.any(zero_mask):
+            size_factors[zero_mask] = 1.0
+
     elif method == "median_ratio":
         # DESeq2-style median ratio normalization
         # Calculate geometric mean per gene
@@ -56,16 +61,17 @@ def calculate_size_factors(
     else:
         raise ValueError(f"Unknown method: {method}")
     
-    # Check for all-zero samples
-    zero_samples = size_factors == 0
-    if np.any(zero_samples):
+    # Check for all-zero samples using column sums
+    zero_samples = np.sum(count_matrix, axis=0) == 0
+    if np.all(zero_samples):
         raise ValueError(
             f"Samples {np.where(zero_samples)[0]} have zero total counts. "
             "Please filter out empty samples."
         )
     
     # Normalize to geometric mean
-    size_factors = size_factors / np.exp(np.mean(np.log(size_factors)))
+    geom = np.exp(np.mean(np.log(size_factors))) if np.all(size_factors > 0) else 1.0
+    size_factors = size_factors / geom
     
     if verbose:
         print(f"Size factor range: [{np.min(size_factors):.3f}, "

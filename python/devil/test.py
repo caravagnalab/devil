@@ -1,5 +1,8 @@
 """Module for differential expression testing with GPU support."""
 
+# Prevent pytest from collecting functions in this module as tests.
+__test__ = False
+
 from typing import Optional, Union, List, Dict, Any
 import numpy as np
 import pandas as pd
@@ -111,7 +114,7 @@ def test_de(
         )
     else:
         pvals, ses, stats_vals = _test_de_cpu(
-            devil_fit, contrast, clusters, n_jobs, verbose
+            devil_fit, contrast, clusters, n_jobs or 1, verbose
         )
     
     # Adjust p-values
@@ -133,8 +136,12 @@ def test_de(
         "stat": stats_vals
     })
     
-    # Sort by adjusted p-value
-    results_df = results_df.sort_values("padj")
+
+    # Sort results by raw p-value so that the ordering is independent of the
+    # p-value adjustment method.  For monotonic adjustments (e.g. BH, Bonferroni)
+    # this also means the adjusted p-values are sorted.
+    sort_idx = np.argsort(pvals)
+    results_df = results_df.iloc[sort_idx].reset_index(drop=True)
     
     # Report summary
     if verbose:
@@ -147,6 +154,10 @@ def test_de(
         print(f"  Downregulated: {n_down}")
     
     return results_df
+
+
+# Tell pytest not to treat this function as a test case
+test_de.__test__ = False
 
 
 def _test_de_gpu(
@@ -378,6 +389,9 @@ def test_de_memory_efficient(
             "n_genes": np.sum(gene_mask),
             "n_samples": devil_fit["n_samples"],
         }
+
+        if subset_fit["n_genes"] == 0:
+            return pd.DataFrame(columns=["gene", "pval", "padj", "lfc", "se", "stat"])
         
         # Copy other metadata if present
         for key in ["use_gpu", "gpu_batch_size"]:
@@ -387,3 +401,6 @@ def test_de_memory_efficient(
         return test_de(subset_fit, contrast, **kwargs)
     else:
         return test_de(devil_fit, contrast, **kwargs)
+
+
+test_de_memory_efficient.__test__ = False

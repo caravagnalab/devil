@@ -85,7 +85,10 @@ def fit_devil(
             raise ValueError("design_formula requires AnnData input with .obs")
         
         import patsy
-        design_matrix = patsy.dmatrix(design_formula, obs_df, return_type="numpy")
+        # Request a pandas DataFrame and convert to numpy array to satisfy
+        # patsy's API requirements.
+        design_df = patsy.dmatrix(design_formula, obs_df, return_type="dataframe")
+        design_matrix = np.asarray(design_df)
         if verbose:
             print(f"Created design matrix from formula: {design_formula}")
     
