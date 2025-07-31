@@ -34,6 +34,9 @@ def handle_input_data(
         if sparse.issparse(count_matrix):
             count_matrix = count_matrix.toarray()
         
+        # Transpose to convert from AnnData format (samples × genes) to devil format (genes × samples)
+        count_matrix = count_matrix.T
+        
         # Get metadata
         gene_names = data.var_names.values
         sample_names = data.obs_names.values

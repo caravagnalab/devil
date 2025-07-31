@@ -51,6 +51,13 @@ dev = [
     "jupyter>=1.0.0",
     "sphinx>=4.0.0",
 ]
+gpu = [
+    "cupy-cuda11x>=10.0.0; platform_machine=='x86_64'",
+    "cupy-cuda12x>=12.0.0; platform_machine=='x86_64'",
+]
+all = [
+    "devil[dev,gpu]",
+]
 
 [project.urls]
 Homepage = "https://github.com/caravagnalab/devil"

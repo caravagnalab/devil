@@ -5,14 +5,31 @@ A Python implementation of the devil (Differential Expression analysis) package 
 ## Installation
 
 ```bash
-pip install devil
+cd python
+uv venv --python=python3.10
+source .venv/bin/activate
+uv pip install .
+```
+
+GPU support
+
+```bash
+uv pip install ".[gpu]"
 ```
 
 ## For development:
 
 ```bash
 cd python
-pip install -e ".[dev]"
+uv venv --python=python3.10
+source .venv/bin/activate
+uv pip install -e ".[dev]"
+```
+
+GPU support
+
+```bash
+uv pip install -e ".[all]"
 ```
 
 ## Quick Start

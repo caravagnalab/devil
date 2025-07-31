@@ -1,4 +1,4 @@
- """Variance estimation functions including sandwich estimator."""
+"""Variance estimation functions including sandwich estimator."""
 
 import numpy as np
 from typing import Optional
