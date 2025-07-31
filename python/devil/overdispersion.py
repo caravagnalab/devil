@@ -171,12 +171,13 @@ def compute_nb_score(
     """Compute score function (derivative of log-likelihood)."""
     alpha = 1.0 / theta
     
-    # Basic score
-    score = np.sum(
+    # Basic score: derivative of log-likelihood with respect to theta
+    # d(ll)/d(theta) = -alpha^2 * sum(digamma(y + alpha) - digamma(alpha) + log(alpha/(alpha + mu)) + (mu - y)/(alpha + mu))
+    score = -alpha**2 * np.sum(
         digamma(y + alpha) - digamma(alpha) + 
         np.log(alpha / (alpha + mu)) +
-        (y - mu) / (alpha + mu)
-    ) * alpha
+        (mu - y) / (alpha + mu)
+    )
     
     # Cox-Reid adjustment term
     if do_cox_reid:
@@ -203,19 +204,26 @@ def compute_nb_hessian(
     """Compute Hessian (second derivative of log-likelihood)."""
     alpha = 1.0 / theta
     
-    # Basic Hessian computation
-    trigamma_term = np.sum(polygamma(1, y + alpha) - polygamma(1, alpha))
-    
-    # Additional terms
-    hess = -2 * alpha * (
-        np.sum(digamma(y + alpha) - digamma(alpha) + 
-               np.log(alpha / (alpha + mu))) +
-        alpha * trigamma_term
+    # First derivative terms (for the product rule)
+    S = np.sum(
+        digamma(y + alpha) - digamma(alpha) + 
+        np.log(alpha / (alpha + mu)) +
+        (mu - y) / (alpha + mu)
     )
     
-    # Cox-Reid adjustment
+    # Second derivative terms
+    dS_dalpha = np.sum(
+        polygamma(1, y + alpha) - polygamma(1, alpha) + 
+        1.0 / alpha - 1.0 / (alpha + mu) - 
+        (mu - y) / (alpha + mu)**2
+    )
+    
+    # Hessian: d²(ll)/d(theta²) = 2*alpha³*S + alpha⁴*dS_dalpha
+    hess = 2 * alpha**3 * S + alpha**4 * dS_dalpha
+    
+    # Cox-Reid adjustment (simplified)
     if do_cox_reid:
-        # Complex computation - simplified here
-        hess *= 0.99  # Correction factor from glmGamPoi
+        # Apply a correction factor as in glmGamPoi
+        hess *= 0.99
     
     return hess

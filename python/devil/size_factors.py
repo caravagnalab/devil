@@ -6,7 +6,7 @@ from typing import Optional
 
 def calculate_size_factors(
     count_matrix: np.ndarray,
-    method: str = "total_count",
+    method: str = "median_ratio",
     verbose: bool = False
 ) -> np.ndarray:
     """
@@ -29,6 +29,10 @@ def calculate_size_factors(
         ValueError: If any sample has all zeros.
     """
     n_genes, n_samples = count_matrix.shape
+    
+    # Handle single gene case - return all ones
+    if n_genes == 1:
+        return np.ones(n_samples)
     
     if method == "total_count":
         # Simple total count normalization
@@ -63,9 +67,9 @@ def calculate_size_factors(
     
     # Check for all-zero samples using column sums
     zero_samples = np.sum(count_matrix, axis=0) == 0
-    if np.all(zero_samples):
+    if np.any(zero_samples):
         raise ValueError(
-            f"Samples {np.where(zero_samples)[0]} have zero total counts. "
+            f"Samples {np.where(zero_samples)[0]} have all zeros. "
             "Please filter out empty samples."
         )
     
