@@ -3,6 +3,7 @@
 docs
 *DS_Store
 python/.venv
+python/tmp/
 .cursor/
 
 # Byte-compiled / optimized / DLL files

@@ -35,17 +35,27 @@ uv pip install -e ".[all]"
 
 ## Quick Start
 
+
 ```python
+import os
 import devil
 import scanpy as sc
+import urllib.request
+
+# Download example dataset
+os.makedirs("tmp", exist_ok=True)
+url = "https://github.com/chanzuckerberg/cellxgene/raw/main/example-dataset/pbmc3k.h5ad"
+filename = "tmp/pbmc3k.h5ad"
+urllib.request.urlretrieve(url, filename)
+print(f"Downloaded {filename}")
 
 # Load data
-adata = sc.read_h5ad("data.h5ad")
+adata = sc.read_h5ad("tmp/pbmc3k.h5ad")
 
 # Fit model
 result = devil.fit_devil(
     adata,
-    design_formula="~ condition + batch",
+    design_formula="~ louvain",
     verbose=True
 )
 
