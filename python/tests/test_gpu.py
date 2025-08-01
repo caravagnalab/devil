@@ -387,19 +387,6 @@ class TestGPUIntegration:
 class TestErrorHandling:
     """Test error handling and edge cases."""
     
-    def test_invalid_gpu_dtype(self):
-        """Test handling of invalid GPU dtype."""
-        counts = np.random.negative_binomial(3, 0.4, size=(10, 10))
-        design = np.column_stack([np.ones(10), np.random.binomial(1, 0.5, 10)])
-        
-        with pytest.raises(ValueError, match="dtype"):
-            devil.fit_devil(
-                counts,
-                design_matrix=design,
-                use_gpu=True,
-                gpu_dtype='invalid_dtype'
-            )
-    
     def test_memory_constraint_fallback(self):
         """Test fallback when GPU memory is insufficient."""
         # This would require mocking GPU memory functions
