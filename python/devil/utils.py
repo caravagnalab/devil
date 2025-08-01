@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 import anndata as ad
-
+import warnings
 
 def handle_input_data(
     data: Union[ad.AnnData, np.ndarray, sparse.spmatrix],
@@ -34,11 +34,36 @@ def handle_input_data(
         if sparse.issparse(count_matrix):
             count_matrix = count_matrix.toarray()
         
+        # Check for negative values (indicating scaled/normalized data)
+        if layer is None and np.any(count_matrix < 0):
+            if data.raw is not None:
+                warnings.warn(
+                    "Detected negative values in adata.X (likely scaled/normalized data). "
+                    "Automatically switching to adata.raw.X for count data.",
+                    UserWarning
+                )
+                count_matrix = data.raw.X
+                if sparse.issparse(count_matrix):
+                    count_matrix = count_matrix.toarray()
+                
+                # Update gene names to match raw data
+                gene_names = data.raw.var_names.values
+            else:
+                raise ValueError(
+                    "Count matrix contains negative values, which suggests scaled/normalized data. "
+                    "DEVIL requires raw count data. Please either:\n"
+                    "1. Use raw count data in adata.X, or\n"
+                    "2. Store raw counts in adata.raw, or\n"
+                    "3. Specify a layer containing raw counts using the 'layer' parameter."
+                )
+        else:
+            # Use standard gene names from main object
+            gene_names = data.var_names.values
+        
         # Transpose to convert from AnnData format (samples × genes) to devil format (genes × samples)
         count_matrix = count_matrix.T
         
-        # Get metadata
-        gene_names = data.var_names.values
+        # Get metadata (always from main object, not raw)
         sample_names = data.obs_names.values
         obs_df = data.obs
         
@@ -85,39 +110,45 @@ def validate_inputs(
     Raises:
         ValueError: If inputs are incompatible.
     """
+    # Check dimensions
     n_genes, n_samples = count_matrix.shape
     n_design_samples, n_features = design_matrix.shape
     
     if n_samples != n_design_samples:
         raise ValueError(
-            f"Sample count mismatch: count_matrix has {n_samples} samples, "
-            f"but design_matrix has {n_design_samples} samples"
+            f"Sample count mismatch: count matrix has {n_samples} samples, "
+            f"design matrix has {n_design_samples} samples"
         )
     
-    if n_samples < n_features:
+    if n_samples <= n_features:
         raise ValueError(
-            f"Insufficient samples: {n_samples} samples but {n_features} features. "
-            "Model is not identifiable."
+            f"Insufficient samples: need more samples ({n_samples}) than features ({n_features})"
         )
     
-    # Check for negative counts
+    # Check for negative values in count matrix
     if np.any(count_matrix < 0):
         raise ValueError("Count matrix contains negative values")
     
-    # Check for non-integer counts (warning only)
-    if not np.allclose(count_matrix, count_matrix.astype(int)):
-        import warnings
-        warnings.warn(
-            "Count matrix contains non-integer values. "
-            "This may indicate normalized data rather than raw counts."
-        )
+    # Check for infinite or NaN values
+    if not np.all(np.isfinite(count_matrix)):
+        raise ValueError("Count matrix must contain finite numeric values")
+    
+    if not np.all(np.isfinite(design_matrix)):
+        raise ValueError("Design matrix must contain finite numeric values")
     
     # Check design matrix rank
     rank = np.linalg.matrix_rank(design_matrix)
     if rank < n_features:
         raise ValueError(
-            f"Design matrix is rank deficient: rank {rank} < {n_features} features. "
-            "Consider removing collinear variables."
+            f"Design matrix is rank deficient: rank {rank} < {n_features} features"
+        )
+    
+    # Warn about non-integer counts
+    if not np.allclose(count_matrix, np.round(count_matrix)):
+        warnings.warn(
+            "Count matrix contains non-integer values. "
+            "DEVIL assumes count data with integer values.",
+            UserWarning
         )
 
 

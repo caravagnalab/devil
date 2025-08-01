@@ -5,69 +5,37 @@ A Python implementation of the devil (Differential Expression analysis) package 
 
 ## Installation
 
+> Assuming that you are in the root directory of the devil repository.
+
 ```bash
-cd python
 uv venv --python=python3.10
 source .venv/bin/activate
-uv pip install .
+uv pip install python/
 ```
 
 GPU support
 
 ```bash
-uv pip install ".[gpu]"
+uv pip install "python/.[gpu]"
 ```
 
 ## For development:
 
 ```bash
-cd python
 uv venv --python=python3.10
 source .venv/bin/activate
-uv pip install -e ".[dev]"
+uv pip install -e "python/.[dev]"
 ```
 
 GPU support
 
 ```bash
-uv pip install -e ".[all]"
+uv pip install -e "python/.[all]"
 ```
 
 ## Quick Start
 
-
-```python
-import os
-import devil
-import scanpy as sc
-import urllib.request
-
-# Download example dataset
-os.makedirs("tmp", exist_ok=True)
-url = "https://github.com/chanzuckerberg/cellxgene/raw/main/example-dataset/pbmc3k.h5ad"
-filename = "tmp/pbmc3k.h5ad"
-urllib.request.urlretrieve(url, filename)
-print(f"Downloaded {filename}")
-
-# Load data
-adata = sc.read_h5ad("tmp/pbmc3k.h5ad")
-
-# Fit model
-result = devil.fit_devil(
-    adata,
-    design_formula="~ louvain",
-    verbose=True
-)
-
-# Test differential expression
-de_results = devil.test_de(
-    result,
-    contrast=[0, 1, -1]  # Compare conditions
-)
-
-# Visualize results
-ax = devil.plot_volcano(de_results)
-```
+See the [notebooks](notebooks) for examples.
 
 ## Features
 

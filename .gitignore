@@ -2,8 +2,9 @@
 .Rhistory
 docs
 *DS_Store
-python/.venv
+.venv
 python/tmp/
+python/notebooks/tmp/
 .cursor/
 
 # Byte-compiled / optimized / DLL files
