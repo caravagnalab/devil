@@ -4,6 +4,13 @@ import numpy as np
 from scipy import optimize
 from scipy.special import digamma, polygamma
 from typing import Optional, Tuple
+import warnings
+
+# Suppress RuntimeWarnings by default in this module
+warnings.filterwarnings('ignore', category=RuntimeWarning)
+warnings.filterwarnings('ignore', message='.*invalid value encountered.*')
+warnings.filterwarnings('ignore', message='.*divide by zero encountered.*')
+warnings.filterwarnings('ignore', message='.*overflow encountered.*')
 
 
 def estimate_initial_dispersion(

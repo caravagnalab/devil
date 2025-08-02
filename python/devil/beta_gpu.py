@@ -1,4 +1,4 @@
-"""GPU-accelerated beta coefficient estimation."""
+"""GPU-accelerated beta coefficient estimation with full vectorization."""
 
 from typing import Tuple, Optional
 import numpy as np
@@ -97,7 +97,10 @@ def fit_beta_coefficients_gpu_batch(
     dtype: np.dtype = np.float32
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Fit beta coefficients for a batch of genes on GPU.
+    Fit beta coefficients for a batch of genes on GPU with full vectorization.
+    
+    This is the primary optimized implementation that processes all genes
+    in the batch simultaneously.
     
     Args:
         count_batch: Count data for batch (batch_size × samples).
@@ -118,85 +121,84 @@ def fit_beta_coefficients_gpu_batch(
     batch_size, n_samples = count_batch.shape
     n_features = design_matrix.shape[1]
     
-    # Transfer data to GPU
-    y_gpu = to_gpu(count_batch, dtype)
-    X_gpu = to_gpu(design_matrix, dtype)
-    beta_gpu = to_gpu(beta_init_batch, dtype)
-    offset_gpu = to_gpu(offset_vector, dtype)
-    k_gpu = to_gpu(1.0 / dispersion_batch, dtype)  # Convert to precision
+    # Transfer all data to GPU at once
+    y_gpu = cp.asarray(count_batch, dtype=dtype)
+    X_gpu = cp.asarray(design_matrix, dtype=dtype)
+    beta_gpu = cp.asarray(beta_init_batch, dtype=dtype)
+    offset_gpu = cp.asarray(offset_vector, dtype=dtype)
+    k_gpu = cp.asarray(1.0 / dispersion_batch, dtype=dtype)
+    
+    # Pre-compute reusable matrices
+    XT = X_gpu.T  # (n_features, n_samples) - cache transpose
     
     # Initialize tracking arrays
-    iterations = cp.zeros(batch_size, dtype=cp.int32)
     converged = cp.zeros(batch_size, dtype=bool)
+    iterations = cp.zeros(batch_size, dtype=cp.int32)
     
-    # Iterative fitting for each gene in batch
+    # Pre-allocate work arrays for efficiency
+    eta = cp.empty((batch_size, n_samples), dtype=dtype)
+    mu = cp.empty_like(eta)
+    variance = cp.empty_like(eta)
+    weights = cp.empty_like(eta)
+    residuals = cp.empty_like(eta)
+    weighted_residuals = cp.empty_like(eta)
+    scores = cp.empty((batch_size, n_features), dtype=dtype)
+    
     for iter_num in range(max_iter):
-        # Calculate linear predictor and mean
-        eta = cp.einsum('ij,jk->ik', beta_gpu, X_gpu.T)  # batch_size × samples
-        eta += offset_gpu[cp.newaxis, :]
-        mu = cp.exp(eta)
-        mu = cp.maximum(mu, 1e-10)  # Numerical stability
+        # Vectorized computation for all genes at once
+        # eta = beta @ X.T + offset
+        cp.matmul(beta_gpu, XT, out=eta)
+        eta += offset_gpu
         
-        # Negative binomial variance and weights
-        k_expanded = k_gpu[:, cp.newaxis]  # batch_size × 1
-        variance = mu + mu**2 / k_expanded
-        weights = mu / variance
+        # mu = exp(eta) with numerical stability
+        cp.exp(eta, out=mu)
+        cp.maximum(mu, 1e-10, out=mu)
         
-        # Calculate residuals
-        residuals = (y_gpu - mu) / variance
+        # Compute variance for negative binomial
+        # variance = mu + mu^2 / k
+        k_expanded = k_gpu[:, cp.newaxis]
+        cp.square(mu, out=variance)
+        variance /= k_expanded
+        variance += mu
         
-        # Score and information matrix for each gene
-        # This is the computationally intensive part
-        deltas = cp.zeros_like(beta_gpu)
+        # weights = mu / variance
+        cp.divide(mu, variance, out=weights)
         
-        for gene_idx in range(batch_size):
-            if converged[gene_idx]:
-                continue
-                
-            # Score vector
-            w_r = weights[gene_idx] * residuals[gene_idx]
-            score = X_gpu.T @ w_r
-            
-            # Information matrix (Fisher information)
-            W_diag = weights[gene_idx]
-            info = X_gpu.T @ (W_diag[:, cp.newaxis] * X_gpu)
-            
-            # Solve for update (with regularization for stability)
-            try:
-                reg_info = info + cp.eye(n_features) * 1e-6
-                try:
-                    delta = cp.linalg.solve(reg_info, score)
-                except (AttributeError, ImportError):
-                    # Fallback to CPU solve
-                    import numpy.linalg as np_linalg
-                    reg_info_cpu = to_cpu(reg_info)
-                    score_cpu = to_cpu(score)
-                    delta_cpu = np_linalg.solve(reg_info_cpu, score_cpu)
-                    delta = to_gpu(delta_cpu, dtype)
-                
-                deltas[gene_idx] = delta
-                
-                # Check convergence for this gene
-                if cp.max(cp.abs(delta)) < tolerance:
-                    converged[gene_idx] = True
-                    iterations[gene_idx] = iter_num + 1
-                    
-            except (cp.linalg.LinAlgError, np.linalg.LinAlgError):
-                # Singular matrix - mark as converged with current values
-                converged[gene_idx] = True
-                iterations[gene_idx] = iter_num + 1
+        # residuals = (y - mu) / variance
+        cp.subtract(y_gpu, mu, out=residuals)
+        residuals /= variance
         
-        # Update beta coefficients
-        beta_gpu += deltas
+        # Compute scores efficiently
+        # scores = (weights * residuals) @ X
+        cp.multiply(weights, residuals, out=weighted_residuals)
+        cp.matmul(weighted_residuals, X_gpu, out=scores)
         
-        # Check if all genes converged
+        # Batch solve using optimized method
+        deltas = _batch_solve_weighted_least_squares(
+            X_gpu, XT, weights, scores, n_features, batch_size, 
+            dtype, converged
+        )
+        
+        # Update beta for non-converged genes only
+        mask = ~converged
+        if cp.any(mask):
+            beta_gpu[mask] += deltas[mask]
+        
+        # Check convergence
+        max_delta = cp.max(cp.abs(deltas), axis=1)
+        newly_converged = (max_delta < tolerance) & mask
+        converged |= newly_converged
+        iterations[newly_converged] = iter_num + 1
+        
+        # Early termination if all converged
         if cp.all(converged):
             break
     
     # Set iterations for non-converged genes
-    iterations = cp.where(converged, iterations, max_iter)
+    iterations[~converged] = max_iter
     
-    return to_cpu(beta_gpu), to_cpu(iterations), to_cpu(converged)
+    # Transfer results back to CPU
+    return beta_gpu.get(), iterations.get(), converged.get()
 
 
 def fit_beta_coefficients_gpu_vectorized(
@@ -212,7 +214,8 @@ def fit_beta_coefficients_gpu_vectorized(
     """
     Vectorized GPU implementation for batch beta fitting.
     
-    More memory-intensive but potentially faster for large batches.
+    This is an alias for fit_beta_coefficients_gpu_batch as both are now
+    fully vectorized. Kept for backward compatibility.
     
     Args:
         count_batch: Count data for batch (batch_size × samples).
@@ -227,97 +230,214 @@ def fit_beta_coefficients_gpu_vectorized(
     Returns:
         Tuple of (fitted_beta, n_iterations, converged) for batch.
     """
-    if not is_gpu_available():
-        raise RuntimeError("GPU not available")
+    return fit_beta_coefficients_gpu_batch(
+        count_batch, design_matrix, beta_init_batch, offset_vector,
+        dispersion_batch, max_iter, tolerance, dtype
+    )
+
+
+def _batch_solve_weighted_least_squares(
+    X: cp.ndarray,
+    XT: cp.ndarray,
+    weights: cp.ndarray,
+    scores: cp.ndarray,
+    n_features: int,
+    batch_size: int,
+    dtype: cp.dtype,
+    converged: cp.ndarray
+) -> cp.ndarray:
+    """
+    Efficiently solve weighted least squares for multiple genes.
     
-    batch_size, n_samples = count_batch.shape
-    n_features = design_matrix.shape[1]
-    
-    # Transfer data to GPU
-    y_gpu = to_gpu(count_batch, dtype)  # batch_size × samples
-    X_gpu = to_gpu(design_matrix, dtype)  # samples × features
-    beta_gpu = to_gpu(beta_init_batch, dtype)  # batch_size × features
-    offset_gpu = to_gpu(offset_vector, dtype)  # samples
-    k_gpu = to_gpu(1.0 / dispersion_batch, dtype)  # batch_size
-    
-    # Tracking arrays
-    iterations = cp.zeros(batch_size, dtype=cp.int32)
-    converged = cp.zeros(batch_size, dtype=bool)
-    
-    # Pre-compute X.T for efficiency
-    XT = X_gpu.T  # features × samples
-    
-    for iter_num in range(max_iter):
-        # Vectorized computation across all genes in batch
+    Solves (X^T W X) delta = score for each gene in the batch using
+    fully vectorized operations.
+    """
+    # For small feature sizes, use einsum for maximum efficiency
+    if n_features <= 30:
+        # Compute sqrt(W) for numerical stability
+        sqrt_weights = cp.sqrt(weights)  # (batch_size, n_samples)
         
-        # Linear predictor: batch_size × samples
-        eta = beta_gpu @ XT + offset_gpu[cp.newaxis, :]
-        mu = cp.exp(eta)
-        mu = cp.maximum(mu, 1e-10)
+        # Mask out converged genes to save computation
+        active_mask = ~converged
+        if not cp.any(active_mask):
+            return cp.zeros((batch_size, n_features), dtype=dtype)
         
-        # Variance and weights: batch_size × samples
-        k_expanded = k_gpu[:, cp.newaxis]
-        variance = mu + mu**2 / k_expanded
-        weights = mu / variance
+        # Create weighted X: sqrt(W)[:, :, None] * X[None, :, :]
+        # Only compute for active genes
+        active_sqrt_weights = sqrt_weights[active_mask]
+        WX = active_sqrt_weights[:, :, cp.newaxis] * X[cp.newaxis, :, :]
         
-        # Residuals: batch_size × samples
-        residuals = (y_gpu - mu) / variance
-        weighted_residuals = weights * residuals
+        # Batch matrix multiplication: WX^T @ WX
+        # Using optimal einsum path
+        info_matrices = cp.einsum('bsi,bsj->bij', WX, WX, optimize=True)
         
-        # Score vectors: batch_size × features
-        # This is matrix multiplication: (batch_size × samples) @ (samples × features)
-        scores = weighted_residuals @ X_gpu
+        # Add regularization for numerical stability
+        reg_eye = cp.eye(n_features, dtype=dtype) * 1e-6
+        info_matrices += reg_eye
         
-        # Information matrices are more complex to vectorize efficiently
-        # We'll compute them in a loop but with vectorized operations
-        deltas = cp.zeros_like(beta_gpu)
+        # Initialize result
+        deltas = cp.zeros((batch_size, n_features), dtype=dtype)
+        active_scores = scores[active_mask]
         
-        # Batch process information matrices
-        for gene_idx in range(batch_size):
-            if converged[gene_idx]:
-                continue
-                
-            W_diag = weights[gene_idx]  # samples
-            # Information matrix: X.T @ diag(W) @ X
-            WX = W_diag[:, cp.newaxis] * X_gpu  # samples × features
-            info = XT @ WX  # features × features
+        try:
+            # Batch Cholesky decomposition
+            L = cp.linalg.cholesky(info_matrices)
             
-            # Regularize for numerical stability
-            info += cp.eye(n_features) * 1e-6
+            # Batch solve using triangular systems
+            # First solve L @ y = scores
+            y = _batch_forward_substitution(L, active_scores)
             
+            # Then solve L^T @ delta = y
+            active_deltas = _batch_backward_substitution(L, y)
+            deltas[active_mask] = active_deltas
+            
+        except cp.linalg.LinAlgError:
+            # Fallback to batch LU decomposition
             try:
-                try:
-                    delta = cp.linalg.solve(info, scores[gene_idx])
-                except (AttributeError, ImportError):
-                    # Fallback to CPU solve
-                    import numpy.linalg as np_linalg
-                    info_cpu = to_cpu(info)
-                    scores_cpu = to_cpu(scores[gene_idx])
-                    delta_cpu = np_linalg.solve(info_cpu, scores_cpu)
-                    delta = to_gpu(delta_cpu, dtype)
-                
-                deltas[gene_idx] = delta
-                
-                # Check convergence
-                if cp.max(cp.abs(delta)) < tolerance:
-                    converged[gene_idx] = True
-                    iterations[gene_idx] = iter_num + 1
-                    
-            except (cp.linalg.LinAlgError, np.linalg.LinAlgError):
-                converged[gene_idx] = True
-                iterations[gene_idx] = iter_num + 1
-        
-        # Update beta
-        beta_gpu += deltas
-        
-        # Early termination if all converged
-        if cp.all(converged):
-            break
+                active_deltas = cp.linalg.solve(
+                    info_matrices, 
+                    active_scores[:, :, cp.newaxis]
+                ).squeeze(-1)
+                deltas[active_mask] = active_deltas
+            except:
+                # Ultimate fallback: process problematic genes individually
+                deltas[active_mask] = _fallback_solve(
+                    X, weights[active_mask], active_scores, n_features
+                )
     
-    # Set final iteration counts
-    iterations = cp.where(converged, iterations, max_iter)
+    else:
+        # For larger feature sizes, use blocked algorithm
+        deltas = _blocked_weighted_least_squares(
+            X, XT, weights, scores, n_features, batch_size, 
+            dtype, converged
+        )
     
-    return to_cpu(beta_gpu), to_cpu(iterations), to_cpu(converged)
+    return deltas
+
+
+def _batch_forward_substitution(L: cp.ndarray, b: cp.ndarray) -> cp.ndarray:
+    """
+    Batch forward substitution for lower triangular systems.
+    
+    Solves L @ x = b for multiple systems simultaneously.
+    """
+    batch_size, n = L.shape[0], L.shape[1]
+    x = cp.zeros_like(b)
+    
+    for i in range(n):
+        if i == 0:
+            x[:, i] = b[:, i] / L[:, i, i]
+        else:
+            x[:, i] = (b[:, i] - cp.sum(L[:, i, :i] * x[:, :i], axis=1)) / L[:, i, i]
+    
+    return x
+
+
+def _batch_backward_substitution(L: cp.ndarray, b: cp.ndarray) -> cp.ndarray:
+    """
+    Batch backward substitution for upper triangular systems.
+    
+    Solves L^T @ x = b for multiple systems simultaneously.
+    """
+    batch_size, n = L.shape[0], L.shape[1]
+    x = cp.zeros_like(b)
+    
+    for i in range(n-1, -1, -1):
+        if i == n-1:
+            x[:, i] = b[:, i] / L[:, i, i]
+        else:
+            x[:, i] = (b[:, i] - cp.sum(L[:, i+1:, i] * x[:, i+1:], axis=1)) / L[:, i, i]
+    
+    return x
+
+
+def _blocked_weighted_least_squares(
+    X: cp.ndarray,
+    XT: cp.ndarray,
+    weights: cp.ndarray,
+    scores: cp.ndarray,
+    n_features: int,
+    batch_size: int,
+    dtype: cp.dtype,
+    converged: cp.ndarray
+) -> cp.ndarray:
+    """
+    Blocked algorithm for large feature sizes to manage memory.
+    """
+    deltas = cp.zeros((batch_size, n_features), dtype=dtype)
+    
+    # Process in sub-batches for memory efficiency
+    sub_batch_size = min(batch_size, 50)
+    
+    for start in range(0, batch_size, sub_batch_size):
+        end = min(start + sub_batch_size, batch_size)
+        sub_mask = ~converged[start:end]
+        
+        if not cp.any(sub_mask):
+            continue
+        
+        active_indices = cp.arange(start, end)[sub_mask]
+        sub_weights = weights[active_indices]
+        sub_scores = scores[active_indices]
+        
+        # Compute information matrices for sub-batch
+        sub_batch_actual = len(active_indices)
+        sub_info = cp.empty((sub_batch_actual, n_features, n_features), dtype=dtype)
+        
+        # Vectorized computation of X^T @ diag(W) @ X
+        for i in range(sub_batch_actual):
+            W_diag = sub_weights[i]
+            # Use optimized BLAS operations
+            WX = X * W_diag[:, cp.newaxis]
+            cp.matmul(XT, WX, out=sub_info[i])
+        
+        # Add regularization
+        reg_eye = cp.eye(n_features, dtype=dtype) * 1e-6
+        sub_info += reg_eye
+        
+        # Batch solve
+        try:
+            sub_deltas = cp.linalg.solve(
+                sub_info, 
+                sub_scores[:, :, cp.newaxis]
+            ).squeeze(-1)
+            deltas[active_indices] = sub_deltas
+        except:
+            # Fallback for problematic matrices
+            deltas[active_indices] = _fallback_solve(
+                X, sub_weights, sub_scores, n_features
+            )
+    
+    return deltas
+
+
+def _fallback_solve(
+    X: cp.ndarray,
+    weights: cp.ndarray,
+    scores: cp.ndarray,
+    n_features: int
+) -> cp.ndarray:
+    """
+    Fallback solver for problematic cases using pseudo-inverse.
+    """
+    batch_size = weights.shape[0]
+    deltas = cp.zeros((batch_size, n_features), dtype=weights.dtype)
+    
+    for i in range(batch_size):
+        try:
+            W_diag = weights[i]
+            WX = X * W_diag[:, cp.newaxis]
+            info = X.T @ WX + cp.eye(n_features) * 1e-4
+            deltas[i] = cp.linalg.solve(info, scores[i])
+        except:
+            # Use pseudo-inverse as last resort
+            try:
+                deltas[i] = cp.linalg.pinv(info) @ scores[i]
+            except:
+                # Skip this gene if all else fails
+                deltas[i] = 0
+    
+    return deltas
 
 
 def select_gpu_implementation(
@@ -338,21 +458,33 @@ def select_gpu_implementation(
     Returns:
         Implementation name: 'vectorized' or 'loop'.
     """
-    # Estimate memory requirements for vectorized approach
+    # Estimate memory requirements
     bytes_per_float = 4  # float32
     
-    # Main arrays:
-    # - y_gpu: batch_size × samples
-    # - beta_gpu: batch_size × features  
-    # - Working arrays: ~3 × batch_size × samples
-    vectorized_memory = bytes_per_float * (
-        batch_size * n_samples +
-        batch_size * n_features +
-        3 * batch_size * n_samples
-    )
+    # Memory for main arrays: y, X, beta, weights, etc.
+    main_memory = (
+        batch_size * n_samples +  # y
+        n_samples * n_features +  # X
+        batch_size * n_features +  # beta
+        batch_size * n_samples * 3  # mu, variance, weights
+    ) * bytes_per_float
     
-    # Use vectorized if we have enough memory and batch is large enough
-    if vectorized_memory < available_memory * 0.7 and batch_size > 10:
-        return 'vectorized'
+    # Memory for batch operations (einsum needs temporary space)
+    if n_features <= 30:
+        # Einsum approach needs WX array
+        batch_op_memory = batch_size * n_samples * n_features * bytes_per_float
     else:
-        return 'loop'
+        # Blocked approach processes sub-batches
+        sub_batch_size = min(batch_size, 50)
+        batch_op_memory = sub_batch_size * n_features * n_features * bytes_per_float
+    
+    total_memory = main_memory + batch_op_memory
+    
+    # Check if we have enough memory (with safety margin)
+    if total_memory > available_memory * 0.8:
+        warnings.warn(
+            f"GPU memory may be insufficient. Required: {total_memory/1e9:.1f}GB, "
+            f"Available: {available_memory/1e9:.1f}GB. Consider reducing batch_size."
+        )
+    
+    return 'vectorized'
