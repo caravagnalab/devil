@@ -24,7 +24,7 @@ except ImportError:
     CUPY_AVAILABLE = False
 
 
-def is_gpu_available(use_memory: bool = True, memory_cutoff_gb: float = 2.0) -> bool:
+def is_gpu_available(use_memory: bool = True, memory_cutoff_gb: float = 10.0) -> bool:
     """
     Check if GPU (CUDA) is available for computation.
     Args:

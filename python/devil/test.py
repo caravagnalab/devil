@@ -322,9 +322,17 @@ def _test_de_cpu(
     # Multiple testing correction
     _, padj, _, _ = multipletests(all_pvals, method=pval_adjust_method)
     
+    # Ensure all arrays are 1D for DataFrame construction
+    gene_names = np.asarray(devil_fit["gene_names"]).flatten()
+    lfcs = np.asarray(lfcs).flatten()
+    all_ses = np.asarray(all_ses).flatten()
+    all_stats = np.asarray(all_stats).flatten()
+    all_pvals = np.asarray(all_pvals).flatten()
+    padj = np.asarray(padj).flatten()
+    
     # Create results DataFrame
     results_df = pd.DataFrame({
-        'gene': devil_fit["gene_names"],
+        'gene': gene_names,
         'lfc': lfcs,
         'se': all_ses,
         'stat': all_stats,

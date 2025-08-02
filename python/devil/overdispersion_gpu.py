@@ -3,7 +3,13 @@
 from typing import Tuple, Optional
 import numpy as np
 import warnings
-
+try:
+    import cupy as cp
+    CUPY_AVAILABLE = True
+except ImportError:
+    # need to mock for cp.ndarray
+    import numpy as cp
+    CUPY_AVAILABLE = False
 from .gpu import is_gpu_available, to_gpu, to_cpu, CUPY_AVAILABLE
 from .overdispersion import estimate_initial_dispersion
 

@@ -71,7 +71,12 @@ def main():
         n_jobs = 1, 
         offset = 1e-6
     )
-    print(fit)
+    print(fit.keys())
+
+    # test de
+    print("Testing DE...")
+    test_results = devil.test_de(fit, contrast = [0, 1, -1], max_lfc = 20)
+    print(test_results.head())
 
     
 if __name__ == "__main__":
