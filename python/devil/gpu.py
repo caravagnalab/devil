@@ -56,8 +56,10 @@ def get_gpu_memory_info() -> Tuple[int, int]:
         return 0, 0
     
     try:
-        mempool = cp.get_default_memory_pool()
-        return mempool.free_bytes(), mempool.total_bytes()
+        # Get actual GPU device memory information
+        device = cp.cuda.Device()
+        free_memory, total_memory = device.mem_info
+        return free_memory, total_memory
     except Exception:
         return 0, 0
 
@@ -246,4 +248,5 @@ def check_gpu_requirements(
 if __name__ == "__main__":
     # python -m devil.gpu
     print(is_gpu_available())
-    
+    free_mem, total_mem = get_gpu_memory_info()
+    print(f"GPU memory available: {free_mem/1e9:.1f}GB / {total_mem/1e9:.1f}GB")
