@@ -290,7 +290,7 @@ def _compute_score_and_info_vectorized(
     
     # Additional terms
     info_term3 = cp.sum(
-        active_mu**2 * active_theta / (1 + active_mu * theta_reshaped)**2,
+        active_mu**2 * theta_reshaped / (1 + active_mu * theta_reshaped)**2,
         axis=1
     )
     
