@@ -9,8 +9,7 @@ from .overdispersion import estimate_initial_dispersion
 
 if CUPY_AVAILABLE:
     import cupy as cp
-    import cupyx.scipy.optimize as cp_optimize
-    from cupy.special import digamma, polygamma
+    from scipy.special import digamma, polygamma
 
 
 def estimate_initial_dispersion_gpu(

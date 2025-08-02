@@ -7,8 +7,15 @@ import numpy as np
 # Try to import CuPy for GPU support
 try:
     import cupy as cp
-    import cupyx.scipy.linalg as cp_linalg
-    import cupyx.scipy.sparse as cp_sparse
+    # Note: cupyx.scipy.linalg may fail due to CUDA library compatibility
+    try:
+        import cupyx.scipy.linalg as cp_linalg
+    except ImportError:
+        cp_linalg = None
+    try:
+        import cupyx.scipy.sparse as cp_sparse
+    except ImportError:
+        cp_sparse = None
     CUPY_AVAILABLE = True
 except ImportError:
     cp = None
@@ -234,3 +241,9 @@ def check_gpu_requirements(
         print(message)
     
     return True, message
+
+# main
+if __name__ == "__main__":
+    # python -m devil.gpu
+    print(is_gpu_available())
+    

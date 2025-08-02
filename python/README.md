@@ -19,11 +19,9 @@ GPU support
 uv pip install "python/.[gpu]"
 ```
 
-## For development:
+## Development
 
 ```bash
-uv venv --python=python3.10
-source .venv/bin/activate
 uv pip install -e "python/.[dev]"
 ```
 

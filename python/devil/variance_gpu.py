@@ -7,7 +7,10 @@ from .gpu import is_gpu_available, to_gpu, to_cpu, CUPY_AVAILABLE
 
 if CUPY_AVAILABLE:
     import cupy as cp
-    import cupyx.scipy.linalg as cp_linalg
+    try:
+        import cupyx.scipy.linalg as cp_linalg
+    except ImportError:
+        cp_linalg = None
 
 
 def compute_hessian_gpu_batch(

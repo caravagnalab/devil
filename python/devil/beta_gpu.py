@@ -8,7 +8,10 @@ from .gpu import is_gpu_available, to_gpu, to_cpu, CUPY_AVAILABLE
 
 if CUPY_AVAILABLE:
     import cupy as cp
-    import cupyx.scipy.linalg as cp_linalg
+    try:
+        import cupyx.scipy.linalg as cp_linalg
+    except ImportError:
+        cp_linalg = None
 
 
 def init_beta_gpu(
@@ -39,8 +42,15 @@ def init_beta_gpu(
     X_gpu = to_gpu(design_matrix, dtype)
     offset_gpu = to_gpu(offset_vector, dtype)
     
-    # QR decomposition
-    Q, R = cp_linalg.qr(X_gpu)
+    # QR decomposition with fallback
+    try:
+        Q, R = cp.linalg.qr(X_gpu)
+    except (AttributeError, ImportError):
+        # Fallback to CPU QR decomposition
+        import numpy.linalg as np_linalg
+        Q, R = np_linalg.qr(design_matrix)
+        Q = to_gpu(Q, dtype)
+        R = to_gpu(R, dtype)
     
     # Process data in batches to manage memory
     batch_size = min(n_genes, 1000)  # Adjust based on memory
@@ -55,10 +65,21 @@ def init_beta_gpu(
             batch_counts.T / cp.exp(offset_gpu)[:, cp.newaxis]
         )
         
-        # Solve for initial beta
-        batch_beta = cp_linalg.solve_triangular(
-            R, Q.T @ norm_log_counts, lower=False
-        ).T
+        # Solve for initial beta with fallback
+        try:
+            batch_beta = cp_linalg.solve_triangular(
+                R, Q.T @ norm_log_counts, lower=False
+            ).T
+        except (AttributeError, ImportError):
+            # Fallback to CPU solve
+            import numpy.linalg as np_linalg
+            R_cpu = to_cpu(R)
+            Q_cpu = to_cpu(Q)
+            norm_log_counts_cpu = to_cpu(norm_log_counts)
+            batch_beta_cpu = np_linalg.solve_triangular(
+                R_cpu, Q_cpu.T @ norm_log_counts_cpu, lower=False
+            ).T
+            batch_beta = to_gpu(batch_beta_cpu, dtype)
         
         beta_init[start_idx:end_idx] = to_cpu(batch_beta)
     
@@ -111,7 +132,7 @@ def fit_beta_coefficients_gpu_batch(
     # Iterative fitting for each gene in batch
     for iter_num in range(max_iter):
         # Calculate linear predictor and mean
-        eta = cp.einsum('ij,kj->ik', beta_gpu, X_gpu.T)  # batch_size × samples
+        eta = cp.einsum('ij,jk->ik', beta_gpu, X_gpu.T)  # batch_size × samples
         eta += offset_gpu[cp.newaxis, :]
         mu = cp.exp(eta)
         mu = cp.maximum(mu, 1e-10)  # Numerical stability
@@ -143,7 +164,16 @@ def fit_beta_coefficients_gpu_batch(
             # Solve for update (with regularization for stability)
             try:
                 reg_info = info + cp.eye(n_features) * 1e-6
-                delta = cp_linalg.solve(reg_info, score)
+                try:
+                    delta = cp.linalg.solve(reg_info, score)
+                except (AttributeError, ImportError):
+                    # Fallback to CPU solve
+                    import numpy.linalg as np_linalg
+                    reg_info_cpu = to_cpu(reg_info)
+                    score_cpu = to_cpu(score)
+                    delta_cpu = np_linalg.solve(reg_info_cpu, score_cpu)
+                    delta = to_gpu(delta_cpu, dtype)
+                
                 deltas[gene_idx] = delta
                 
                 # Check convergence for this gene
@@ -151,7 +181,7 @@ def fit_beta_coefficients_gpu_batch(
                     converged[gene_idx] = True
                     iterations[gene_idx] = iter_num + 1
                     
-            except cp.linalg.LinAlgError:
+            except (cp.linalg.LinAlgError, np.linalg.LinAlgError):
                 # Singular matrix - mark as converged with current values
                 converged[gene_idx] = True
                 iterations[gene_idx] = iter_num + 1
@@ -256,7 +286,16 @@ def fit_beta_coefficients_gpu_vectorized(
             info += cp.eye(n_features) * 1e-6
             
             try:
-                delta = cp_linalg.solve(info, scores[gene_idx])
+                try:
+                    delta = cp.linalg.solve(info, scores[gene_idx])
+                except (AttributeError, ImportError):
+                    # Fallback to CPU solve
+                    import numpy.linalg as np_linalg
+                    info_cpu = to_cpu(info)
+                    scores_cpu = to_cpu(scores[gene_idx])
+                    delta_cpu = np_linalg.solve(info_cpu, scores_cpu)
+                    delta = to_gpu(delta_cpu, dtype)
+                
                 deltas[gene_idx] = delta
                 
                 # Check convergence
@@ -264,7 +303,7 @@ def fit_beta_coefficients_gpu_vectorized(
                     converged[gene_idx] = True
                     iterations[gene_idx] = iter_num + 1
                     
-            except cp.linalg.LinAlgError:
+            except (cp.linalg.LinAlgError, np.linalg.LinAlgError):
                 converged[gene_idx] = True
                 iterations[gene_idx] = iter_num + 1
         
@@ -307,9 +346,9 @@ def select_gpu_implementation(
     # - beta_gpu: batch_size × features  
     # - Working arrays: ~3 × batch_size × samples
     vectorized_memory = bytes_per_float * (
-        batch_size * samples +
+        batch_size * n_samples +
         batch_size * n_features +
-        3 * batch_size * samples
+        3 * batch_size * n_samples
     )
     
     # Use vectorized if we have enough memory and batch is large enough
