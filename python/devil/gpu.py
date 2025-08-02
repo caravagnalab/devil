@@ -24,24 +24,33 @@ except ImportError:
     CUPY_AVAILABLE = False
 
 
-def is_gpu_available() -> bool:
+def is_gpu_available(use_memory: bool = True, memory_cutoff_gb: float = 2.0) -> bool:
     """
     Check if GPU (CUDA) is available for computation.
-    
+    Args:
+        use_memory: Whether to check if GPU memory is available.
+        memory_cutoff_gb: Minimum amount of GPU memory required in GB.
     Returns:
         True if GPU is available and CuPy is installed, False otherwise.
     """
     if not CUPY_AVAILABLE:
         return False
     
+    can_use_gpu = False
     try:
         # Try to create a simple array on GPU
         cp.cuda.Device(0).use()
         test_array = cp.array([1, 2, 3])
         del test_array
-        return True
+        can_use_gpu = True
     except Exception:
-        return False
+        pass
+    
+    if use_memory:
+        free_mem, total_mem = get_gpu_memory_info()
+        if free_mem / 1e9 < memory_cutoff_gb:
+            can_use_gpu = False
+    return can_use_gpu
 
 
 def get_gpu_memory_info() -> Tuple[int, int]:
@@ -52,7 +61,7 @@ def get_gpu_memory_info() -> Tuple[int, int]:
         Tuple of (free_memory, total_memory) in bytes.
         Returns (0, 0) if GPU not available.
     """
-    if not is_gpu_available():
+    if not is_gpu_available(use_memory=False):
         return 0, 0
     
     try:
