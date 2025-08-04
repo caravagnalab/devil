@@ -13,11 +13,9 @@ def handle_input_data(
 ) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray], Optional[pd.DataFrame]]:
     """
     Handle various input data formats and extract count matrix.
-    
     Args:
         data: Input data as AnnData, numpy array, or sparse matrix.
         layer: For AnnData, which layer to use.
-        
     Returns:
         Tuple of (count_matrix, gene_names, sample_names, obs_dataframe).
     """
@@ -102,11 +100,9 @@ def validate_inputs(
 ) -> None:
     """
     Validate input matrices for compatibility.
-    
     Args:
         count_matrix: Gene expression matrix (genes × samples).
         design_matrix: Design matrix (samples × features).
-        
     Raises:
         ValueError: If inputs are incompatible.
     """
@@ -167,7 +163,6 @@ def check_convergence(
 ) -> None:
     """
     Check and report convergence issues.
-    
     Args:
         iterations: Number of iterations per gene.
         max_iter: Maximum iterations allowed.

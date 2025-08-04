@@ -24,12 +24,10 @@ def _create_one_vs_rest_contrasts(
 ) -> Dict[str, np.ndarray]:
     """
     Create one-vs-rest contrast vectors for categorical variables.
-    
     Args:
         n_coeffs: Total number of coefficients in the model.
         n_groups: Total number of groups (including reference).
         group_variable_start_index: Index where group coefficients start (usually 1, after intercept).
-        
     Returns:
         Dictionary mapping group names to contrast vectors.
     """
@@ -64,14 +62,11 @@ def _create_one_vs_rest_contrasts(
 def _infer_categorical_structure(devil_fit: Dict[str, Any]) -> Dict[str, Any]:
     """
     Infer the structure of categorical variables from the design matrix.
-    
     This is a simple heuristic that assumes the most common case:
     - First coefficient is intercept
     - Remaining coefficients represent levels of a categorical variable
-    
     Args:
         devil_fit: Fitted model dictionary.
-        
     Returns:
         Dictionary with categorical structure information.
     """
@@ -99,10 +94,8 @@ def test_de(
 ) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """
     Test for differential expression with optional GPU acceleration.
-    
     Supports both manual contrast specification and automatic one-vs-rest testing
     for categorical variables.
-    
     Args:
         devil_fit: Fitted model dictionary from fit_devil().
         contrast: Either:
@@ -117,7 +110,6 @@ def test_de(
         use_gpu: Whether to use GPU acceleration. If None, uses same as fit_devil.
         gpu_batch_size: Batch size for GPU processing.
         gpu_dtype: Data type for GPU computation.
-        
     Returns:
         If contrast is array/list: Single DataFrame with DE results.
         If contrast is "one-vs-rest": Dictionary with group names as keys and 
@@ -190,7 +182,6 @@ def _test_de_one_vs_rest(
 ) -> Dict[str, pd.DataFrame]:
     """
     Perform one-vs-rest differential expression testing.
-    
     Args:
         devil_fit: Fitted model dictionary.
         pval_adjust_method: Method for p-value adjustment.
@@ -201,7 +192,6 @@ def _test_de_one_vs_rest(
         use_gpu: Whether to use GPU acceleration.
         gpu_batch_size: Batch size for GPU processing.
         gpu_dtype: Data type for GPU computation.
-        
     Returns:
         Dictionary mapping group names to DataFrames with DE results.
     """
@@ -271,7 +261,19 @@ def _test_de_cpu(
     n_jobs: Optional[int],
     verbose: bool
 ) -> pd.DataFrame:
-    """CPU implementation of differential expression testing."""
+    """
+    CPU implementation of differential expression testing.
+    Args:
+        devil_fit: Fitted model dictionary.
+        contrast: Contrast vector.
+        pval_adjust_method: Method for p-value adjustment.
+        max_lfc: Maximum absolute log2 fold change to report.
+        clusters: Sample cluster assignments for robust variance estimation.
+        n_jobs: Number of parallel CPU jobs.
+        verbose: Whether to print progress messages.
+    Returns:
+        DataFrame with differential expression results.
+    """
     
     # Validate clusters if provided
     if clusters is not None:
@@ -360,7 +362,20 @@ def _test_de_gpu(
     gpu_dtype: str,
     verbose: bool
 ) -> pd.DataFrame:
-    """GPU implementation of differential expression testing (placeholder)."""
+    """
+    GPU implementation of differential expression testing (placeholder).
+    Args:
+        devil_fit: Fitted model dictionary.
+        contrast: Contrast vector.
+        pval_adjust_method: Method for p-value adjustment.
+        max_lfc: Maximum absolute log2 fold change to report.
+        clusters: Sample cluster assignments for robust variance estimation.
+        gpu_batch_size: Batch size for GPU processing.
+        gpu_dtype: Data type for GPU computation.
+        verbose: Whether to print progress messages.
+    Returns:
+        DataFrame with differential expression results.
+    """
     
     # For now, fall back to CPU implementation
     # TODO: Implement actual GPU version
@@ -376,7 +391,16 @@ def _test_genes_cpu_batch(
     gene_indices: np.ndarray,
     clusters: Optional[np.ndarray]
 ) -> tuple:
-    """Process a batch of genes for differential expression testing."""
+    """
+    Process a batch of genes for differential expression testing.
+    Args:
+        devil_fit: Fitted model dictionary.
+        contrast: Contrast vector.
+        gene_indices: Indices of genes to test.
+        clusters: Sample cluster assignments for robust variance estimation.
+    Returns:
+        Tuple containing p-values, standard errors, and statistics.
+    """
     
     n_samples = devil_fit["n_samples"]
     batch_size = len(gene_indices)
@@ -428,16 +452,13 @@ def test_de_memory_efficient(
     **kwargs
 ) -> pd.DataFrame:
     """
-    Memory-efficient version of test_de for very large datasets.
-    
+    Memory-efficient version of test_de for very large datasets.    
     Processes genes in smaller chunks to avoid memory issues.
-    
     Args:
         devil_fit: Fitted model dictionary.
         contrast: Contrast vector.
         gene_subset: Optional subset of genes to test (by name or index).
         **kwargs: Other arguments passed to test_de.
-        
     Returns:
         DataFrame with differential expression results.
     """

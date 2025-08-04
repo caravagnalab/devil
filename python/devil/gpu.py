@@ -56,7 +56,6 @@ def is_gpu_available(use_memory: bool = True, memory_cutoff_gb: float = 10.0) ->
 def get_gpu_memory_info() -> Tuple[int, int]:
     """
     Get GPU memory information.
-    
     Returns:
         Tuple of (free_memory, total_memory) in bytes.
         Returns (0, 0) if GPU not available.
@@ -82,14 +81,12 @@ def estimate_batch_size(
 ) -> int:
     """
     Estimate optimal batch size for GPU processing based on available memory.
-    
     Args:
         n_genes: Number of genes to process.
         n_samples: Number of samples.
         n_features: Number of features in design matrix.
         dtype: Data type for calculations.
         memory_fraction: Fraction of GPU memory to use.
-        
     Returns:
         Recommended batch size for processing genes.
     """
@@ -110,7 +107,6 @@ def estimate_batch_size(
         # - Working arrays: ~3 * n_samples (mu, weights, residuals)
         # - Design matrix (shared): n_samples * n_features
         # - Temporary arrays: ~2 * n_samples * n_features
-        
         memory_per_gene = bytes_per_element * (
             n_samples +  # count data
             n_features +  # beta coefficients
@@ -138,10 +134,8 @@ def to_gpu(array: np.ndarray, dtype: Optional[np.dtype] = None) -> "cp.ndarray":
     Args:
         array: NumPy array to transfer.
         dtype: Optional target dtype.
-        
     Returns:
         CuPy array on GPU.
-        
     Raises:
         RuntimeError: If GPU not available.
     """
@@ -157,10 +151,8 @@ def to_gpu(array: np.ndarray, dtype: Optional[np.dtype] = None) -> "cp.ndarray":
 def to_cpu(array: "cp.ndarray") -> np.ndarray:
     """
     Transfer CuPy array back to CPU.
-    
     Args:
         array: CuPy array to transfer.
-        
     Returns:
         NumPy array on CPU.
     """

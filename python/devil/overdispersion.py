@@ -23,7 +23,6 @@ def estimate_initial_dispersion(
     Args:
         count_matrix: Count data (genes × samples).
         offset_vector: Offset values per sample.
-        
     Returns:
         Initial dispersion estimates per gene.
     """
@@ -56,10 +55,8 @@ def fit_dispersion(
 ) -> float:
     """
     Fit dispersion parameter using maximum likelihood.
-    
     Uses Newton-Raphson optimization with analytical gradients.
     Implementation adapted from DESeq2/glmGamPoi.
-    
     Args:
         beta: Fitted coefficients for gene.
         design_matrix: Design matrix.
@@ -68,7 +65,6 @@ def fit_dispersion(
         tolerance: Convergence tolerance.
         max_iter: Maximum iterations.
         do_cox_reid_adjustment: Whether to apply Cox-Reid adjustment.
-        
     Returns:
         Estimated dispersion parameter.
     """
@@ -137,14 +133,12 @@ def compute_nb_log_likelihood(
 ) -> float:
     """
     Compute negative binomial log-likelihood.
-    
     Args:
         y: Observed counts.
         mu: Expected values.
         theta: Dispersion parameter.
         design_matrix: Design matrix for Cox-Reid adjustment.
         do_cox_reid: Whether to apply Cox-Reid adjustment.
-        
     Returns:
         Log-likelihood value.
     """
@@ -175,7 +169,17 @@ def compute_nb_score(
     design_matrix: np.ndarray,
     do_cox_reid: bool
 ) -> float:
-    """Compute score function (derivative of log-likelihood)."""
+    """
+    Compute score function (derivative of log-likelihood).
+    Args:
+        y: Observed counts.
+        mu: Expected values.
+        theta: Dispersion parameter.
+        design_matrix: Design matrix for Cox-Reid adjustment.
+        do_cox_reid: Whether to apply Cox-Reid adjustment.
+    Returns:
+        Score function value.
+    """
     alpha = 1.0 / theta
     
     # Basic score: derivative of log-likelihood with respect to theta
@@ -205,10 +209,18 @@ def compute_nb_hessian(
     y: np.ndarray,
     mu: np.ndarray, 
     theta: float,
-    design_matrix: np.ndarray,
     do_cox_reid: bool
 ) -> float:
-    """Compute Hessian (second derivative of log-likelihood)."""
+    """
+    Compute Hessian (second derivative of log-likelihood).
+    Args:
+        y: Observed counts.
+        mu: Expected values.
+        theta: Dispersion parameter.
+        do_cox_reid: Whether to apply Cox-Reid adjustment.
+    Returns:
+        Hessian value.
+    """
     alpha = 1.0 / theta
     
     # First derivative terms (for the product rule)

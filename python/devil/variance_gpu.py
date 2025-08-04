@@ -23,7 +23,6 @@ def compute_hessian_gpu_batch(
 ) -> np.ndarray:
     """
     Compute inverse Hessian matrices for a batch of genes on GPU.
-    
     Args:
         beta_batch: Regression coefficients (batch_size × features).
         precision_batch: Inverse overdispersion parameters (batch_size,).
@@ -31,7 +30,6 @@ def compute_hessian_gpu_batch(
         design_matrix: Predictor variables (samples × features).
         size_factors: Normalization factors (samples,).
         dtype: Data type for computation.
-        
     Returns:
         Inverse Hessian matrices (batch_size × features × features).
     """
@@ -96,7 +94,6 @@ def compute_scores_gpu_batch(
         overdispersion_batch: Dispersion parameters (batch_size,).
         size_factors: Normalization factors (samples,).
         dtype: Data type for computation.
-        
     Returns:
         Score residuals (batch_size × samples × features).
     """
@@ -147,7 +144,6 @@ def compute_sandwich_estimator_gpu_batch(
 ) -> np.ndarray:
     """
     Compute clustered sandwich variance estimators for a batch of genes on GPU.
-    
     Args:
         design_matrix: Predictor variables (samples × features).
         y_batch: Response values (batch_size × samples).
@@ -156,7 +152,6 @@ def compute_sandwich_estimator_gpu_batch(
         size_factors: Normalization factors (samples,).
         clusters: Cluster assignments (samples,).
         dtype: Data type for computation.
-        
     Returns:
         Sandwich variance matrices (batch_size × features × features).
     """
@@ -229,14 +224,12 @@ def compute_variance_batch_gpu(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute variance estimates for a batch of genes on GPU.
-    
     Args:
         devil_fit: Fitted model dictionary.
         gene_indices: Indices of genes to process.
         contrast: Contrast vector.
         clusters: Optional cluster assignments.
         dtype: Data type for computation.
-        
     Returns:
         Tuple of (variances, standard_errors) for the batch.
     """

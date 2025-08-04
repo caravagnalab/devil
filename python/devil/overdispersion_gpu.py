@@ -25,12 +25,10 @@ def estimate_initial_dispersion_gpu(
 ) -> np.ndarray:
     """
     Estimate initial dispersion using method of moments on GPU.
-    
     Args:
         count_matrix: Count data (genes × samples).
         offset_vector: Offset values per sample.
         dtype: Data type for GPU computation.
-        
     Returns:
         Initial dispersion estimates per gene.
     """
@@ -77,10 +75,8 @@ def fit_dispersion_gpu_batch(
 ) -> np.ndarray:
     """
     Fit dispersion parameters for a batch of genes on GPU with full vectorization.
-    
     This implementation uses vectorized Newton-Raphson optimization to fit
     dispersion parameters for all genes in the batch simultaneously.
-    
     Args:
         beta_batch: Fitted coefficients (batch_size × features).
         design_matrix: Design matrix (samples × features).
@@ -90,7 +86,6 @@ def fit_dispersion_gpu_batch(
         max_iter: Maximum iterations.
         do_cox_reid_adjustment: Whether to apply Cox-Reid adjustment.
         dtype: Data type for computation.
-        
     Returns:
         Estimated dispersion parameters for batch.
     """
@@ -168,11 +163,9 @@ def _initialize_dispersions_vectorized(
 ) -> cp.ndarray:
     """
     Initialize dispersion parameters using method of moments for all genes.
-    
     Args:
         y: Count data (batch_size × samples).
         mu: Expected values (batch_size × samples).
-        
     Returns:
         Initial dispersion estimates.
     """
@@ -203,7 +196,6 @@ def _compute_cox_reid_adjustment(
 ) -> float:
     """
     Compute Cox-Reid adjustment term.
-    
     For efficiency, we compute a simplified version that works well in practice.
     """
     # Simplified Cox-Reid adjustment
@@ -378,7 +370,6 @@ def _optimize_dispersion_gpu(
         tolerance: Convergence tolerance.
         max_iter: Maximum iterations.
         do_cox_reid: Whether to apply Cox-Reid adjustment.
-        
     Returns:
         Optimized dispersion parameter.
     """
@@ -405,7 +396,6 @@ def _optimize_dispersion_gpu(
 
 
 def select_dispersion_implementation(
-    n_genes: int,
     batch_size: int,
     available_memory: int
 ) -> str:
@@ -413,10 +403,8 @@ def select_dispersion_implementation(
     Select implementation based on problem size and memory.
     
     Args:
-        n_genes: Total number of genes.
         batch_size: Proposed batch size.
         available_memory: Available GPU memory in bytes.
-        
     Returns:
         'gpu' or 'cpu' recommendation.
     """

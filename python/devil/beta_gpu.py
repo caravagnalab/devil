@@ -227,9 +227,7 @@ def beta_fit_group_gpu_batch(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Fit single beta coefficient (intercept-only) for batch of genes on GPU.
-    
     This implements the exact beta_fit_group algorithm for GPU batch processing.
-    
     Args:
         y_batch: Count data (batch_size × samples).
         mu_beta_batch: Initial beta coefficients (batch_size,).
@@ -238,7 +236,6 @@ def beta_fit_group_gpu_batch(
         max_iter: Maximum iterations.
         tolerance: Convergence tolerance.
         dtype: Data type for computation.
-        
     Returns:
         Tuple of (fitted_beta, n_iterations, converged).
     """
@@ -322,7 +319,6 @@ def fit_beta_coefficients_gpu(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     High-level interface for exact GPU beta coefficient fitting.
-    
     Args:
         y_batch: Count data (batch_size × samples).
         design_matrix: Design matrix (samples × features).
@@ -332,7 +328,6 @@ def fit_beta_coefficients_gpu(
         max_iter: Maximum iterations.
         tolerance: Convergence tolerance.
         dtype: Data type for computation.
-        
     Returns:
         Tuple of (fitted_beta, n_iterations, converged).
     """
@@ -394,7 +389,6 @@ def fit_beta_coefficients_gpu_batch(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Process large count matrices in batches using GPU acceleration.
-    
     Args:
         count_matrix: Count data (genes × samples).
         design_matrix: Design matrix (samples × features).
@@ -406,7 +400,6 @@ def fit_beta_coefficients_gpu_batch(
         tolerance: Convergence tolerance.
         dtype: Data type for computation.
         verbose: Whether to show progress.
-        
     Returns:
         Tuple of (fitted_beta, n_iterations, converged) for all genes.
     """

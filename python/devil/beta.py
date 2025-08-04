@@ -23,8 +23,7 @@ def init_beta(
     
     Args:
         y: Count vector for one gene.
-        X: Design matrix.
-        
+        X: Design matrix.    
     Returns:
         Initial beta estimates.
     """
@@ -65,7 +64,6 @@ def beta_fit(
         dispersion: Dispersion parameter.
         max_iter: Maximum iterations.
         tolerance: Convergence tolerance.
-        
     Returns:
         Tuple of (fitted_beta, n_iterations, converged).
     """
@@ -156,7 +154,6 @@ def beta_fit_group(
         dispersion: Dispersion parameter.
         max_iter: Maximum iterations.
         tolerance: Convergence tolerance.
-        
     Returns:
         Tuple of (fitted_beta, n_iterations, converged).
     """
@@ -228,7 +225,6 @@ def fit_beta_coefficients(
         dispersion: Dispersion parameter.
         max_iter: Maximum iterations.
         tolerance: Convergence tolerance.
-        
     Returns:
         Tuple of (fitted_beta, n_iterations, converged).
     """
@@ -269,7 +265,6 @@ def init_beta_matrix(
     Args:
         count_matrix: Count data (genes × samples).
         design_matrix: Design matrix (samples × features).
-        
     Returns:
         Initial beta estimates (genes × features).
     """

@@ -13,14 +13,12 @@ def compute_hessian(
 ) -> np.ndarray:
     """
     Compute inverse of negative Hessian matrix for GLM.
-    
     Args:
         beta: Regression coefficients.
         precision: Inverse of overdispersion (1/phi).
         y: Response values.
         design_matrix: Predictor variables matrix.
         size_factors: Normalization factors.
-        
     Returns:
         Inverse of negative Hessian matrix.
     """
@@ -54,14 +52,12 @@ def compute_scores(
 ) -> np.ndarray:
     """
     Compute score residuals for each observation.
-    
     Args:
         design_matrix: Predictor variables.
         y: Response values.
         beta: Regression coefficients.
         overdispersion: Dispersion parameter.
-        size_factors: Normalization factors.
-        
+        size_factors: Normalization factors.  
     Returns:
         Matrix of score residuals (n_samples × n_features).
     """
@@ -92,18 +88,15 @@ def compute_sandwich_estimator(
 ) -> np.ndarray:
     """
     Compute clustered sandwich variance estimator.
-    
     Calculates robust variance estimation accounting for correlation
     within clusters (e.g., multiple samples from same patient).
-    
     Args:
         design_matrix: Predictor variables.
         y: Response values.
         beta: Regression coefficients. 
         overdispersion: Dispersion parameter.
         size_factors: Normalization factors.
-        clusters: Cluster assignments (1-indexed).
-        
+        clusters: Cluster assignments (1-indexed).    
     Returns:
         Sandwich variance-covariance matrix.
     """

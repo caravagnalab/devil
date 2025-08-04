@@ -11,20 +11,16 @@ def calculate_size_factors(
 ) -> np.ndarray:
     """
     Calculate size factors for count data normalization.
-    
     Computes normalization factors to account for differences in sequencing
     depth across samples.
-    
     Args:
         count_matrix: Count data (genes × samples).
         method: Normalization method. Options:
             - 'median_ratio': DESeq2-style median ratio method
             - 'total_count': Simple library size normalization
         verbose: Whether to print messages.
-        
     Returns:
         Size factors array (one per sample).
-        
     Raises:
         ValueError: If any sample has all zeros.
     """
@@ -60,8 +56,7 @@ def calculate_size_factors(
             if len(finite_ratios) > 0:
                 size_factors[j] = np.exp(np.median(finite_ratios))
             else:
-                size_factors[j] = 1.0
-                
+                size_factors[j] = 1.0       
     else:
         raise ValueError(f"Unknown method: {method}")
     
@@ -91,12 +86,10 @@ def compute_offset_vector(
 ) -> np.ndarray:
     """
     Compute offset vector for model fitting.
-    
     Args:
         base_offset: Base offset value.
         n_samples: Number of samples.
         size_factors: Optional size factors for normalization.
-        
     Returns:
         Offset vector for each sample.
     """

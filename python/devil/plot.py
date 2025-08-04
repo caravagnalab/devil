@@ -46,21 +46,8 @@ def plot_volcano(
         xlabel: X-axis label. If None, uses default.
         ylabel: Y-axis label. If None, uses default.
         ax: Existing axes to plot on. If None, creates new figure.
-        
     Returns:
         Matplotlib axes object containing the plot.
-        
-    Examples:
-        >>> # Basic volcano plot
-        >>> ax = plot_volcano(de_results)
-        
-        >>> # Custom thresholds and colors
-        >>> ax = plot_volcano(
-        ...     de_results,
-        ...     lfc_threshold=2,
-        ...     pval_threshold=0.01,
-        ...     colors=['gray', 'blue', 'green', 'red']
-        ... )
     """
     # Validate input
     required_cols = {'gene', 'lfc'}
@@ -249,30 +236,3 @@ def plot_volcano(
     return ax
 
 
-def plot_ma(
-    de_results: pd.DataFrame,
-    expression_data: Optional[np.ndarray] = None,
-    lfc_threshold: float = 1.0,
-    pval_threshold: float = 0.05,
-    alpha: float = 0.5,
-    figsize: Tuple[float, float] = (8, 6),
-    ax: Optional[plt.Axes] = None,
-) -> plt.Axes:
-    """
-    Create MA plot for differential expression results.
-    
-    Args:
-        de_results: DataFrame from test_de() with columns 'gene', 'lfc', 'padj'.
-        expression_data: Optional expression matrix (genes × samples) for computing
-            mean expression. If None, must have 'baseMean' column in de_results.
-        lfc_threshold: Absolute log2 fold change threshold.
-        pval_threshold: Adjusted p-value threshold.
-        alpha: Point transparency.
-        figsize: Figure size as (width, height).
-        ax: Existing axes to plot on.
-        
-    Returns:
-        Matplotlib axes object.
-    """
-    # Implementation details...
-    pass  # Placeholder for brevity
