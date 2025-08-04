@@ -11,7 +11,7 @@ from unittest.mock import patch, MagicMock
 import warnings
 
 import devil
-from devil.main import fit_devil, _fit_beta_cpu, _fit_overdispersion_cpu
+from devil.main import fit_devil, _fit_beta_cpu, _fit_overdispersion
 
 
 class TestFitDevil:
@@ -100,9 +100,24 @@ class TestFitDevil:
         
     def test_fit_devil_anndata(self, anndata_object):
         """Test fit_devil with AnnData object."""
+        # Create design matrix manually since design_formula is not implemented
+        # This matches "~ condition + batch"
+        from pandas import get_dummies
+        
+        # Create dummy variables for categorical factors
+        condition_dummies = get_dummies(anndata_object.obs['condition'], drop_first=True)
+        batch_dummies = get_dummies(anndata_object.obs['batch'], drop_first=True)
+        
+        # Combine with intercept
+        design_matrix = np.column_stack([
+            np.ones(anndata_object.n_obs),  # intercept
+            condition_dummies.values,  # condition dummies (reference: A)
+            batch_dummies.values,  # batch dummies (reference: batch1)
+        ])
+        
         result = fit_devil(
             anndata_object,
-            design_formula="~ condition + batch",
+            design_matrix=design_matrix,
             overdispersion=True,
             verbose=False,
             max_iter=10,
@@ -212,10 +227,10 @@ class TestInputValidation:
             fit_devil(counts, use_gpu=False)
     
     def test_design_formula_without_anndata(self):
-        """Test error when using design_formula with non-AnnData input."""
+        """Test error when using design_formula (which is not implemented)."""
         counts = np.random.negative_binomial(3, 0.4, size=(10, 10))
         
-        with pytest.raises(ValueError, match="design_formula requires AnnData"):
+        with pytest.raises(NotImplementedError, match="design_formula support not yet implemented"):
             fit_devil(counts, design_formula="~ condition", use_gpu=False)
     
     def test_incompatible_dimensions(self):
@@ -297,12 +312,12 @@ class TestHelperFunctions:
         assert np.all(iterations >= 1)
         assert np.all(iterations <= 10)
     
-    def test_fit_overdispersion_cpu(self, mock_fit_data):
+    def test_fit_overdispersion(self, mock_fit_data):
         """Test CPU overdispersion fitting."""
         # Create fitted beta values
         beta = np.random.normal(0, 1, size=(20, 3))
         
-        theta = _fit_overdispersion_cpu(
+        theta = _fit_overdispersion(
             beta,
             mock_fit_data['design_matrix'],
             mock_fit_data['count_matrix'],
@@ -310,6 +325,9 @@ class TestHelperFunctions:
             tolerance=1e-3,
             max_iter=10,
             do_cox_reid_adjustment=True,
+            use_gpu=False,
+            batch_size=None,
+            dtype=None,
             n_jobs=2,
             verbose=False
         )

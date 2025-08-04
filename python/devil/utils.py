@@ -120,9 +120,17 @@ def validate_inputs(
             f"design matrix has {n_design_samples} samples"
         )
     
-    if n_samples <= n_features:
+    if n_samples < n_features:
         raise ValueError(
-            f"Insufficient samples: need more samples ({n_samples}) than features ({n_features})"
+            f"Insufficient samples: need at least as many samples ({n_samples}) as features ({n_features})"
+        )
+    
+    # If we have exactly n_samples == n_features, warn about potential issues
+    if n_samples == n_features:
+        warnings.warn(
+            f"Number of samples ({n_samples}) equals number of features ({n_features}). "
+            "This may cause issues with statistical testing due to zero degrees of freedom.",
+            RuntimeWarning
         )
     
     # Check for negative values in count matrix
@@ -169,7 +177,6 @@ def check_convergence(
     n_non_converged = np.sum(non_converged)
     
     if n_non_converged > 0:
-        import warnings
         warnings.warn(
             f"{n_non_converged} genes did not converge within {max_iter} iterations. "
             "Consider increasing max_iter or tolerance."

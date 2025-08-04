@@ -173,6 +173,10 @@ def test_de(
         )
 
 
+# Prevent pytest from collecting this function as a test
+test_de.__test__ = False
+
+
 def _test_de_one_vs_rest(
     devil_fit: Dict[str, Any],
     pval_adjust_method: str = "fdr_bh",
@@ -340,8 +344,8 @@ def _test_de_cpu(
         'padj': padj
     })
     
-    # Sort by adjusted p-value
-    results_df = results_df.sort_values('padj').reset_index(drop=True)
+    # Sort by raw p-value to ensure consistent ordering across adjustment methods
+    results_df = results_df.sort_values('pval').reset_index(drop=True)
     
     return results_df
 

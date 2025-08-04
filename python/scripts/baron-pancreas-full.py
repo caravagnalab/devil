@@ -69,7 +69,8 @@ def main():
         init_overdispersion = 100,
         verbose = True,
         n_jobs = 1, 
-        offset = 1e-6
+        offset = 1e-6,
+        use_gpu = devil.is_gpu_available()
     )
     print(fit.keys())
 

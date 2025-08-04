@@ -6,6 +6,7 @@ docs
 python/tmp/
 python/notebooks/tmp/
 .cursor/
+tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -9,7 +9,6 @@ from joblib import Parallel, delayed
 import warnings
 from tqdm import tqdm
 
-# Import implementations (with "_exact" suffix removed as requested)
 from .beta import init_beta, fit_beta_coefficients, init_beta_matrix
 from .overdispersion import estimate_initial_dispersion, fit_dispersion
 from .size_factors import calculate_size_factors, compute_offset_vector
@@ -99,8 +98,6 @@ def fit_devil(
     if design_formula is not None:
         if not isinstance(adata, ad.AnnData):
             raise ValueError("design_formula requires AnnData input with .obs metadata")
-        # Note: Design formula parsing would need to be implemented
-        # For now, require explicit design_matrix
         raise NotImplementedError("design_formula support not yet implemented")
     
     # Validate inputs
@@ -239,7 +236,8 @@ def fit_devil(
         'count_matrix': count_matrix,
         'feature_names': feature_names,
         'gene_names': gene_names,
-        'sample_names': sample_names
+        'sample_names': sample_names,
+        'use_gpu': use_gpu
     }
     
     if verbose:
