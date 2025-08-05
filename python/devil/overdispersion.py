@@ -97,8 +97,7 @@ def fit_dispersion(
     def hessian(log_theta):
         """Hessian (second derivative)."""
         theta = np.exp(log_theta)
-        return -compute_nb_hessian(y, mu, theta, design_matrix,
-                                 do_cox_reid_adjustment)
+        return -compute_nb_hessian(y, mu, theta, do_cox_reid_adjustment)
     
     # Optimize using Newton-Raphson via scipy
     result = optimize.minimize(

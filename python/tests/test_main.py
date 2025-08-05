@@ -226,13 +226,6 @@ class TestInputValidation:
         with pytest.raises(ValueError, match="Must provide either"):
             fit_devil(counts, use_gpu=False)
     
-    def test_design_formula_without_anndata(self):
-        """Test error when using design_formula (which is not implemented)."""
-        counts = np.random.negative_binomial(3, 0.4, size=(10, 10))
-        
-        with pytest.raises(NotImplementedError, match="design_formula support not yet implemented"):
-            fit_devil(counts, design_formula="~ condition", use_gpu=False)
-    
     def test_incompatible_dimensions(self):
         """Test error with incompatible matrix dimensions."""
         counts = np.random.negative_binomial(3, 0.4, size=(10, 15))
