@@ -1,7 +1,7 @@
 Package: devil
 Title: devil
 Version: 0.1.0
-Author: Giovanni Santacatterina
+Author: Giovanni Santacatterina and Niccolò Tosato
 Authors@R: c(person("Giovanni", "Santacatterina", role=c("aut", "cre"), email="santacatterinagiovanni@gmail.com"))
 Description: An R package to perform fast and scalable single cell differential expression analysis.
 License: MIT + file LICENSE
