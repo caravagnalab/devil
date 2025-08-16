@@ -1,0 +1,198 @@
+  ---
+title: "Getting Started with devil: Differential Expression in scRNA-seq"
+output: html_document
+vignette: >
+  %\VignetteIndexEntry{Getting Started with devil}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", message = FALSE, warning = FALSE)
+set.seed(1)
+```
+
+## Overview
+
+This tutorial walks through a minimal, end-to-end workflow for differential expression (DE) with **`devil`** on a public scRNA-seq dataset. You will: (1) load data, (2) filter cells/genes, (3) build a design, (4) fit the model, (5) specify contrasts, and (6) visualize results.
+
+If your study has multiple patients/donors, `devil` can compute **clustered (patient-aware) standard errors** via a `cluster` argument.
+
+## Prerequisites
+
+```{r}
+# If needed:
+# install.packages("BiocManager")
+# BiocManager::install(c("scRNAseq","SingleCellExperiment"))
+
+library(devil)
+library(scRNAseq)
+library(SingleCellExperiment)
+library(SummarizedExperiment)
+library(Matrix)
+library(dplyr)
+```
+
+## Load and inspect data
+
+We’ll use the Baron pancreas dataset from `scRNAseq`.
+
+```{r}
+sce <- scRNAseq::BaronPancreasData()  # SingleCellExperiment
+sce
+```
+
+Extract counts and metadata using accessors:
+
+```{r}
+counts <- SummarizedExperiment::assay(sce, "counts")
+meta   <- as.data.frame(SummarizedExperiment::colData(sce))
+
+cat("Genes:", nrow(counts), "\nCells:", ncol(counts), "\n")
+stopifnot("label" %in% colnames(meta))
+head(meta$label)
+```
+
+**Tip:** If you have a patient/donor column (often `donor` or `patient`), keep it, we’ll optionally pass it to `cluste=` later.
+
+## Light filtering
+
+Keep the three most abundant cell types; filter lowly expressed genes.
+
+```{r}
+# keep 3 largest cell types
+top3 <- names(sort(table(meta$label), decreasing = TRUE))[1:3]
+keep_cells <- meta$label %in% top3
+counts <- counts[, keep_cells, drop = FALSE]
+meta   <- meta[ keep_cells, , drop = FALSE]
+
+# gene filter: expressed (>=1 UMI) in >= 1% of kept cells
+min_cells <- max(1, floor(0.01 * ncol(counts)))
+keep_genes <- Matrix::rowSums(counts >= 1) >= min_cells
+counts <- counts[keep_genes, , drop = FALSE]
+
+cat("After filtering — Genes:", nrow(counts), "Cells:", ncol(counts), "\n")
+table(meta$label)
+```
+
+Optionally restrict to highly expressed genes for a faster demo (skip for real analyses):
+
+```{r}
+# demo mode: top 3000 genes by total counts
+if (nrow(counts) > 3000) {
+  ord <- order(Matrix::rowSums(counts), decreasing = TRUE)
+  counts <- counts[ord[seq_len(3000)], ]
+}
+```
+
+## Design matrix
+
+Build a **no-intercept** design so each coefficient corresponds to a cell type.
+
+```{r}
+meta$label <- droplevels(factor(meta$label))
+design <- model.matrix(~ 0 + label, data = meta)
+colnames(design) <- gsub("^label", "", colnames(design))
+colnames(design)
+```
+
+*(Optional) Cluster variable for patient-aware SEs, if available:*
+
+```{r}
+cluster <- NULL
+if ("donor" %in% names(meta))   cluster <- factor(meta$donor)
+if (is.null(cluster) && "patient" %in% names(meta)) cluster <- factor(meta$patient)
+```
+
+## Fit the model
+
+`fit_devil()` expects a counts matrix (genes × cells), a design (cells × covariates). The parameters `size_factors=TRUE` computes internally a size factor that will scale expression based on the library size of each cell.
+
+```{r}
+fit <- devil::fit_devil(
+  input_matrix        = as.matrix(counts),
+  design_matrix       = design,
+  overdispersion      = TRUE,
+  offset              = 1e-6,
+  size_factors        = TRUE,
+  parallel.cores      = 1,
+  verbose             = TRUE
+)
+```
+
+## Specify contrasts
+
+With a no-intercept design, each column is a cell-type mean on the log scale.  
+To test “beta vs ductal”, define the contrast `(+1 * beta) + (-1 * ductal)` and zero elsewhere.
+
+```{r}
+make_contrast <- function(design, from, to) {
+  stopifnot(from %in% colnames(design), to %in% colnames(design))
+  c <- rep(0, ncol(design)); names(c) <- colnames(design)
+  c[from] <-  1
+  c[to]   <- -1
+  as.numeric(c)
+}
+
+contrast <- make_contrast(design, from = "beta", to = "ductal")
+contrast
+```
+
+If your labels differ, update `from`/`to` accordingly—use `colnames(design)` to see available levels.
+
+## Test for differential expression
+
+Run a Wald test with optional **clustered SEs** if `cluster` exists.
+
+```{r}
+test <- devil::test_de(
+  fit,
+  contrast = contrast,
+  max_lfc  = 20,      # Cap extreme fold changes
+  cluster  = cluster  # NULL if not present; enables patient-aware SE if provided
+)
+
+# Add gene names if missing
+if (!("name" %in% colnames(test))) {
+  if (!is.null(rownames(counts))) {
+    test$name <- rownames(counts)
+  } else {
+    test$name <- as.character(seq_len(nrow(test)))
+  }
+}
+```
+
+Quick peek at the top hits:
+
+```{r}
+test %>%
+  arrange(adj_pval, desc(abs(lfc))) %>%
+  select(name, lfc, pval, adj_pval) %>%
+  head(10)
+```
+
+## Visualize results
+
+```{r}
+devil::plot_volcano(
+  test,
+  lfc_cut    = 1,
+  pval_cut   = 0.05,
+  labels     = TRUE,
+  point_size = 1.8, 
+  title = "beta vs ductal"
+)
+```
+
+## Notes & tips
+
+- **Designs with covariates.** No-intercept designs (~ 0 + label) make contrasts more intuitive but aren't always necessary. You can obviously add more covariates (e.g., age, sex). Keep `cluster = donor` for valid patient-level uncertainty.
+- **Multiple testing** Use adj_pval (FDR-corrected) rather than raw p-values for significance calls.
+- **Speed.** For large datasets, run on GPU if available.  
+- **Interpretation.** `lfc` is on the log2 scale. `lfc = 1` means 2-fold higher expression.
+
+## Session info
+
+```{r}
+sessionInfo()
+```

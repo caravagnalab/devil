@@ -23,12 +23,14 @@ Key features are:
 
 ## Installation
 
-You can install the development version of `devil` from
+You can install the current version of `devil` from
 [GitHub](https://github.com/) with:
 
 ``` r
 devtools::install_github("caravagnalab/devil")
 ```
+
+The CUDA implementation is, as today, in the devel branch.
 
 ## Example
 
