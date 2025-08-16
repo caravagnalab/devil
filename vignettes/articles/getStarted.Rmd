@@ -1,8 +1,8 @@
-  ---
-title: "Getting Started with devil: Differential Expression in scRNA-seq"
+---
+title: "Get started"
 output: html_document
 vignette: >
-  %\VignetteIndexEntry{Getting Started with devil}
+  %\VignetteIndexEntry{Get started}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -173,7 +173,7 @@ test %>%
 
 ## Visualize results
 
-```{r}
+```{r, fig.cap="Volcano plot of DE genes"}
 devil::plot_volcano(
   test,
   lfc_cut    = 1,
