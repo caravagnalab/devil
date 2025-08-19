@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "numpy>=1.20.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devil"
+version = "0.1.0"
+description = "Fast and scalable single cell differential expression analysis"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Giovanni Santacatterina", email = "santacatterinagiovanni@gmail.com"},
+]
+maintainers = [
+    {name = "Giovanni Santacatterina", email = "santacatterinagiovanni@gmail.com"},
+]
+keywords = ["single-cell", "RNA-seq", "differential-expression", "statistics", "bioinformatics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+dependencies = [
+    "numpy>=1.20.0",
+    "scipy>=1.7.0",
+    "pandas>=1.3.0",
+    "anndata>=0.8.0",
+    "scanpy>=1.8.0",
+    "matplotlib>=3.4.0",
+    "seaborn>=0.11.0",
+    "statsmodels>=0.12.0",
+    "joblib>=1.0.0",
+    "tqdm>=4.62.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=3.0.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.990",
+    "jupyter>=1.0.0",
+    "sphinx>=4.0.0",
+]
+gpu = [
+    "cupy-cuda12x>=12.0.0; platform_machine=='x86_64'",
+]
+all = [
+    "devil[dev,gpu]",
+]
+
+[project.urls]
+Homepage = "https://github.com/caravagnalab/devil"
+Documentation = "https://caravagnalab.github.io/devil"
+Repository = "https://github.com/caravagnalab/devil"
+Issues = "https://github.com/caravagnalab/devil/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["devil*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
