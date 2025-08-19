@@ -31,6 +31,7 @@ devtools::install_github("caravagnalab/devil")
 ```
 
 The CUDA implementation is, as today, in the devel branch.
+Similary, a Python implementation (with GPU support), is in the python branch.
 
 ## Example
 
