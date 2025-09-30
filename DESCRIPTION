@@ -26,6 +26,6 @@ LinkingTo:
     RcppArmadillo,
     RcppEigen
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 URL: https://caravagnalab.github.io/devil/
 Config/Needs/website: rmarkdown

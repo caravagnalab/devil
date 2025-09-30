@@ -19,23 +19,27 @@ using namespace Eigen;
  * @return Inverse of the negative Hessian matrix
  */
 // [[Rcpp::export]]
-Eigen::MatrixXd compute_hessian(Eigen::VectorXd beta, const double overdispersion, Eigen::VectorXd y, Eigen::MatrixXd design_matrix, Eigen::VectorXd size_factors) {
-  const double alpha = 1 / overdispersion;
+Eigen::MatrixXd compute_hessian(const Eigen::VectorXd& beta,
+                                const double overdispersion,
+                                const Eigen::VectorXd& y,
+                                const Eigen::MatrixXd& design_matrix,
+                                const Eigen::VectorXd& size_factors) {
+  const double alpha = 1.0 / overdispersion;
   const int n = y.size();
   const int p = design_matrix.cols();
   MatrixXd H = MatrixXd::Zero(p, p);
-  double k, gamma_sq;
 
   for (int sample_idx = 0; sample_idx < n; ++sample_idx) {
     double yi = y(sample_idx);
     VectorXd design_v = design_matrix.row(sample_idx);
 
-    MatrixXd xij = design_v * design_v.transpose();
-    k = size_factors(sample_idx) * std::exp(design_v.dot(beta));
-    gamma_sq = std::pow(1 + alpha * k, 2);
+    double eta = design_v.dot(beta);
+    double k = size_factors(sample_idx) * std::exp(eta);
+    double denom = 1.0 + alpha * k;
+    double gamma_sq = denom * denom;
 
-    MatrixXd new_term = -((yi * alpha + 1) * xij * k / gamma_sq);
-    H += new_term;
+    double scalar = (yi * alpha + 1.0) * k / gamma_sq;
+    H.noalias() -= scalar * (design_v * design_v.transpose());
   }
 
   return -H.inverse();
@@ -56,16 +60,21 @@ Eigen::MatrixXd compute_hessian(Eigen::VectorXd beta, const double overdispersio
  * @return Matrix of score residuals
  */
 // [[Rcpp::export]]
-Eigen::MatrixXd compute_scores(Eigen::MatrixXd& design_matrix, Eigen::VectorXd& y, Eigen::VectorXd& beta, double overdispersion, Eigen::VectorXd& size_factors) {
-  MatrixXd xmat = design_matrix;
-  double alpha = 1.0 / overdispersion;
+Eigen::MatrixXd compute_scores(const Eigen::MatrixXd& design_matrix,
+                               const Eigen::VectorXd& y,
+                               const Eigen::VectorXd& beta,
+                               const double overdispersion,
+                               const Eigen::VectorXd& size_factors) {
+    double alpha = 1.0 / overdispersion;
 
-  VectorXd mu = size_factors.array() * (xmat * beta).array().exp();
-  VectorXd residuals = (y - mu).array() / mu.array();
-  VectorXd weights = mu.array().square() / (mu.array() + mu.array().square() / alpha);
-  VectorXd wr = residuals.array() * weights.array();
+    // Vectorized computation
+    VectorXd eta = design_matrix * beta;
+    VectorXd mu = size_factors.array() * eta.array().exp();
+    VectorXd residuals = (y.array() - mu.array()) / mu.array();
+    VectorXd weights = mu.array() / (1.0 + mu.array() / alpha);
+    VectorXd wr = residuals.array() * weights.array();
 
-  return xmat.array().colwise() * wr.array();
+    return design_matrix.array().colwise() * wr.array();
 }
 
 
@@ -85,22 +94,31 @@ Eigen::MatrixXd compute_scores(Eigen::MatrixXd& design_matrix, Eigen::VectorXd& 
  * @return Clustered "meat" matrix for sandwich variance estimation
  */
 // [[Rcpp::export]]
-Eigen::MatrixXd compute_clustered_meat(Eigen::MatrixXd design_matrix, Eigen::VectorXd y, Eigen::VectorXd beta, double overdispersion, Eigen::VectorXd size_factors, Eigen::VectorXi clusters) {
+Eigen::MatrixXd compute_clustered_meat(const Eigen::MatrixXd& design_matrix,
+                                       const Eigen::VectorXd& y,
+                                       const Eigen::VectorXd& beta,
+                                       const double overdispersion,
+                                       const Eigen::VectorXd& size_factors,
+                                       const Eigen::VectorXi& clusters) {
 
     Eigen::MatrixXd ef = compute_scores(design_matrix, y, beta, overdispersion, size_factors);
     int k = design_matrix.cols();
     int n = design_matrix.rows();
     int ng = clusters.maxCoeff();
-    double adj = double(ng) / (ng - 1);
-    if (ng == 1) {adj = 1;}
+    double adj = (ng > 1) ? double(ng) / (ng - 1.0) : 1.0;
 
     Eigen::MatrixXd rval = Eigen::MatrixXd::Zero(k, k);
 
-    for (int j = 0; j < ng; ++j) {
-      Eigen::VectorXi mask = (clusters.array() == (j + 1)).cast<int>();
-      Eigen::MatrixXd ef_j = (ef.array().colwise() * mask.cast<double>().array()).colwise().sum();
-      rval += adj * ef_j.transpose() * ef_j;
+    for (int j = 1; j <= ng; ++j) {
+      // Sum rows directly without creating mask array
+      Eigen::VectorXd ef_sum = Eigen::VectorXd::Zero(k);
+      for (int i = 0; i < n; ++i) {
+        if (clusters(i) == j) {
+          ef_sum += ef.row(i).transpose();
+        }
+      }
+      rval.noalias() += ef_sum * ef_sum.transpose();
     }
 
-    return rval / n;
+    return (adj / n) * rval;
 }
