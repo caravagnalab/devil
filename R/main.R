@@ -17,6 +17,17 @@
 #' criteria and maximum iterations. For large datasets, the GPU implementation processes
 #' genes in batches for improved memory efficiency.
 #'
+#' @section Size Factor Methods:
+#' Three normalization methods are available:
+#' \itemize{
+#'   \item \code{"normed_sum"} (default): Geometric mean normalization based on library sizes.
+#'     Fast and works well for most datasets.
+#'   \item \code{"psinorm"}: Psi-normalization using Pareto distribution MLE.
+#'     More robust to highly variable genes.
+#'   \item \code{"edgeR"}: edgeR's TMM with singleton pairing method.
+#'     Requires the edgeR package from Bioconductor.
+#' }
+#'
 #' @param input_matrix A numeric matrix of count data (genes × samples).
 #'   Rows represent genes/features, columns represent samples/cells.
 #' @param design_matrix A numeric matrix of predictor variables (samples × predictors).
@@ -30,8 +41,14 @@
 #'   overdispersion estimation. Default: TRUE
 #' @param offset Numeric. Value added to counts to avoid numerical issues with zero counts.
 #'   Default: 1e-6
-#' @param size_factors Logical. Whether to compute normalization factors for different
-#'   sequencing depths. Default: TRUE
+#' @param size_factors Character string or NULL. Method for computing normalization factors
+#'   to account for different sequencing depths. Options are:
+#'   \itemize{
+#'     \item \code{"normed_sum"} (default): Geometric mean normalization
+#'     \item \code{"psinorm"}: Psi-normalization
+#'     \item \code{"edgeR"}: edgeR TMM method
+#'     \item \code{NULL}: No normalization (all size factors set to 1)
+#'   }
 #' @param verbose Logical. Whether to print progress messages during execution.
 #'   Default: FALSE
 #' @param max_iter Integer. Maximum number of iterations for parameter optimization.
@@ -78,7 +95,7 @@ fit_devil <- function(
     init_overdispersion = NULL,
     do_cox_reid_adjustment = TRUE,
     offset=1e-6,
-    size_factors=TRUE,
+    size_factors="normed_sum",
     verbose=FALSE,
     max_iter=100,
     tolerance=1e-3,
@@ -110,16 +127,15 @@ fit_devil <- function(
   }
 
   # Compute size factors
-  if (size_factors) {
+  if (!is.null(size_factors)) {
     if (verbose) { message("Compute size factors") }
-    sf <- calculate_sf(input_matrix, verbose = verbose)
+    sf <- calculate_sf(input_matrix, method = size_factors, verbose = verbose)
   } else {
     sf <- rep(1, nrow(design_matrix))
   }
 
   # Calculate offset vector
   offset_vector = compute_offset_vector(offset, input_matrix, sf)
-  #offset_matrix = compute_offset_matrix(offset, input_matrix, sf)
 
   # Initialize overdispersion
   if (is.null(init_overdispersion)) {

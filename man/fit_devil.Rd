@@ -11,7 +11,7 @@ fit_devil(
   init_overdispersion = NULL,
   do_cox_reid_adjustment = TRUE,
   offset = 1e-06,
-  size_factors = TRUE,
+  size_factors = "normed_sum",
   verbose = FALSE,
   max_iter = 100,
   tolerance = 0.001,
@@ -40,8 +40,14 @@ overdispersion estimation. Default: TRUE}
 \item{offset}{Numeric. Value added to counts to avoid numerical issues with zero counts.
 Default: 1e-6}
 
-\item{size_factors}{Logical. Whether to compute normalization factors for different
-sequencing depths. Default: TRUE}
+\item{size_factors}{Character string or NULL. Method for computing normalization factors
+to account for different sequencing depths. Options are:
+\itemize{
+\item \code{"normed_sum"} (default): Geometric mean normalization
+\item \code{"psinorm"}: Psi-normalization
+\item \code{"edgeR"}: edgeR TMM method
+\item \code{NULL}: No normalization (all size factors set to 1)
+}}
 
 \item{verbose}{Logical. Whether to print progress messages during execution.
 Default: FALSE}
@@ -93,6 +99,19 @@ The model fitting process uses iterative optimization with configurable converge
 criteria and maximum iterations. For large datasets, the GPU implementation processes
 genes in batches for improved memory efficiency.
 }
+\section{Size Factor Methods}{
+
+Three normalization methods are available:
+\itemize{
+\item \code{"normed_sum"} (default): Geometric mean normalization based on library sizes.
+Fast and works well for most datasets.
+\item \code{"psinorm"}: Psi-normalization using Pareto distribution MLE.
+More robust to highly variable genes.
+\item \code{"edgeR"}: edgeR's TMM with singleton pairing method.
+Requires the edgeR package from Bioconductor.
+}
+}
+
 \examples{
 \dontrun{
 # Basic usage with default parameters

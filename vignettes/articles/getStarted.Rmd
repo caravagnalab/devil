@@ -114,7 +114,7 @@ fit <- devil::fit_devil(
   design_matrix       = design,
   overdispersion      = TRUE,
   offset              = 1e-6,
-  size_factors        = TRUE,
+  size_factors        = "normed_sum",
   parallel.cores      = 1,
   verbose             = TRUE
 )
