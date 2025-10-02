@@ -1,31 +1,138 @@
-
 #' Calculate Size Factors for Count Data Normalization
 #'
-#' @description Computes normalization factors for count data, handling edge cases
-#'   like all-zero columns. Uses geometric mean normalization approach.
+#' @description Computes normalization factors for count data using one of three
+#'   methods: geometric mean normalization (normed_sum), psi-normalization
+#'   (psinorm), or edgeR's TMM with singleton pairing (edgeR). Handles edge cases
+#'   like all-zero columns and matrices with too few rows.
 #'
 #' @param Y Count data matrix with genes in rows and samples in columns
+#' @param method Character string specifying the normalization method. One of:
+#'   \itemize{
+#'     \item \code{"normed_sum"} (default): Geometric mean normalization based on
+#'       library sizes
+#'     \item \code{"psinorm"}: Psi-normalization using Pareto distribution MLE
+#'     \item \code{"edgeR"}: edgeR's TMM with singleton pairing method
+#'   }
 #' @param verbose Logical indicating whether to print progress messages
 #'
-#' @return Vector of size factors, one per sample
+#' @return Numeric vector of size factors, one per sample (column). Size factors
+#'   are scaled to have a geometric mean of 1.
+#'
+#' @details
+#' Size factors are used to normalize count data for differences in sequencing
+#' depth and RNA composition across samples. The function will return a vector
+#' of 1s if the input matrix has only one row.
+#'
+#' The \code{"normed_sum"} method computes size factors as the column sums
+#' divided by their geometric mean.
+#'
+#' The \code{"psinorm"} method uses maximum likelihood estimation of Pareto
+#' distribution parameters to compute size factors robust to highly variable
+#' genes.
+#'
+#' The \code{"edgeR"} method requires the edgeR package to be installed and
+#' uses the TMM (trimmed mean of M-values) method with singleton pairing.
 #'
 #' @keywords internal
-calculate_sf <- function(Y, verbose=FALSE) {
-  if (nrow(Y) <= 1) { return(rep(1, ncol(Y))) }
-
-  sf <- DelayedMatrixStats::colSums2(Y, useNames=TRUE)
-
-  # Check for all-zero columns
-  all_zero_genes <- (sf == 0)
-
-  if (any(all_zero_genes)) {
-    stop("Error: At least one column (i.e. gene) contains all zeros, unable to compute size factor. Please filter out non-expressed genes from input matrix")
+calculate_sf <- function(Y, method = c("normed_sum", "psinorm", "edgeR"), verbose = FALSE) {
+  # Handle edge case: matrix with only one row
+  if (nrow(Y) <= 1) {
+    if (verbose) message("Matrix has only one row. Returning unit size factors.")
+    return(rep(1, ncol(Y)))
   }
 
-  # Compute size factors
-  sf <- sf / exp(mean(log(sf), na.rm=TRUE))
+  # Match and validate method argument
+  method <- match.arg(method)
+
+  if (verbose) message("Calculating size factors using method: ", method)
+
+  # Calculate size factors based on selected method
+  sf <- switch(method,
+               normed_sum = normed_sum_sf(Y),
+               psinorm = psinorm_sf(Y),
+               edgeR = edgeR_sf(Y),
+               stop("Unknown method: ", method)
+  )
+
+  if (verbose) {
+    message("Size factors calculated successfully.")
+    message("Range: [", round(min(sf), 4), ", ", round(max(sf), 4), "]")
+  }
 
   return(sf)
+}
+
+#' Geometric Mean Normalization Size Factors
+#'
+#' @description Computes size factors based on library sizes (column sums)
+#'   normalized by their geometric mean.
+#'
+#' @param Y Count data matrix with genes in rows and samples in columns
+#'
+#' @return Numeric vector of size factors
+#'
+#' @keywords internal
+normed_sum_sf <- function(Y) {
+  sf <- DelayedMatrixStats::colSums2(Y, useNames = TRUE)
+  all_zero_cols <- (sf == 0) # Check for all-zero columns
+
+  if (any(all_zero_cols)) {
+    stop("Error: At least one column (sample) contains all zeros, unable to compute size factor. ",
+         "Please filter out empty samples from input matrix.", call. = FALSE)
+  }
+
+  sf <- sf / exp(mean(log(sf), na.rm = TRUE)) # Compute size factors
+  return(sf)
+}
+
+#' Psi-Normalization Size Factors
+#'
+#' @description Computes size factors using psi-normalization based on Pareto
+#'   distribution maximum likelihood estimation.
+#'
+#' @param Y Count data matrix with genes in rows and samples in columns
+#'
+#' @return Numeric vector of size factors
+#'
+#' @keywords internal
+psinorm_sf <- function(Y) {
+  pareto.MLE <- function(Y) {
+    n <- nrow(Y)
+    m <- DelayedMatrixStats::colMins(Y)
+    a <- n / DelayedMatrixStats::colSums2(t(t(log(Y)) - log(m)))
+    return(a)
+  }
+
+  computePsiNormSF <- function(x) {
+    1 / pareto.MLE(x + 1)
+  }
+
+  sf <- computePsiNormSF(Y)
+  sf <- sf / exp(mean(log(sf), na.rm = TRUE))
+  return(sf)
+}
+
+#' edgeR TMM Size Factors
+#'
+#' @description Computes size factors using edgeR's TMM (trimmed mean of M-values)
+#'   method with singleton pairing.
+#'
+#' @param Y Count data matrix with genes in rows and samples in columns
+#'
+#' @return Numeric vector of size factors
+#'
+#' @keywords internal
+edgeR_sf <- function(Y) {
+  if (requireNamespace("edgeR", quietly = TRUE)) {
+    y <- edgeR::DGEList(counts = Y)
+    y <- edgeR::calcNormFactors(y, method = "TMMwsp")
+    sf <- DelayedMatrixStats::colSums2(Y) * y$samples$norm.factors
+    sf <- sf / exp(mean(log(sf), na.rm = TRUE))
+    return(sf)
+  } else {
+    stop("To use the \"edgeR\" method for size factor calculation, you need to install the ",
+         "'edgeR' package from Bioconductor.", call. = FALSE)
+  }
 }
 
 compute_offset_matrix <- function (off, Y, size_factors) {
