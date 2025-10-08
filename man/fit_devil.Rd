@@ -13,8 +13,8 @@ fit_devil(
   offset = 1e-06,
   size_factors = "normed_sum",
   verbose = FALSE,
-  max_iter = 100,
-  tolerance = 0.001,
+  max_iter = 200,
+  tolerance = 1e-04,
   CUDA = FALSE,
   batch_size = 1024L,
   parallel.cores = NULL

@@ -6,8 +6,6 @@ Authors@R: c(person("Giovanni", "Santacatterina", role=c("aut", "cre"), email="s
 Description: An R package to perform fast and scalable single cell differential expression analysis.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Suggests:
-    scRNAseq
 Imports: 
     DelayedArray,
     DelayedMatrixStats,
@@ -17,14 +15,16 @@ Imports:
     magrittr,
     methods,
     Rcpp (>= 1.0.12),
-    RcppArmadillo,
-    RcppEigen,
     rlang,
     stats
+Suggests:
+    scRNAseq,
+    edgeR
 LinkingTo: 
     Rcpp,
     RcppArmadillo,
-    RcppEigen
+    RcppEigen,
+    BH
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 URL: https://caravagnalab.github.io/devil/

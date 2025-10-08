@@ -83,6 +83,57 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// H_log_gh_cpp
+double H_log_gh_cpp(double p, double s, double t, int gh_order, int max_newton, double newton_tol);
+RcppExport SEXP _devil_H_log_gh_cpp(SEXP pSEXP, SEXP sSEXP, SEXP tSEXP, SEXP gh_orderSEXP, SEXP max_newtonSEXP, SEXP newton_tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type p(pSEXP);
+    Rcpp::traits::input_parameter< double >::type s(sSEXP);
+    Rcpp::traits::input_parameter< double >::type t(tSEXP);
+    Rcpp::traits::input_parameter< int >::type gh_order(gh_orderSEXP);
+    Rcpp::traits::input_parameter< int >::type max_newton(max_newtonSEXP);
+    Rcpp::traits::input_parameter< double >::type newton_tol(newton_tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(H_log_gh_cpp(p, s, t, gh_order, max_newton, newton_tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// H_log_gh_pmhalf
+Rcpp::NumericVector H_log_gh_pmhalf(double s, double t, int gh_order, int max_newton, double newton_tol);
+RcppExport SEXP _devil_H_log_gh_pmhalf(SEXP sSEXP, SEXP tSEXP, SEXP gh_orderSEXP, SEXP max_newtonSEXP, SEXP newton_tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type s(sSEXP);
+    Rcpp::traits::input_parameter< double >::type t(tSEXP);
+    Rcpp::traits::input_parameter< int >::type gh_order(gh_orderSEXP);
+    Rcpp::traits::input_parameter< int >::type max_newton(max_newtonSEXP);
+    Rcpp::traits::input_parameter< double >::type newton_tol(newton_tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(H_log_gh_pmhalf(s, t, gh_order, max_newton, newton_tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// two_step_fit_cpp
+Rcpp::List two_step_fit_cpp(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, Eigen::VectorXd mu_beta, const Eigen::VectorXd& off, double kappa, int max_iter_beta, int max_iter_kappa, double eps, int newton_max, int y_unique_cap);
+RcppExport SEXP _devil_two_step_fit_cpp(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kappaSEXP, SEXP max_iter_betaSEXP, SEXP max_iter_kappaSEXP, SEXP epsSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type off(offSEXP);
+    Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter_beta(max_iter_betaSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter_kappa(max_iter_kappaSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    Rcpp::traits::input_parameter< int >::type newton_max(newton_maxSEXP);
+    Rcpp::traits::input_parameter< int >::type y_unique_cap(y_unique_capSEXP);
+    rcpp_result_gen = Rcpp::wrap(two_step_fit_cpp(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps, newton_max, y_unique_cap));
+    return rcpp_result_gen;
+END_RCPP
+}
 // make_table_if_small
 List make_table_if_small(const NumericVector& x, int stop_if_larger);
 RcppExport SEXP _devil_make_table_if_small(SEXP xSEXP, SEXP stop_if_largerSEXP) {
@@ -199,6 +250,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_beta_fit_group", (DL_FUNC) &_devil_beta_fit_group, 6},
     {"_devil_lte_n_equal_rows", (DL_FUNC) &_devil_lte_n_equal_rows, 3},
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
+    {"_devil_H_log_gh_cpp", (DL_FUNC) &_devil_H_log_gh_cpp, 6},
+    {"_devil_H_log_gh_pmhalf", (DL_FUNC) &_devil_H_log_gh_pmhalf, 5},
+    {"_devil_two_step_fit_cpp", (DL_FUNC) &_devil_two_step_fit_cpp, 10},
     {"_devil_make_table_if_small", (DL_FUNC) &_devil_make_table_if_small, 2},
     {"_devil_conventional_loglikelihood_fast", (DL_FUNC) &_devil_conventional_loglikelihood_fast, 7},
     {"_devil_conventional_score_function_fast", (DL_FUNC) &_devil_conventional_score_function_fast, 7},
