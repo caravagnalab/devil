@@ -123,9 +123,11 @@ psinorm_sf <- function(Y) {
 #'
 #' @keywords internal
 edgeR_sf <- function(Y) {
+
   if (requireNamespace("edgeR", quietly = TRUE)) {
-    y <- edgeR::DGEList(counts = Y)
-    y <- edgeR::calcNormFactors(y, method = "TMMwsp")
+    edgeR <- asNamespace("edgeR")
+    y <- edgeR$DGEList(counts = Y)
+    y <- edgeR$calcNormFactors(y, method = "TMMwsp")
     sf <- DelayedMatrixStats::colSums2(Y) * y$samples$norm.factors
     sf <- sf / exp(mean(log(sf), na.rm = TRUE))
     return(sf)

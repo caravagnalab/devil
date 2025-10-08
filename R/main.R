@@ -97,8 +97,8 @@ fit_devil <- function(
     offset=1e-6,
     size_factors="normed_sum",
     verbose=FALSE,
-    max_iter=100,
-    tolerance=1e-3,
+    max_iter=200,
+    tolerance=1e-4,
     CUDA = FALSE,
     batch_size = 1024L,
     parallel.cores=NULL) {
@@ -204,34 +204,28 @@ fit_devil <- function(
 
   } else {
 
-    if (verbose) { message("Fit beta coefficients") }
+    if (verbose) { message("Fitting beta coefficients and overdispersion") }
 
+    y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
     tmp <- parallel::mclapply(1:ngenes, function(i) {
-      beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)
+      two_step_fit_cpp(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i],
+                       max_iter_beta = max_iter, max_iter_kappa = as.integer(max_iter / 2), eps = tolerance,
+                       newton_max = 16, y_unique_cap = y_unique_cap)
+
     }, mc.cores = n.cores)
 
     beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
+    theta = lapply(1:ngenes, function(i) { tmp[[i]]$kappa }) %>% unlist()
+
     rownames(beta) <- gene_names
-    iterations <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
-
-  }
-
-  s <- Sys.time()
-  if (overdispersion) {
-    if (verbose) { message("Fit overdispersion") }
-
-    theta <- parallel::mclapply(1:ngenes, function(i) {
-      fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_vector, tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = do_cox_reid_adjustment)
-    }, mc.cores = n.cores) %>% unlist()
-
-  } else {
-    theta = rep(0, ngenes)
+    beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$beta_iters }) %>% unlist()
+    theta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$kappa_iters }) %>% unlist()
   }
 
   return(list(
     beta=beta,
     overdispersion=theta,
-    iterations=iterations,
+    iterations=list(beta_iters=beta_iters, theta_iters = theta_iters),
     size_factors=sf,
     offset_vector=offset_vector,
     design_matrix=design_matrix,

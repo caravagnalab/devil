@@ -78,10 +78,10 @@ table(meta$label)
 Optionally restrict to highly expressed genes for a faster demo (skip for real analyses):
 
 ```{r}
-# demo mode: top 3000 genes by total counts
-if (nrow(counts) > 3000) {
+# demo mode: top 500 genes by total counts
+if (nrow(counts) > 500) {
   ord <- order(Matrix::rowSums(counts), decreasing = TRUE)
-  counts <- counts[ord[seq_len(3000)], ]
+  counts <- counts[ord[seq_len(500)], ]
 }
 ```
 
@@ -106,18 +106,22 @@ if (is.null(cluster) && "patient" %in% names(meta)) cluster <- factor(meta$patie
 
 ## Fit the model
 
-`fit_devil()` expects a counts matrix (genes × cells), a design (cells × covariates). The parameters `size_factors=TRUE` computes internally a size factor that will scale expression based on the library size of each cell.
+`fit_devil()` expects a counts matrix (genes × cells), a design (cells × covariates). The parameters `size_factors="normed_sum"` computes internally a size factor that will scale expression based on the library size of each cell.
 
 ```{r}
 fit <- devil::fit_devil(
   input_matrix        = as.matrix(counts),
   design_matrix       = design,
   overdispersion      = TRUE,
-  offset              = 1e-6,
+  offset              = 1e-6, 
+  init_overdispersion = 100,
   size_factors        = "normed_sum",
   parallel.cores      = 1,
-  verbose             = TRUE
+  verbose             = TRUE, 
+  max_iter = 200, 
+  tolerance = 1e-4
 )
+
 ```
 
 ## Specify contrasts

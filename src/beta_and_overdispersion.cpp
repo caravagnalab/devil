@@ -1,0 +1,321 @@
+#include <RcppEigen.h>
+#include <iostream>
+// [[Rcpp::depends(RcppEigen)]]
+using namespace Rcpp;
+using namespace Eigen;
+
+// ======================= Gauss–Hermite (physicists) with caching =======================
+struct GHTable { VectorXd X, W; };
+
+inline GHTable& get_gh(int n){
+  static std::unordered_map<int, GHTable> cache;
+  auto it = cache.find(n);
+  if (it != cache.end()) return it->second;
+
+  // Golub–Welsch for Hermite (weight e^{-x^2})
+  Eigen::MatrixXd J = Eigen::MatrixXd::Zero(n, n);
+  for (int i = 0; i < n - 1; ++i) {
+    double b = std::sqrt(0.5 * (i + 1));
+    J(i, i + 1) = b;
+    J(i + 1, i) = b;
+  }
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(J);
+  VectorXd x = es.eigenvalues();
+  Eigen::MatrixXd V = es.eigenvectors();
+  VectorXd w(n);
+  const double c = std::sqrt(M_PI);
+  for (int i = 0; i < n; ++i) {
+    double wi = c * V(0, i) * V(0, i);
+    w(i) = (wi < 0) ? 0.0 : wi; // numerical safety
+  }
+
+  cache.emplace(n, GHTable{std::move(x), std::move(w)});
+  return cache.find(n)->second;
+}
+
+// ======================= h(x) split and Laplace mode =======================
+struct LaplacePoint {
+  double mu0, sigma0, h_mu0;
+};
+
+inline double g (double s, double t, double x){
+  return s * (x * std::log(x) - std::lgamma(x)) - t * x;
+}
+inline double g1(double s, double t, double x){
+  return s * (std::log(x) + 1.0 - R::digamma(x)) - t;
+}
+inline double g2(double s, double      x){
+  return s * (1.0/x - R::trigamma(x));
+}
+
+inline LaplacePoint find_mode(double p, double s, double t,
+                              int max_newton, double newton_tol,
+                              double x0){
+  auto hp  = [&](double x){ return p/x + g1(s,t,x); };
+  auto hpp = [&](double x){ return -p/(x*x) + g2(s,x); };
+
+  double x = std::max(1e-9, x0);
+  for (int i = 0; i < max_newton; ++i){
+    double g1v = hp(x);
+    if (std::abs(g1v) < newton_tol) break;
+    double g2v = hpp(x);
+    double step = g1v / g2v;
+    double xn = x - step;
+    if (!(xn>0.0) || !std::isfinite(xn)) xn = 0.5 * x;
+    if (std::abs(xn - x) < newton_tol * (1.0 + std::abs(x))) { x = xn; break; }
+    x = xn;
+  }
+  double curv = -hpp(x);
+  if (!(curv>0.0) || !std::isfinite(curv))
+    Rcpp::stop("Mode-finding failed: h''(mu0) >= 0 or non-finite.");
+
+  double mu0    = std::max(1e-12, x);
+  double sigma0 = std::sqrt(1.0/curv);
+  double h_mu0  = p*std::log(mu0) + g(s,t,mu0);
+
+  return {mu0, sigma0, h_mu0};
+}
+
+inline double log_integral_at(double p, double s, double t,
+                              int gh_order,
+                              const GHTable& gh,
+                              const LaplacePoint& lp)
+{
+  const double root2 = std::sqrt(2.0);
+  const double scale = lp.sigma0 * root2;
+
+  // Two-pass log-sum-exp without heap allocations
+  double max_lt = -std::numeric_limits<double>::infinity();
+  for (int i = 0; i < gh_order; ++i){
+    double u  = gh.X(i);
+    double xx = lp.mu0 + scale*u;
+    if (xx <= 0.0 || !std::isfinite(xx)) continue;
+    double r  = (p*std::log(xx) + g(s,t,xx)) - lp.h_mu0 + u*u;
+    double lt = std::log(gh.W(i)) + r;
+    if (lt > max_lt) max_lt = lt;
+  }
+  long double acc = 0.0L;
+  for (int i = 0; i < gh_order; ++i){
+    double u  = gh.X(i);
+    double xx = lp.mu0 + scale*u;
+    if (xx <= 0.0 || !std::isfinite(xx)) continue;
+    double r  = (p*std::log(xx) + g(s,t,xx)) - lp.h_mu0 + u*u;
+    double lt = std::log(gh.W(i)) + r;
+    acc += std::exp(lt - max_lt);
+  }
+  if (!(acc > 0.0L)) Rcpp::stop("GH quadrature underflow.");
+  double logI = max_lt + std::log((double)acc);
+  return lp.h_mu0 + std::log(scale) + logI;
+}
+
+// ======================= Public GH wrappers =======================
+// [[Rcpp::export]]
+double H_log_gh_cpp(double p, double s, double t,
+                    int gh_order      = 32,
+                    int max_newton    = 8,
+                    double newton_tol = 1e-12)
+{
+  if (!(t > s)) Rcpp::stop("Convergence requires t > s (got t=%.6g, s=%.6g).", t, s);
+  if (gh_order < 4) gh_order = 4;
+  GHTable& gh = get_gh(gh_order);
+  double x0 = std::max(1e-3, (p + s) / (t - s));
+  LaplacePoint lp = find_mode(p, s, t, max_newton, newton_tol, x0);
+  return log_integral_at(p, s, t, gh_order, gh, lp);
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericVector H_log_gh_pmhalf(double s, double t,
+                                    int gh_order      = 32,
+                                    int max_newton    = 8,
+                                    double newton_tol = 1e-12)
+{
+  if (!(t > s)) Rcpp::stop("Convergence requires t > s (got t=%.6g, s=%.6g).", t, s);
+  if (gh_order < 4) gh_order = 4;
+  GHTable& gh = get_gh(gh_order);
+
+  double p1 = +0.5, p2 = -0.5;
+  double x0_1 = std::max(1e-3, (p1 + s) / (t - s));
+  LaplacePoint lp1 = find_mode(p1, s, t, max_newton, newton_tol, x0_1);
+  LaplacePoint lp2 = find_mode(p2, s, t, max_newton, newton_tol, lp1.mu0);
+
+  double logH_p = log_integral_at(p1, s, t, gh_order, gh, lp1);
+  double logH_m = log_integral_at(p2, s, t, gh_order, gh, lp2);
+  return NumericVector::create(_["logH_p"]=logH_p, _["logH_m"]=logH_m);
+}
+
+// ======================= Small frequency table (on Eigen) =======================
+/*
+ Returns {keys, counts}. If unique values exceed cap, returns two empty vectors.
+ Keys are int64 obtained by static_cast<long long>(y[i]) (assumes integer-valued doubles).
+ */
+static inline List make_table_if_small_eigen(const VectorXd y, int cap){
+  std::unordered_map<long long, size_t> cnt;
+  cnt.reserve(static_cast<size_t>(cap * 1.3));
+  const int n = (int)y.size();
+  for (int i = 0; i < n; ++i){
+    long long k = static_cast<long long>(y[i]);
+    auto it = cnt.find(k);
+    if (it == cnt.end()){
+      cnt.emplace(k, 1u);
+      if ((int)cnt.size() > cap){
+        return List::create(NumericVector(), NumericVector()); // empty => fallback
+      }
+    } else {
+      ++(it->second);
+    }
+  }
+  NumericVector keys(cnt.size()), vals(cnt.size());
+  size_t j = 0;
+  for (const auto& kv : cnt){
+    keys[j] = static_cast<double>(kv.first);
+    vals[j] = static_cast<double>(kv.second);
+    ++j;
+  }
+  return List::create(keys, vals);
+}
+
+// ======================= Two-step fit with digamma caching =======================
+// SIGNATURE NOTE: use Map<> to avoid copies from R.
+// mu_beta is by value because we update it; others are const references.
+
+// [[Rcpp::export]]
+Rcpp::List two_step_fit_cpp(const Eigen::VectorXd& y,
+                            const Eigen::MatrixXd& X,
+                            Eigen::VectorXd mu_beta,                 // by value if you mutate it
+                            const Eigen::VectorXd& off,
+                            double kappa, int max_iter_beta, int max_iter_kappa,
+                            double eps, int newton_max = 16, int y_unique_cap = 4096) {
+  const int n = X.rows();
+  const int p = X.cols();
+  if (off.size() != n) stop("off length mismatch.");
+
+  // internal: k = 1/kappa
+  double k = 1.0 / kappa;
+
+  const MatrixXd Xt = X.transpose();
+
+  VectorXd w_q(n), mu_g(n), delta(p);
+
+  // ---------- Precompute exp(-off) once ----------
+  VectorXd exp_neg_off = (-off.array()).exp().matrix();
+
+  // ---------- Phase 1: optimize beta | k ----------
+  bool beta_converged = false;
+  int  it_beta = 0;
+
+  // Start: w_q = exp(-X*beta - off) = exp(-off) * exp(-(X*beta))
+  VectorXd Xbeta = X * mu_beta;
+  w_q = (-(Xbeta).array()).exp().matrix();
+  w_q.array() *= exp_neg_off.array();
+
+  for (it_beta = 0; it_beta < max_iter_beta; ++it_beta) {
+    // mu_g and helpers at current beta
+    // mu_g = (k + y) / (1 + k*w_q)
+    VectorXd denom = (1.0 + k * w_q.array()).matrix();
+    mu_g = (k + y.array()) / denom.array();
+    VectorXd mu_g_wq = (mu_g.array() * w_q.array()).matrix(); // weight vector
+
+    // A = X' * (k * diag(mu_g_wq)) * X without forming diag:
+    // scale columns of X by (k*mu_g_wq), then Xt * Xw
+    VectorXd wcol = (k * mu_g_wq).matrix();
+    MatrixXd Xw = X;
+    Xw.array().colwise() *= wcol.array();
+
+    MatrixXd A(p, p);
+    A.noalias() = Xt * Xw;
+
+    // rhs = k * X' * (mu_g_wq - 1)
+    VectorXd rhs = (mu_g_wq.array() - 1.0).matrix();
+    rhs *= k;
+    rhs = Xt * rhs;
+
+    Eigen::LLT<MatrixXd> llt(A);
+    if (llt.info() != Eigen::Success) {
+      A.diagonal().array() += 1e-10;      // tiny jitter only if needed
+      llt.compute(A);
+      if (llt.info() != Eigen::Success) stop("Cholesky failed (beta phase).");
+    }
+    delta = llt.solve(rhs);
+    if (!delta.allFinite()) stop("Non-finite beta step.");
+
+    mu_beta += delta;
+
+    double beta_change = delta.cwiseAbs().maxCoeff();
+
+    // ---------- Incremental update of w_q ----------
+    // Old: w_q = exp(-X*mu_beta - off) -> expensive
+    // New: w_q *= exp( -X*delta )
+    VectorXd Xdelta = X * (-delta);
+    w_q.array() *= Xdelta.array().exp();
+
+    if (beta_change < eps) { beta_converged = true; break; }
+  }
+
+  // ---------- Build (optional) frequency table on y for κ phase ----------
+  List table = make_table_if_small_eigen(y, y_unique_cap);
+  NumericVector y_keys = table[0];
+  NumericVector y_cnts = table[1];
+  const bool use_table = (y_keys.size() > 0);
+
+  // ---------- Phase 2: optimize k | beta (beta frozen) ----------
+  bool kappa_converged = false;
+  int  it_kappa = 0;
+
+  // precompute sum(X*beta) once (unchanged in this phase)
+  const double Xbeta_sum = (X * mu_beta).sum();
+
+  for (it_kappa = 0; it_kappa < max_iter_kappa; ++it_kappa) {
+    // sum_digamma = sum_i digamma(k + y_i)
+    double sum_digamma = 0.0;
+
+    if (use_table) {
+      for (int j = 0; j < y_keys.size(); ++j) {
+        sum_digamma += y_cnts[j] * R::digamma(k + y_keys[j]);
+      }
+    } else {
+      for (int i = 0; i < n; ++i) {
+        sum_digamma += R::digamma(k + y[i]);
+      }
+    }
+
+    // sum_log1p = sum_i log1p(k * w_q[i])
+    const double sum_log1p = (k * w_q.array()).log1p().sum();
+
+    // sum_mu_g_wq = sum_i ((k + y_i) * w_q[i] / (1 + k * w_q[i]))
+    VectorXd denom = (1.0 + k * w_q.array()).matrix();
+    const double sum_mu_g_wq =
+      ((k + y.array()) * w_q.array() / denom.array()).sum();
+
+    // C1(β,k) = sum(Xβ) - (sum_digamma - sum_log1p) + sum_mu_g_wq
+    const double C1 = Xbeta_sum - (sum_digamma - sum_log1p) + sum_mu_g_wq;
+
+    if (!(C1 > n))
+      stop("kappa update requires C1 > n (got C1=%.6g, n=%d).", C1, n);
+
+    // Compute k via ratio of H at ±1/2
+    Rcpp::NumericVector both = H_log_gh_pmhalf(n, C1, newton_max, newton_max, eps);
+    const double logH_p = both["logH_p"];
+    const double logH_m = both["logH_m"];
+
+    const double k_new  = std::exp(logH_p - logH_m);
+    if (!std::isfinite(k_new)) stop("Non-finite kappa step.");
+
+    const double dk = std::fabs(k_new - k);
+    k = k_new;
+
+    if (dk < eps) { kappa_converged = true; break; }
+  }
+
+  // Output on user scale
+  const double kappa_out = 1.0 / k;
+
+  return List::create(
+    Named("mu_beta")         = mu_beta,
+    Named("kappa")           = kappa_out,
+    Named("beta_converged")  = beta_converged,
+    Named("kappa_converged") = kappa_converged,
+    Named("beta_iters")      = it_beta + 1,
+    Named("kappa_iters")     = it_kappa + 1,
+    Named("used_y_table")    = use_table
+  );
+}
