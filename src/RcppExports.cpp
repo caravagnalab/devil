@@ -115,8 +115,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // two_step_fit_cpp
-List two_step_fit_cpp(const Eigen::VectorXd y, const Eigen::MatrixXd X, Eigen::VectorXd mu_beta, const Eigen::VectorXd off, double kappa, int max_iter_beta, int max_iter_kappa, double eps, int newton_max, int y_unique_cap);
-RcppExport SEXP _devil_two_step_fit_cpp(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kappaSEXP, SEXP max_iter_betaSEXP, SEXP max_iter_kappaSEXP, SEXP epsSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP) {
+List two_step_fit_cpp(const Eigen::VectorXd y, const Eigen::MatrixXd X, Eigen::VectorXd mu_beta, const Eigen::VectorXd off, double kappa, int max_iter_beta, int max_iter_kappa, double eps_theta, double eps_beta, int newton_max, int y_unique_cap);
+RcppExport SEXP _devil_two_step_fit_cpp(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kappaSEXP, SEXP max_iter_betaSEXP, SEXP max_iter_kappaSEXP, SEXP eps_thetaSEXP, SEXP eps_betaSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -127,10 +127,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter_beta(max_iter_betaSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter_kappa(max_iter_kappaSEXP);
-    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    Rcpp::traits::input_parameter< double >::type eps_theta(eps_thetaSEXP);
+    Rcpp::traits::input_parameter< double >::type eps_beta(eps_betaSEXP);
     Rcpp::traits::input_parameter< int >::type newton_max(newton_maxSEXP);
     Rcpp::traits::input_parameter< int >::type y_unique_cap(y_unique_capSEXP);
-    rcpp_result_gen = Rcpp::wrap(two_step_fit_cpp(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps, newton_max, y_unique_cap));
+    rcpp_result_gen = Rcpp::wrap(two_step_fit_cpp(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max, y_unique_cap));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -252,7 +253,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
     {"_devil_H_log_gh_cpp", (DL_FUNC) &_devil_H_log_gh_cpp, 6},
     {"_devil_H_log_gh_pmhalf", (DL_FUNC) &_devil_H_log_gh_pmhalf, 5},
-    {"_devil_two_step_fit_cpp", (DL_FUNC) &_devil_two_step_fit_cpp, 10},
+    {"_devil_two_step_fit_cpp", (DL_FUNC) &_devil_two_step_fit_cpp, 11},
     {"_devil_make_table_if_small", (DL_FUNC) &_devil_make_table_if_small, 2},
     {"_devil_conventional_loglikelihood_fast", (DL_FUNC) &_devil_conventional_loglikelihood_fast, 7},
     {"_devil_conventional_score_function_fast", (DL_FUNC) &_devil_conventional_score_function_fast, 7},

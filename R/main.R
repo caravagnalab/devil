@@ -209,7 +209,7 @@ fit_devil <- function(
     y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
     tmp <- parallel::mclapply(1:ngenes, function(i) {
       two_step_fit_cpp(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i],
-                       max_iter_beta = max_iter, max_iter_kappa = as.integer(max_iter / 2), eps = tolerance,
+                       max_iter_beta = max_iter, max_iter_kappa = as.integer(max_iter / 2), eps_theta = tolerance, eps_beta = tolerance * 10,
                        newton_max = 16, y_unique_cap = y_unique_cap)
 
     }, mc.cores = n.cores)

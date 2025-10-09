@@ -29,8 +29,8 @@ H_log_gh_pmhalf <- function(s, t, gh_order = 32L, max_newton = 8L, newton_tol = 
     .Call('_devil_H_log_gh_pmhalf', PACKAGE = 'devil', s, t, gh_order, max_newton, newton_tol)
 }
 
-two_step_fit_cpp <- function(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps, newton_max = 16L, y_unique_cap = 4096L) {
-    .Call('_devil_two_step_fit_cpp', PACKAGE = 'devil', y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps, newton_max, y_unique_cap)
+two_step_fit_cpp <- function(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max = 16L, y_unique_cap = 4096L) {
+    .Call('_devil_two_step_fit_cpp', PACKAGE = 'devil', y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max, y_unique_cap)
 }
 
 make_table_if_small <- function(x, stop_if_larger) {
