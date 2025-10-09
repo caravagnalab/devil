@@ -17,7 +17,7 @@ fit_devil(
   tolerance = 1e-04,
   CUDA = FALSE,
   batch_size = 1024L,
-  parallel.cores = NULL
+  parallel.cores = 1
 )
 }
 \arguments{
@@ -65,7 +65,7 @@ Default: FALSE}
 Only relevant if CUDA = TRUE. Default: 1024}
 
 \item{parallel.cores}{Integer or NULL. Number of CPU cores for parallel processing.
-If NULL, uses all available cores. Default: NULL}
+If NULL, uses all available cores. Default: 1}
 }
 \value{
 A list containing:

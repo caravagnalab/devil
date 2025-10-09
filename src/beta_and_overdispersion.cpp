@@ -1,8 +1,18 @@
 #include <RcppEigen.h>
-#include <iostream>
+#include <unordered_map>
+#include <cmath>            // std::log, std::sqrt, std::lgamma
 // [[Rcpp::depends(RcppEigen)]]
+// [[Rcpp::depends(BH)]]
+
+#include <boost/math/special_functions/digamma.hpp>
+#include <boost/math/special_functions/trigamma.hpp>
+
 using namespace Rcpp;
 using namespace Eigen;
+
+// Bring in Boost scalar digamma/trigamma (optional: could instead fully qualify each call)
+using boost::math::digamma;
+using boost::math::trigamma;
 
 // ======================= Gauss–Hermite (physicists) with caching =======================
 struct GHTable { VectorXd X, W; };
@@ -13,17 +23,17 @@ inline GHTable& get_gh(int n){
   if (it != cache.end()) return it->second;
 
   // Golub–Welsch for Hermite (weight e^{-x^2})
-  Eigen::MatrixXd J = Eigen::MatrixXd::Zero(n, n);
+  MatrixXd J = MatrixXd::Zero(n, n);
   for (int i = 0; i < n - 1; ++i) {
     double b = std::sqrt(0.5 * (i + 1));
     J(i, i + 1) = b;
     J(i + 1, i) = b;
   }
-  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(J);
+  SelfAdjointEigenSolver<MatrixXd> es(J);
   VectorXd x = es.eigenvalues();
-  Eigen::MatrixXd V = es.eigenvectors();
+  MatrixXd V = es.eigenvectors();
   VectorXd w(n);
-  const double c = std::sqrt(M_PI);
+  const double c = std::sqrt(M_PI);   // ok on clang/libc++; portable alternative: const double c = std::sqrt(acos(-1.0));
   for (int i = 0; i < n; ++i) {
     double wi = c * V(0, i) * V(0, i);
     w(i) = (wi < 0) ? 0.0 : wi; // numerical safety
@@ -41,12 +51,15 @@ struct LaplacePoint {
 inline double g (double s, double t, double x){
   return s * (x * std::log(x) - std::lgamma(x)) - t * x;
 }
+
+// NOTE: use Boost scalar digamma/trigamma (or fully qualify: boost::math::digamma(x))
 inline double g1(double s, double t, double x){
-  return s * (std::log(x) + 1.0 - R::digamma(x)) - t;
+  return s * (std::log(x) + 1.0 - digamma(x)) - t;
 }
-inline double g2(double s, double      x){
-  return s * (1.0/x - R::trigamma(x));
+inline double g2(double s, double x){
+  return s * (1.0/x - trigamma(x));
 }
+
 
 inline LaplacePoint find_mode(double p, double s, double t,
                               int max_newton, double newton_tol,
@@ -175,16 +188,19 @@ static inline List make_table_if_small_eigen(const VectorXd y, int cap){
 }
 
 // ======================= Two-step fit with digamma caching =======================
-// SIGNATURE NOTE: use Map<> to avoid copies from R.
-// mu_beta is by value because we update it; others are const references.
 
 // [[Rcpp::export]]
-Rcpp::List two_step_fit_cpp(const Eigen::VectorXd& y,
-                            const Eigen::MatrixXd& X,
-                            Eigen::VectorXd mu_beta,                 // by value if you mutate it
-                            const Eigen::VectorXd& off,
-                            double kappa, int max_iter_beta, int max_iter_kappa,
-                            double eps, int newton_max = 16, int y_unique_cap = 4096) {
+List two_step_fit_cpp(const Eigen::VectorXd y,
+                      const Eigen::MatrixXd X,
+                      Eigen::VectorXd mu_beta,             // updated in-place
+                      const Eigen::VectorXd off,
+                      double kappa,
+                      int max_iter_beta,
+                      int max_iter_kappa,
+                      double eps,
+                      int    newton_max = 16,
+                      int    y_unique_cap = 4096)
+{
   const int n = X.rows();
   const int p = X.cols();
   if (off.size() != n) stop("off length mismatch.");
@@ -216,7 +232,6 @@ Rcpp::List two_step_fit_cpp(const Eigen::VectorXd& y,
     VectorXd mu_g_wq = (mu_g.array() * w_q.array()).matrix(); // weight vector
 
     // A = X' * (k * diag(mu_g_wq)) * X without forming diag:
-    // scale columns of X by (k*mu_g_wq), then Xt * Xw
     VectorXd wcol = (k * mu_g_wq).matrix();
     MatrixXd Xw = X;
     Xw.array().colwise() *= wcol.array();
@@ -243,8 +258,7 @@ Rcpp::List two_step_fit_cpp(const Eigen::VectorXd& y,
     double beta_change = delta.cwiseAbs().maxCoeff();
 
     // ---------- Incremental update of w_q ----------
-    // Old: w_q = exp(-X*mu_beta - off) -> expensive
-    // New: w_q *= exp( -X*delta )
+    // w_q *= exp( -X*delta )
     VectorXd Xdelta = X * (-delta);
     w_q.array() *= Xdelta.array().exp();
 
@@ -260,51 +274,168 @@ Rcpp::List two_step_fit_cpp(const Eigen::VectorXd& y,
   // ---------- Phase 2: optimize k | beta (beta frozen) ----------
   bool kappa_converged = false;
   int  it_kappa = 0;
-
-  // precompute sum(X*beta) once (unchanged in this phase)
   const double Xbeta_sum = (X * mu_beta).sum();
 
-  for (it_kappa = 0; it_kappa < max_iter_kappa; ++it_kappa) {
-    // sum_digamma = sum_i digamma(k + y_i)
+  // Fixed-point map and residual -------------------------------
+  auto F_k = [&](double kk)->double {
     double sum_digamma = 0.0;
-
     if (use_table) {
-      for (int j = 0; j < y_keys.size(); ++j) {
-        sum_digamma += y_cnts[j] * R::digamma(k + y_keys[j]);
-      }
+      for (int j = 0; j < y_keys.size(); ++j)
+        sum_digamma += y_cnts[j] * digamma(kk + y_keys[j]);
     } else {
-      for (int i = 0; i < n; ++i) {
-        sum_digamma += R::digamma(k + y[i]);
-      }
+      for (int i = 0; i < n; ++i)
+        sum_digamma += digamma(kk + y[i]);
     }
 
-    // sum_log1p = sum_i log1p(k * w_q[i])
-    const double sum_log1p = (k * w_q.array()).log1p().sum();
+    double sum_log1p = 0.0, sum_mu_g_wq = 0.0;
+    for (int i = 0; i < n; ++i) {
+      const double wi = w_q[i], yi = y[i];
+      const double kw = kk * wi, den = 1.0 + kw;
+      sum_log1p   += std::log1p(kw);
+      sum_mu_g_wq += (kk + yi) * wi / den;
+    }
 
-    // sum_mu_g_wq = sum_i ((k + y_i) * w_q[i] / (1 + k * w_q[i]))
-    VectorXd denom = (1.0 + k * w_q.array()).matrix();
-    const double sum_mu_g_wq =
-      ((k + y.array()) * w_q.array() / denom.array()).sum();
-
-    // C1(β,k) = sum(Xβ) - (sum_digamma - sum_log1p) + sum_mu_g_wq
     const double C1 = Xbeta_sum - (sum_digamma - sum_log1p) + sum_mu_g_wq;
-
     if (!(C1 > n))
       stop("kappa update requires C1 > n (got C1=%.6g, n=%d).", C1, n);
 
-    // Compute k via ratio of H at ±1/2
     Rcpp::NumericVector both = H_log_gh_pmhalf(n, C1, newton_max, newton_max, eps);
     const double logH_p = both["logH_p"];
     const double logH_m = both["logH_m"];
+    return std::exp(logH_p - logH_m);
+  };
 
-    const double k_new  = std::exp(logH_p - logH_m);
-    if (!std::isfinite(k_new)) stop("Non-finite kappa step.");
+  auto f_of_k = [&](double kk)->double {
+    double kn = F_k(kk);                 // uses same evaluation
+    return std::log(kn) - std::log(kk);  // Δ(k) - log k  == log(F(k)) - log(k)
+  };
 
-    const double dk = std::fabs(k_new - k);
-    k = k_new;
+  // Brent (very small, bracketed) --------------------------------
+  auto brent = [&](double a, double b, double fa, double fb)->double {
+    // assumes fa and fb have opposite signs
+    double c=a, fc=fa, d=b-a, e=d;
+    const double tol = eps, eps_m = std::numeric_limits<double>::epsilon();
+    for (int it=0; it<60; ++it) {
+      if (std::fabs(fc) < std::fabs(fb)) { a=b; b=c; c=a; fa=fb; fb=fc; fc=fa; }
+      double tol1 = 2.0*eps_m*std::fabs(b) + 0.5*tol;
+      double xm   = 0.5*(c - b);
+      if (std::fabs(xm) <= tol1 || fb == 0.0) return b;
 
-    if (dk < eps) { kappa_converged = true; break; }
+      double s, p, q;
+      if (std::fabs(e) >= tol1 && std::fabs(fa) > std::fabs(fb)) {
+        // inverse quadratic or secant
+        s = fb/fa;
+        if (a==c) { p = 2.0*xm*s; q = 1.0 - s; }
+        else {
+          double r = fb/fc, t = fa/fc;
+          p = s*(2.0*xm*t*(t-r) - (b-a)*(r-1.0));
+          q = (t-1.0)*(r-1.0)*(s-1.0);
+        }
+        if (p>0) q = -q;
+        p = std::fabs(p);
+        if (2.0*p < std::min(3.0*xm*q - std::fabs(tol1*q), std::fabs(e*q))) {
+          e = d; d = p/q;
+        } else { d = xm; e = d; }
+      } else { d = xm; e = d; }
+      a = b; fa = fb;
+      b += (std::fabs(d) > tol1 ? d : (xm>0 ? tol1 : -tol1));
+      fb = f_of_k(b);
+      if ( (fb>0 && fc>0) || (fb<0 && fc<0) ) { c=a; fc=fa; e=d=b-a; }
+    }
+    return b;
+  };
+
+  // Parameters for safeguards -----------------------------------
+  const double k_min = 1e-12;
+  const double k_max = 1e12;     // generous hard cap
+  const double jump_factor = 10; // per-iteration relative jump limit
+  int bad_accel = 0;
+
+  // Start
+  double k0 = std::max(k_min, std::min(k_max, k));
+  double f0 = f_of_k(k0);
+  if (!std::isfinite(f0)) stop("kappa residual not finite at start.");
+
+  double k1 = F_k(k0);
+  k1 = std::min(k1, jump_factor*std::max(k0,1.0));
+  k1 = std::max(k_min, std::min(k_max, k1));
+  double f1 = f_of_k(k1);
+
+  // If we already bracket, prefer Brent immediately
+  if (f0*f1 < 0) {
+    k = brent(std::min(k0,k1), std::max(k0,k1), f0, f1);
+    kappa_converged = true;
+  } else {
+    // Aitken with monotone residual + backtracking, Brent fallback
+    for (it_kappa = 0; it_kappa < max_iter_kappa; ++it_kappa) {
+      double k2 = F_k(k1);
+      k2 = std::min(k2, jump_factor*std::max(k1,1.0));
+      k2 = std::max(k_min, std::min(k_max, k2));
+      double f2 = f_of_k(k2);
+
+      // Aitken Δ² proposal
+      double d1 = k1 - k0, d2 = k2 - k1, denom = (d2 - d1);
+      double k_acc = (std::fabs(denom) > 1e-14) ? k0 - (d1*d1)/denom : k2;
+
+      // ensure positivity + jump cap
+      if (!(k_acc > 0) || !std::isfinite(k_acc))
+        k_acc = k2;
+      k_acc = std::min(k_acc, jump_factor*std::max(k2,1.0));
+      k_acc = std::max(k_min, std::min(k_max, k_acc));
+
+      // residual decrease with backtracking
+      double k_prop = k_acc;
+      double f_prop = f_of_k(k_prop);
+      int bt = 0;
+      while ( (std::fabs(f_prop) >= std::fabs(f1) || !std::isfinite(f_prop)) && bt < 8 ) {
+        k_prop = 0.5*(k_prop + k1); // damp towards previous
+        f_prop = f_of_k(k_prop);
+        ++bt;
+      }
+
+      // If still not improving twice in a row, go to Brent with a local bracket
+      if (!(std::fabs(f_prop) < std::fabs(f1))) {
+        bad_accel++;
+        // Try to form a bracket from the last two points
+        double a = std::min(k1, k2), b = std::max(k1, k2);
+        double fa = f1, fb = f2;
+        if (fa*fb < 0) {
+          k = brent(a, b, fa, fb);
+          kappa_converged = true;
+          break;
+        }
+        // else fallback to plain fixed-point step
+        k_prop = k2;
+        f_prop = f2;
+        if (bad_accel >= 2 && std::isfinite(f_prop)) {
+          // final Brent attempt: expand bracket geometrically
+          double lo = std::max(k_min, k1 / 4.0), hi = std::min(k_max, k1 * 4.0);
+          double flo = f_of_k(lo), fhi = f_of_k(hi);
+          if (flo*fhi < 0) {
+            k = brent(lo, hi, flo, fhi);
+            kappa_converged = true;
+            break;
+          }
+        }
+      } else {
+        bad_accel = 0; // good step
+      }
+
+      if (std::fabs(k_prop - k1) < eps * (1.0 + k1)) {
+        k = k_prop; kappa_converged = true; break;
+      }
+
+      // shift
+      k0 = k1; f0 = f1;
+      k1 = k_prop; f1 = f_prop;
+    }
+
+    if (!kappa_converged) k = std::max(k_min, k1);
   }
+
+  //
+  //   // If not converged, set k to last iterate
+  //   if (!kappa_converged) k = std::max(1e-12, k1);
 
   // Output on user scale
   const double kappa_out = 1.0 / k;

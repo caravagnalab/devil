@@ -60,7 +60,7 @@
 #' @param batch_size Integer. Number of genes to process per batch in GPU mode.
 #'   Only relevant if CUDA = TRUE. Default: 1024
 #' @param parallel.cores Integer or NULL. Number of CPU cores for parallel processing.
-#'   If NULL, uses all available cores. Default: NULL
+#'   If NULL, uses all available cores. Default: 1
 #'
 #' @return A list containing:
 #' \describe{
@@ -101,7 +101,7 @@ fit_devil <- function(
     tolerance=1e-4,
     CUDA = FALSE,
     batch_size = 1024L,
-    parallel.cores=NULL) {
+    parallel.cores=1) {
 
   # Read general info about input matrix and design matrix
   gene_names <- rownames(input_matrix)
