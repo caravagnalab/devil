@@ -197,7 +197,8 @@ List two_step_fit_cpp(const Eigen::VectorXd y,
                       double kappa,
                       int max_iter_beta,
                       int max_iter_kappa,
-                      double eps,
+                      double eps_theta,
+                      double eps_beta,
                       int    newton_max = 16,
                       int    y_unique_cap = 4096)
 {
@@ -262,7 +263,7 @@ List two_step_fit_cpp(const Eigen::VectorXd y,
     VectorXd Xdelta = X * (-delta);
     w_q.array() *= Xdelta.array().exp();
 
-    if (beta_change < eps) { beta_converged = true; break; }
+    if (beta_change < eps_beta) { beta_converged = true; break; }
   }
 
   // ---------- Build (optional) frequency table on y for κ phase ----------
@@ -299,7 +300,7 @@ List two_step_fit_cpp(const Eigen::VectorXd y,
     if (!(C1 > n))
       stop("kappa update requires C1 > n (got C1=%.6g, n=%d).", C1, n);
 
-    Rcpp::NumericVector both = H_log_gh_pmhalf(n, C1, newton_max, newton_max, eps);
+    Rcpp::NumericVector both = H_log_gh_pmhalf(n, C1, newton_max, newton_max, eps_theta);
     const double logH_p = both["logH_p"];
     const double logH_m = both["logH_m"];
     return std::exp(logH_p - logH_m);
@@ -314,7 +315,7 @@ List two_step_fit_cpp(const Eigen::VectorXd y,
   auto brent = [&](double a, double b, double fa, double fb)->double {
     // assumes fa and fb have opposite signs
     double c=a, fc=fa, d=b-a, e=d;
-    const double tol = eps, eps_m = std::numeric_limits<double>::epsilon();
+    const double tol = eps_theta, eps_m = std::numeric_limits<double>::epsilon();
     for (int it=0; it<60; ++it) {
       if (std::fabs(fc) < std::fabs(fb)) { a=b; b=c; c=a; fa=fb; fb=fc; fc=fa; }
       double tol1 = 2.0*eps_m*std::fabs(b) + 0.5*tol;
@@ -421,7 +422,7 @@ List two_step_fit_cpp(const Eigen::VectorXd y,
         bad_accel = 0; // good step
       }
 
-      if (std::fabs(k_prop - k1) < eps * (1.0 + k1)) {
+      if (std::fabs(k_prop - k1) < eps_theta * (1.0 + k1)) {
         k = k_prop; kappa_converged = true; break;
       }
 
