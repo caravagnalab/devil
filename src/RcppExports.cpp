@@ -115,15 +115,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // two_step_fit_cpp
-Rcpp::List two_step_fit_cpp(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, Eigen::VectorXd mu_beta, const Eigen::VectorXd& off, double kappa, int max_iter_beta, int max_iter_kappa, double eps, int newton_max, int y_unique_cap);
+List two_step_fit_cpp(const Eigen::VectorXd y, const Eigen::MatrixXd X, Eigen::VectorXd mu_beta, const Eigen::VectorXd off, double kappa, int max_iter_beta, int max_iter_kappa, double eps, int newton_max, int y_unique_cap);
 RcppExport SEXP _devil_two_step_fit_cpp(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kappaSEXP, SEXP max_iter_betaSEXP, SEXP max_iter_kappaSEXP, SEXP epsSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type X(XSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type off(offSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd >::type off(offSEXP);
     Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter_beta(max_iter_betaSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter_kappa(max_iter_kappaSEXP);
