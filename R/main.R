@@ -94,11 +94,11 @@ fit_devil <- function(
     overdispersion = TRUE,
     init_overdispersion = NULL,
     do_cox_reid_adjustment = TRUE,
-    offset=1e-6,
+    offset=0,
     size_factors="normed_sum",
     verbose=FALSE,
     max_iter=200,
-    tolerance=1e-4,
+    tolerance=1e-3,
     CUDA = FALSE,
     batch_size = 1024L,
     parallel.cores=1) {
@@ -203,23 +203,38 @@ fit_devil <- function(
     }
 
   } else {
-
     if (verbose) { message("Fitting beta coefficients and overdispersion") }
 
     y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
-    tmp <- parallel::mclapply(1:ngenes, function(i) {
-      two_step_fit_cpp(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i],
-                       max_iter_beta = max_iter, max_iter_kappa = as.integer(max_iter / 2), eps_theta = tolerance, eps_beta = tolerance * 10,
-                       newton_max = 16, y_unique_cap = y_unique_cap)
 
-    }, mc.cores = n.cores)
+    if (batch_size == 1) {
+      tmp <- parallel::mclapply(1:ngenes, function(i) {
+        two_step_fit_cpp(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i],
+                         max_iter_beta = max_iter, max_iter_kappa = max_iter, eps_theta = tolerance, eps_beta = tolerance,
+                         newton_max = 16, y_unique_cap = y_unique_cap)
 
-    beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-    theta = lapply(1:ngenes, function(i) { tmp[[i]]$kappa }) %>% unlist()
+      }, mc.cores = n.cores)
+      beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
+      theta = lapply(1:ngenes, function(i) { tmp[[i]]$kappa }) %>% unlist()
+      rownames(beta) <- gene_names
+      beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$beta_iters }) %>% unlist()
+      theta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$kappa_iters }) %>% unlist()
+    } else {
+      batch_size = min(ngenes, batch_size)
+      n_batches = ceiling(ngenes / batch_size)
+      tmp = lapply(1:n_batches, function(nb) {
+        idxs = (batch_size*(nb-1)+1):(min((batch_size*nb),ngenes))
+        tmp = two_step_fit_batched_cpp(t(input_matrix[idxs,]), design_matrix, t(beta_0[idxs,]), offset_vector, kappa_vec = dispersion_init[idxs],
+                                         max_iter, max_iter, tolerance, tolerance, 16, y_unique_cap = y_unique_cap, n_threads = 1)
+        list(mu_beta = tmp$mu_beta, kappa = tmp$kappa, beta_iters = tmp$beta_iters, kappa_iters = tmp$kappa_iters)
+      })
 
-    rownames(beta) <- gene_names
-    beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$beta_iters }) %>% unlist()
-    theta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$kappa_iters }) %>% unlist()
+      beta = lapply(tmp, function(x) t(x$mu_beta)) %>% do.call("rbind", .)
+      theta = lapply(tmp, function(x) x$kappa) %>% unlist()
+      rownames(beta) <- gene_names
+      beta_iters = lapply(tmp, function(x) x$beta_iters) %>% unlist()
+      theta_iters = lapply(tmp, function(x) x$kappa_iters) %>% unlist()
+    }
   }
 
   return(list(

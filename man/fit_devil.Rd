@@ -10,11 +10,11 @@ fit_devil(
   overdispersion = TRUE,
   init_overdispersion = NULL,
   do_cox_reid_adjustment = TRUE,
-  offset = 1e-06,
+  offset = 0,
   size_factors = "normed_sum",
   verbose = FALSE,
   max_iter = 200,
-  tolerance = 1e-04,
+  tolerance = 0.001,
   CUDA = FALSE,
   batch_size = 1024L,
   parallel.cores = 1

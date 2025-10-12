@@ -33,6 +33,10 @@ two_step_fit_cpp <- function(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_
     .Call('_devil_two_step_fit_cpp', PACKAGE = 'devil', y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max, y_unique_cap)
 }
 
+two_step_fit_batched_cpp <- function(Y, X, mu_beta_mat, off, kappa_vec, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max = 16L, y_unique_cap = 4096L, n_threads = 1L) {
+    .Call('_devil_two_step_fit_batched_cpp', PACKAGE = 'devil', Y, X, mu_beta_mat, off, kappa_vec, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max, y_unique_cap, n_threads)
+}
+
 make_table_if_small <- function(x, stop_if_larger) {
     .Call('_devil_make_table_if_small', PACKAGE = 'devil', x, stop_if_larger)
 }

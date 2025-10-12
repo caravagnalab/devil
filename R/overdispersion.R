@@ -107,5 +107,5 @@ estimate_dispersion <- function(count_matrix, offset_vector) {
   variance <- DelayedMatrixStats::rowVars(count_matrix, useNames=TRUE)
   mean_counts <- DelayedMatrixStats::rowMeans2(count_matrix, useNames=TRUE)
   dispersion <- (variance - mean_offset_inverse * mean_counts) / mean_counts^2
-  ifelse(is.na(dispersion) | dispersion < 0, 100, dispersion)
+  ifelse(is.na(dispersion) | dispersion < 0, .01, dispersion)
 }
