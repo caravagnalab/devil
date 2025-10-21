@@ -29,8 +29,8 @@ H_log_gh_pmhalf <- function(s, t, gh_order = 32L, max_newton = 8L, newton_tol = 
     .Call('_devil_H_log_gh_pmhalf', PACKAGE = 'devil', s, t, gh_order, max_newton, newton_tol)
 }
 
-two_step_fit_cpp <- function(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max = 16L, y_unique_cap = 4096L) {
-    .Call('_devil_two_step_fit_cpp', PACKAGE = 'devil', y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max, y_unique_cap)
+two_step_fit_cpp <- function(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, fit_overdispersion = TRUE, newton_max = 16L, y_unique_cap = 4096L) {
+    .Call('_devil_two_step_fit_cpp', PACKAGE = 'devil', y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, fit_overdispersion, newton_max, y_unique_cap)
 }
 
 two_step_fit_batched_cpp <- function(Y, X, mu_beta_mat, off, kappa_vec, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max = 16L, y_unique_cap = 4096L, n_threads = 1L) {
@@ -53,6 +53,22 @@ conventional_deriv_score_function_fast <- function(y, mu, log_theta, model_matri
     .Call('_devil_conventional_deriv_score_function_fast', PACKAGE = 'devil', y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
 }
 
+poisson_fit_cpp <- function(y, X, beta, off, max_iter_beta, eps_beta, do_backtrack = TRUE, max_backtrack = 8L) {
+    .Call('_devil_poisson_fit_cpp', PACKAGE = 'devil', y, X, beta, off, max_iter_beta, eps_beta, do_backtrack, max_backtrack)
+}
+
+compute_hessian_poisson <- function(beta, y, design_matrix, size_factors) {
+    .Call('_devil_compute_hessian_poisson', PACKAGE = 'devil', beta, y, design_matrix, size_factors)
+}
+
+compute_scores_poisson <- function(design_matrix, y, beta, size_factors) {
+    .Call('_devil_compute_scores_poisson', PACKAGE = 'devil', design_matrix, y, beta, size_factors)
+}
+
+compute_clustered_meat_poisson <- function(design_matrix, y, beta, size_factors, clusters) {
+    .Call('_devil_compute_clustered_meat_poisson', PACKAGE = 'devil', design_matrix, y, beta, size_factors, clusters)
+}
+
 compute_hessian <- function(beta, overdispersion, y, design_matrix, size_factors) {
     .Call('_devil_compute_hessian', PACKAGE = 'devil', beta, overdispersion, y, design_matrix, size_factors)
 }
@@ -63,5 +79,9 @@ compute_scores <- function(design_matrix, y, beta, overdispersion, size_factors)
 
 compute_clustered_meat <- function(design_matrix, y, beta, overdispersion, size_factors, clusters) {
     .Call('_devil_compute_clustered_meat', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors, clusters)
+}
+
+compute_meat <- function(design_matrix, y, beta, overdispersion, size_factors) {
+    .Call('_devil_compute_meat', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors)
 }
 

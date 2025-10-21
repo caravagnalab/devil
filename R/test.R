@@ -78,39 +78,96 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
     unname() %>%
     c()
 
+  if (!is.null(clusters) & !is.numeric(clusters)) {
+    message("Converting clusters to numeric factors")
+    clusters = as.numeric(as.factor(clusters))
+  }
+
   # Calculate p-values in parallel
-  if (!is.null(clusters)) {
+  p_values <- parallel::mclapply(1:nrow(devil.fit$input_matrix), function(gene_idx) {
+    mu_test <- lfcs[gene_idx]
 
-    if (!is.numeric(clusters)) {
-      message("Converting clusters to numeric factors")
-      clusters = as.numeric(as.factor(clusters))
-    }
+    H <- compute_sandwich(
+      devil.fit$design_matrix,
+      devil.fit$input_matrix[gene_idx,],
+      devil.fit$beta[gene_idx,], devil.fit$overdispersion[gene_idx],
+      devil.fit$size_factors,
+      clusters
+    )
+    total_variance <- t(contrast) %*% H %*% contrast
+    p = 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
 
-    p_values <- parallel::mclapply(1:nrow(devil.fit$input_matrix), function(gene_idx) {
-      mu_test <- lfcs[gene_idx]
-
-      H <- compute_sandwich(
+    if (!is.null(clusters)) {
+      Hnull <- compute_sandwich(
         devil.fit$design_matrix,
         devil.fit$input_matrix[gene_idx,],
         devil.fit$beta[gene_idx,], devil.fit$overdispersion[gene_idx],
         devil.fit$size_factors,
-        clusters
+        NULL
       )
-
-      total_variance <- t(contrast) %*% H %*% contrast
+      total_variance <- t(contrast) %*% Hnull %*% contrast
       #1 - stats::pchisq(mu_test^2 / total_variance, df = 1)
-      2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
-    }, mc.cores = n.cores) %>% unlist()
+      pnull = 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
+    } else {
+      pnull = p
+    }
 
-  } else {
-    p_values <- parallel::mclapply(1:ngenes, function(gene_idx) {
-      mu_test <- lfcs[gene_idx]
-      H <- compute_hessian(devil.fit$beta[gene_idx,], 1 / devil.fit$overdispersion[gene_idx], devil.fit$input_matrix[gene_idx,], devil.fit$design_matrix, devil.fit$size_factors)
-      total_variance <- t(contrast) %*% H %*% contrast
-      #1 - stats::pchisq(mu_test^2 / total_variance, df = 1)
-      2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
-    }, mc.cores = n.cores) %>% unlist()
-  }
+    max(p, pnull)
+  }, mc.cores = n.cores) %>% unlist()
+
+
+  # if (!is.null(clusters)) {
+  #
+  #   if (!is.numeric(clusters)) {
+  #     message("Converting clusters to numeric factors")
+  #     clusters = as.numeric(as.factor(clusters))
+  #   }
+  #
+  #   if (is.null(devil.fit$overdispersion)) {
+  #     p_values <- parallel::mclapply(1:nrow(devil.fit$input_matrix), function(gene_idx) {
+  #       mu_test <- lfcs[gene_idx]
+  #
+  #       H = compute_sandwich_poisson(
+  #         devil.fit$design_matrix,
+  #         devil.fit$input_matrix[gene_idx,],
+  #         devil.fit$beta[gene_idx,],
+  #         devil.fit$size_factors,
+  #         clusters
+  #       )
+  #
+  #       total_variance <- t(contrast) %*% H %*% contrast
+  #       #1 - stats::pchisq(mu_test^2 / total_variance, df = 1)
+  #       2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
+  #     }, mc.cores = n.cores) %>% unlist()
+  #   } else {
+  #     p_values <- parallel::mclapply(1:nrow(devil.fit$input_matrix), function(gene_idx) {
+  #       mu_test <- lfcs[gene_idx]
+  #
+  #       H <- compute_sandwich(
+  #         devil.fit$design_matrix,
+  #         devil.fit$input_matrix[gene_idx,],
+  #         devil.fit$beta[gene_idx,], devil.fit$overdispersion[gene_idx],
+  #         devil.fit$size_factors,
+  #         clusters
+  #       )
+  #
+  #       total_variance <- t(contrast) %*% H %*% contrast
+  #       #1 - stats::pchisq(mu_test^2 / total_variance, df = 1)
+  #       2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
+  #     }, mc.cores = n.cores) %>% unlist()
+  #   }
+  #
+  #
+  #
+  # } else {
+  #   p_values <- parallel::mclapply(1:ngenes, function(gene_idx) {
+  #     mu_test <- lfcs[gene_idx]
+  #     H <- compute_hessian(devil.fit$beta[gene_idx,], 1 / devil.fit$overdispersion[gene_idx], devil.fit$input_matrix[gene_idx,], devil.fit$design_matrix, devil.fit$size_factors)
+  #     total_variance <- t(contrast) %*% H %*% contrast
+  #     #1 - stats::pchisq(mu_test^2 / total_variance, df = 1)
+  #     2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = F)
+  #   }, mc.cores = n.cores) %>% unlist()
+  # }
 
   # Create tibble with results
   result_df <- dplyr::tibble(
@@ -160,8 +217,6 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
   #
   #   #message('Warning: the results for some genes are unrealiable (i.e. NaN)\n This might be due to gene very lowly expressed or not expressed at all for some conditions')
   # }
-
-  result_df$adj_pval = stats::p.adjust(result_df$pval, method = pval_adjust_method)
 
   return(result_df)
 }

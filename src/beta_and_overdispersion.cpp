@@ -191,8 +191,6 @@ static inline List make_table_if_small_eigen(const VectorXd y, int cap){
   return List::create(keys, vals);
 }
 
-// ======================= Two-step fit with digamma caching =======================
-
 // [[Rcpp::export]]
 List two_step_fit_cpp(const Eigen::VectorXd y,
                       const Eigen::MatrixXd X,
@@ -203,9 +201,9 @@ List two_step_fit_cpp(const Eigen::VectorXd y,
                       int max_iter_kappa,
                       double eps_theta,
                       double eps_beta,
+                      bool  fit_overdispersion = true,
                       int    newton_max = 16,
-                      int    y_unique_cap = 4096)
-{
+                      int    y_unique_cap = 4096) {
   const int n = X.rows();
   const int p = X.cols();
   if (off.size() != n) stop("off length mismatch.");
@@ -268,6 +266,21 @@ List two_step_fit_cpp(const Eigen::VectorXd y,
     w_q.array() *= Xdelta.array().exp();
 
     if (beta_change < eps_beta) { beta_converged = true; break; }
+  }
+
+  // ---------------------------------------------------------------------------
+  // EARLY RETURN if we don't want to fit overdispersion
+  // ---------------------------------------------------------------------------
+  if (!fit_overdispersion) {
+    return List::create(
+      Named("mu_beta")         = mu_beta,
+      Named("kappa")           = R_NaReal,
+      Named("beta_converged")  = beta_converged,
+      Named("kappa_converged") = false,
+      Named("beta_iters")      = it_beta + 1,
+      Named("kappa_iters")     = 0,
+      Named("used_y_table")    = false
+    );
   }
 
   // ---------- Build (optional) frequency table on y for κ phase ----------

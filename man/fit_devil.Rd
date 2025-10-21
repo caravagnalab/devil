@@ -9,7 +9,6 @@ fit_devil(
   design_matrix,
   overdispersion = TRUE,
   init_overdispersion = NULL,
-  do_cox_reid_adjustment = TRUE,
   offset = 0,
   size_factors = "normed_sum",
   verbose = FALSE,
@@ -33,9 +32,6 @@ Set to FALSE for Poisson regression. Default: TRUE}
 \item{init_overdispersion}{Numeric or NULL. Initial value for overdispersion parameter.
 If NULL, estimates initial value from data. Recommended value if specified: 100.
 Default: NULL}
-
-\item{do_cox_reid_adjustment}{Logical. Whether to apply Cox-Reid adjustment in
-overdispersion estimation. Default: TRUE}
 
 \item{offset}{Numeric. Value added to counts to avoid numerical issues with zero counts.
 Default: 1e-6}
