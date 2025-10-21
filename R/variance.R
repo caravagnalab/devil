@@ -16,6 +16,18 @@
 #' @keywords internal
 compute_sandwich <- function(design_matrix, y, beta, overdispersion, size_factors, clusters) {
   b = compute_hessian(beta, 1 / overdispersion, y, design_matrix, size_factors)
-  m = compute_clustered_meat(design_matrix, y, beta, overdispersion, size_factors, clusters)
+
+  if (!is.null(clusters)) {
+    m = compute_clustered_meat(design_matrix, y, beta, overdispersion, size_factors, clusters)
+  } else {
+    m = compute_meat(design_matrix, y, beta, overdispersion, size_factors)
+  }
+
   (b %*% m %*% b) * length(y)
 }
+
+# compute_sandwich_poisson <- function(design_matrix, y, beta, size_factors, clusters) {
+#   b = compute_hessian_poisson(beta, y, design_matrix, size_factors)
+#   m = compute_clustered_meat_poisson(design_matrix, y, beta, size_factors, clusters)
+#   (b %*% m %*% b)
+# }

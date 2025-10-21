@@ -115,8 +115,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // two_step_fit_cpp
-List two_step_fit_cpp(const Eigen::VectorXd y, const Eigen::MatrixXd X, Eigen::VectorXd mu_beta, const Eigen::VectorXd off, double kappa, int max_iter_beta, int max_iter_kappa, double eps_theta, double eps_beta, int newton_max, int y_unique_cap);
-RcppExport SEXP _devil_two_step_fit_cpp(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kappaSEXP, SEXP max_iter_betaSEXP, SEXP max_iter_kappaSEXP, SEXP eps_thetaSEXP, SEXP eps_betaSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP) {
+List two_step_fit_cpp(const Eigen::VectorXd y, const Eigen::MatrixXd X, Eigen::VectorXd mu_beta, const Eigen::VectorXd off, double kappa, int max_iter_beta, int max_iter_kappa, double eps_theta, double eps_beta, bool fit_overdispersion, int newton_max, int y_unique_cap);
+RcppExport SEXP _devil_two_step_fit_cpp(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kappaSEXP, SEXP max_iter_betaSEXP, SEXP max_iter_kappaSEXP, SEXP eps_thetaSEXP, SEXP eps_betaSEXP, SEXP fit_overdispersionSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -129,9 +129,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type max_iter_kappa(max_iter_kappaSEXP);
     Rcpp::traits::input_parameter< double >::type eps_theta(eps_thetaSEXP);
     Rcpp::traits::input_parameter< double >::type eps_beta(eps_betaSEXP);
+    Rcpp::traits::input_parameter< bool >::type fit_overdispersion(fit_overdispersionSEXP);
     Rcpp::traits::input_parameter< int >::type newton_max(newton_maxSEXP);
     Rcpp::traits::input_parameter< int >::type y_unique_cap(y_unique_capSEXP);
-    rcpp_result_gen = Rcpp::wrap(two_step_fit_cpp(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max, y_unique_cap));
+    rcpp_result_gen = Rcpp::wrap(two_step_fit_cpp(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, fit_overdispersion, newton_max, y_unique_cap));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -220,6 +221,67 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// poisson_fit_cpp
+List poisson_fit_cpp(const Eigen::VectorXd y, const Eigen::MatrixXd X, Eigen::VectorXd beta, const Eigen::VectorXd off, int max_iter_beta, double eps_beta, bool do_backtrack, int max_backtrack);
+RcppExport SEXP _devil_poisson_fit_cpp(SEXP ySEXP, SEXP XSEXP, SEXP betaSEXP, SEXP offSEXP, SEXP max_iter_betaSEXP, SEXP eps_betaSEXP, SEXP do_backtrackSEXP, SEXP max_backtrackSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd >::type off(offSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter_beta(max_iter_betaSEXP);
+    Rcpp::traits::input_parameter< double >::type eps_beta(eps_betaSEXP);
+    Rcpp::traits::input_parameter< bool >::type do_backtrack(do_backtrackSEXP);
+    Rcpp::traits::input_parameter< int >::type max_backtrack(max_backtrackSEXP);
+    rcpp_result_gen = Rcpp::wrap(poisson_fit_cpp(y, X, beta, off, max_iter_beta, eps_beta, do_backtrack, max_backtrack));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_hessian_poisson
+Eigen::MatrixXd compute_hessian_poisson(const Eigen::VectorXd& beta, const Eigen::VectorXd& y, const Eigen::MatrixXd& design_matrix, const Eigen::VectorXd& size_factors);
+RcppExport SEXP _devil_compute_hessian_poisson(SEXP betaSEXP, SEXP ySEXP, SEXP design_matrixSEXP, SEXP size_factorsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type design_matrix(design_matrixSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type size_factors(size_factorsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_hessian_poisson(beta, y, design_matrix, size_factors));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_scores_poisson
+Eigen::MatrixXd compute_scores_poisson(const Eigen::MatrixXd& design_matrix, const Eigen::VectorXd& y, const Eigen::VectorXd& beta, const Eigen::VectorXd& size_factors);
+RcppExport SEXP _devil_compute_scores_poisson(SEXP design_matrixSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP size_factorsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type design_matrix(design_matrixSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type size_factors(size_factorsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_scores_poisson(design_matrix, y, beta, size_factors));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_clustered_meat_poisson
+Eigen::MatrixXd compute_clustered_meat_poisson(const Eigen::MatrixXd& design_matrix, const Eigen::VectorXd& y, const Eigen::VectorXd& beta, const Eigen::VectorXd& size_factors, const Eigen::VectorXi& clusters);
+RcppExport SEXP _devil_compute_clustered_meat_poisson(SEXP design_matrixSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP size_factorsSEXP, SEXP clustersSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type design_matrix(design_matrixSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type size_factors(size_factorsSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXi& >::type clusters(clustersSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_clustered_meat_poisson(design_matrix, y, beta, size_factors, clusters));
+    return rcpp_result_gen;
+END_RCPP
+}
 // compute_hessian
 Eigen::MatrixXd compute_hessian(const Eigen::VectorXd& beta, const double overdispersion, const Eigen::VectorXd& y, const Eigen::MatrixXd& design_matrix, const Eigen::VectorXd& size_factors);
 RcppExport SEXP _devil_compute_hessian(SEXP betaSEXP, SEXP overdispersionSEXP, SEXP ySEXP, SEXP design_matrixSEXP, SEXP size_factorsSEXP) {
@@ -266,6 +328,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// compute_meat
+Eigen::MatrixXd compute_meat(const Eigen::MatrixXd& design_matrix, const Eigen::VectorXd& y, const Eigen::VectorXd& beta, const double overdispersion, const Eigen::VectorXd& size_factors);
+RcppExport SEXP _devil_compute_meat(SEXP design_matrixSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP overdispersionSEXP, SEXP size_factorsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type design_matrix(design_matrixSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const double >::type overdispersion(overdispersionSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type size_factors(size_factorsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_meat(design_matrix, y, beta, overdispersion, size_factors));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_devil_init_beta", (DL_FUNC) &_devil_init_beta, 2},
@@ -275,15 +352,20 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
     {"_devil_H_log_gh_cpp", (DL_FUNC) &_devil_H_log_gh_cpp, 6},
     {"_devil_H_log_gh_pmhalf", (DL_FUNC) &_devil_H_log_gh_pmhalf, 5},
-    {"_devil_two_step_fit_cpp", (DL_FUNC) &_devil_two_step_fit_cpp, 11},
+    {"_devil_two_step_fit_cpp", (DL_FUNC) &_devil_two_step_fit_cpp, 12},
     {"_devil_two_step_fit_batched_cpp", (DL_FUNC) &_devil_two_step_fit_batched_cpp, 12},
     {"_devil_make_table_if_small", (DL_FUNC) &_devil_make_table_if_small, 2},
     {"_devil_conventional_loglikelihood_fast", (DL_FUNC) &_devil_conventional_loglikelihood_fast, 7},
     {"_devil_conventional_score_function_fast", (DL_FUNC) &_devil_conventional_score_function_fast, 7},
     {"_devil_conventional_deriv_score_function_fast", (DL_FUNC) &_devil_conventional_deriv_score_function_fast, 7},
+    {"_devil_poisson_fit_cpp", (DL_FUNC) &_devil_poisson_fit_cpp, 8},
+    {"_devil_compute_hessian_poisson", (DL_FUNC) &_devil_compute_hessian_poisson, 4},
+    {"_devil_compute_scores_poisson", (DL_FUNC) &_devil_compute_scores_poisson, 4},
+    {"_devil_compute_clustered_meat_poisson", (DL_FUNC) &_devil_compute_clustered_meat_poisson, 5},
     {"_devil_compute_hessian", (DL_FUNC) &_devil_compute_hessian, 5},
     {"_devil_compute_scores", (DL_FUNC) &_devil_compute_scores, 5},
     {"_devil_compute_clustered_meat", (DL_FUNC) &_devil_compute_clustered_meat, 6},
+    {"_devil_compute_meat", (DL_FUNC) &_devil_compute_meat, 5},
     {NULL, NULL, 0}
 };
 

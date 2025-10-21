@@ -122,3 +122,43 @@ Eigen::MatrixXd compute_clustered_meat(const Eigen::MatrixXd& design_matrix,
 
     return (adj / n) * rval;
 }
+
+
+/**
+ * Computes unclustered "meat" matrix for sandwich variance estimator
+ *
+ * Calculates the middle matrix of the sandwich variance estimator without
+ * accounting for clustering. This implementation forms the conventional
+ * (non-robust-to-clustering) meat by summing outer products of the
+ * per-observation score vectors and applying 1/n normalization.
+ *
+ * @param design_matrix Matrix of predictor variables (n x k)
+ * @param y             Vector of response values (length n)
+ * @param beta          Vector of regression coefficients (length k)
+ * @param overdispersion Overdispersion parameter (phi)
+ * @param size_factors  Vector of normalization/offset factors (length n)
+ * @return Unclustered "meat" matrix (k x k) for sandwich variance estimation
+ */
+// [[Rcpp::export]]
+Eigen::MatrixXd compute_meat(const Eigen::MatrixXd& design_matrix,
+                             const Eigen::VectorXd& y,
+                             const Eigen::VectorXd& beta,
+                             const double overdispersion,
+                             const Eigen::VectorXd& size_factors) {
+  // n x k matrix of scores (each row is a per-observation score vector)
+  Eigen::MatrixXd ef = compute_scores(design_matrix, y, beta, overdispersion, size_factors);
+
+  int n = design_matrix.rows();
+  int k = design_matrix.cols();
+
+  Eigen::MatrixXd rval = Eigen::MatrixXd::Zero(k, k);
+
+  // Sum outer products of each observation's score
+  for (int i = 0; i < n; ++i) {
+    Eigen::VectorXd si = ef.row(i).transpose();  // k x 1
+    rval.noalias() += si * si.transpose();       // accumulate s_i s_i'
+  }
+
+  // Scale by 1/n to match asymptotic normalization
+  return (1.0 / n) * rval;
+}
