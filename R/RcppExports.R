@@ -53,22 +53,6 @@ conventional_deriv_score_function_fast <- function(y, mu, log_theta, model_matri
     .Call('_devil_conventional_deriv_score_function_fast', PACKAGE = 'devil', y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
 }
 
-poisson_fit_cpp <- function(y, X, beta, off, max_iter_beta, eps_beta, do_backtrack = TRUE, max_backtrack = 8L) {
-    .Call('_devil_poisson_fit_cpp', PACKAGE = 'devil', y, X, beta, off, max_iter_beta, eps_beta, do_backtrack, max_backtrack)
-}
-
-compute_hessian_poisson <- function(beta, y, design_matrix, size_factors) {
-    .Call('_devil_compute_hessian_poisson', PACKAGE = 'devil', beta, y, design_matrix, size_factors)
-}
-
-compute_scores_poisson <- function(design_matrix, y, beta, size_factors) {
-    .Call('_devil_compute_scores_poisson', PACKAGE = 'devil', design_matrix, y, beta, size_factors)
-}
-
-compute_clustered_meat_poisson <- function(design_matrix, y, beta, size_factors, clusters) {
-    .Call('_devil_compute_clustered_meat_poisson', PACKAGE = 'devil', design_matrix, y, beta, size_factors, clusters)
-}
-
 compute_hessian <- function(beta, overdispersion, y, design_matrix, size_factors) {
     .Call('_devil_compute_hessian', PACKAGE = 'devil', beta, overdispersion, y, design_matrix, size_factors)
 }
