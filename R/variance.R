@@ -26,6 +26,7 @@ compute_sandwich <- function(design_matrix, y, beta, overdispersion, size_factor
   (b %*% m %*% b) * length(y)
 }
 
+
 # compute_sandwich_poisson <- function(design_matrix, y, beta, size_factors, clusters) {
 #   b = compute_hessian_poisson(beta, y, design_matrix, size_factors)
 #   m = compute_clustered_meat_poisson(design_matrix, y, beta, size_factors, clusters)

@@ -65,16 +65,16 @@ Eigen::MatrixXd compute_scores(const Eigen::MatrixXd& design_matrix,
                                const Eigen::VectorXd& beta,
                                const double overdispersion,
                                const Eigen::VectorXd& size_factors) {
-    double alpha = 1.0 / overdispersion;
+  double alpha = 1.0 / overdispersion;
 
-    // Vectorized computation
-    VectorXd eta = design_matrix * beta;
-    VectorXd mu = size_factors.array() * eta.array().exp();
-    VectorXd residuals = (y.array() - mu.array()) / mu.array();
-    VectorXd weights = mu.array() / (1.0 + mu.array() / alpha);
-    VectorXd wr = residuals.array() * weights.array();
+  // Vectorized computation
+  VectorXd eta = design_matrix * beta;
+  VectorXd mu = size_factors.array() * eta.array().exp();
+  VectorXd residuals = (y.array() - mu.array()) / mu.array();
+  VectorXd weights = mu.array() / (1.0 + mu.array() / alpha);
+  VectorXd wr = residuals.array() * weights.array();
 
-    return design_matrix.array().colwise() * wr.array();
+  return design_matrix.array().colwise() * wr.array();
 }
 
 
@@ -101,26 +101,26 @@ Eigen::MatrixXd compute_clustered_meat(const Eigen::MatrixXd& design_matrix,
                                        const Eigen::VectorXd& size_factors,
                                        const Eigen::VectorXi& clusters) {
 
-    Eigen::MatrixXd ef = compute_scores(design_matrix, y, beta, overdispersion, size_factors);
-    int k = design_matrix.cols();
-    int n = design_matrix.rows();
-    int ng = clusters.maxCoeff();
-    double adj = (ng > 1) ? double(ng) / (ng - 1.0) : 1.0;
+  Eigen::MatrixXd ef = compute_scores(design_matrix, y, beta, overdispersion, size_factors);
+  int k = design_matrix.cols();
+  int n = design_matrix.rows();
+  int ng = clusters.maxCoeff();
+  double adj = (ng > 1) ? double(ng) / (ng - 1.0) : 1.0;
 
-    Eigen::MatrixXd rval = Eigen::MatrixXd::Zero(k, k);
+  Eigen::MatrixXd rval = Eigen::MatrixXd::Zero(k, k);
 
-    for (int j = 1; j <= ng; ++j) {
-      // Sum rows directly without creating mask array
-      Eigen::VectorXd ef_sum = Eigen::VectorXd::Zero(k);
-      for (int i = 0; i < n; ++i) {
-        if (clusters(i) == j) {
-          ef_sum += ef.row(i).transpose();
-        }
+  for (int j = 1; j <= ng; ++j) {
+    // Sum rows directly without creating mask array
+    Eigen::VectorXd ef_sum = Eigen::VectorXd::Zero(k);
+    for (int i = 0; i < n; ++i) {
+      if (clusters(i) == j) {
+        ef_sum += ef.row(i).transpose();
       }
-      rval.noalias() += ef_sum * ef_sum.transpose();
     }
+    rval.noalias() += ef_sum * ef_sum.transpose();
+  }
 
-    return (adj / n) * rval;
+  return (adj / n) * rval;
 }
 
 
