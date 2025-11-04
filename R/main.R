@@ -33,7 +33,7 @@
 #' @param design_matrix A numeric matrix of predictor variables (samples × predictors).
 #'   Each row corresponds to a sample, each column to a predictor variable.
 #' @param overdispersion Logical. Whether to estimate the overdispersion parameter.
-#'   Set to FALSE for Poisson regression. Default: TRUE
+#'   Set to FALSE for Poisson regression. Either "new" or "old" Default: "new"
 #' @param init_overdispersion Numeric or NULL. Initial value for overdispersion parameter.
 #'   If NULL, estimates initial value from data. Recommended value if specified: 100.
 #'   Default: NULL
@@ -89,7 +89,7 @@
 fit_devil <- function(
     input_matrix,
     design_matrix,
-    overdispersion = TRUE,
+    overdispersion = "new",
     init_overdispersion = NULL,
     # do_cox_reid_adjustment = TRUE,
     offset=0,
@@ -202,24 +202,34 @@ fit_devil <- function(
 
   } else {
 
-    if (verbose) { message("Fitting coefficients") }
-
-    y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
+    if (verbose) { message("Fitting beta coefficients") }
 
     tmp <- parallel::mclapply(1:ngenes, function(i) {
-      two_step_fit_cpp(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i],
-                       max_iter_beta = max_iter, max_iter_kappa = max_iter, eps_theta = tolerance, eps_beta = tolerance,
-                       newton_max = 16, y_unique_cap = y_unique_cap, fit_overdispersion = overdispersion)
+      beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)
     }, mc.cores = n.cores)
 
     beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-    theta = lapply(1:ngenes, function(i) { tmp[[i]]$kappa }) %>% unlist()
-
-    if (!overdispersion) theta = dispersion_init
-
     rownames(beta) <- gene_names
-    beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$beta_iters }) %>% unlist()
-    theta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$kappa_iters }) %>% unlist()
+    beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
+
+
+    # # To remove
+    # y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
+    #
+    # tmp <- parallel::mclapply(1:ngenes, function(i) {
+    #   two_step_fit_cpp(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i],
+    #                    max_iter_beta = max_iter, max_iter_kappa = max_iter, eps_theta = tolerance, eps_beta = tolerance,
+    #                    newton_max = 16, y_unique_cap = y_unique_cap, fit_overdispersion = overdispersion)
+    # }, mc.cores = n.cores)
+    #
+    # beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
+    # theta = lapply(1:ngenes, function(i) { tmp[[i]]$kappa }) %>% unlist()
+    #
+    # if (!overdispersion) theta = dispersion_init
+    #
+    # rownames(beta) <- gene_names
+    # beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$beta_iters }) %>% unlist()
+    # theta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$kappa_iters }) %>% unlist()
 
     # if (batch_size == 1) {
     #   tmp <- parallel::mclapply(1:ngenes, function(i) {
@@ -249,8 +259,34 @@ fit_devil <- function(
     #   beta_iters = lapply(tmp, function(x) x$beta_iters) %>% unlist()
     #   theta_iters = lapply(tmp, function(x) x$kappa_iters) %>% unlist()
     # }
+  }
+
+  if (!isFALSE(overdispersion)) {
+    if (verbose) { message("Fit overdispersion") }
 
 
+    if (overdispersion == "old") {
+      theta <- parallel::mclapply(1:ngenes, function(i) {
+        fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_vector,
+                       tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = TRUE)
+      }, mc.cores = n.cores) %>% unlist()
+      theta_iters = NA
+    } else if (overdispersion == "new") {
+      y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
+      tmp <- parallel::mclapply(1:ngenes, function(i) {
+        fit_overdispersion_cppp(y = input_matrix[i,], X = design_matrix, mu_beta = beta[i,], off = offset_vector,
+                                        kappa = dispersion_init[i], max_iter = max_iter, eps_theta = tolerance,
+                                        newton_max = 16, y_unique_cap = y_unique_cap)
+      }, mc.cores = n.cores)
+
+      theta = lapply(tmp, function(x) x$kappa) %>% unlist()
+      theta_iters = lapply(tmp, function(x) x$kappa_iters) %>% unlist()
+    } else {
+      stop()
+    }
+  } else {
+    theta = rep(0, ngenes)
+    theta_iters = 0
   }
 
   return(list(

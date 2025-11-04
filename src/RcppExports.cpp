@@ -114,9 +114,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// two_step_fit_cpp
-List two_step_fit_cpp(const Eigen::VectorXd y, const Eigen::MatrixXd X, Eigen::VectorXd mu_beta, const Eigen::VectorXd off, double kappa, int max_iter_beta, int max_iter_kappa, double eps_theta, double eps_beta, bool fit_overdispersion, int newton_max, int y_unique_cap);
-RcppExport SEXP _devil_two_step_fit_cpp(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kappaSEXP, SEXP max_iter_betaSEXP, SEXP max_iter_kappaSEXP, SEXP eps_thetaSEXP, SEXP eps_betaSEXP, SEXP fit_overdispersionSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP) {
+// fit_overdispersion_cppp
+List fit_overdispersion_cppp(const Eigen::VectorXd y, const Eigen::MatrixXd X, Eigen::VectorXd mu_beta, const Eigen::VectorXd off, double kappa, int max_iter, double eps_theta, int newton_max, int y_unique_cap);
+RcppExport SEXP _devil_fit_overdispersion_cppp(SEXP ySEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kappaSEXP, SEXP max_iterSEXP, SEXP eps_thetaSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -125,36 +125,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
     Rcpp::traits::input_parameter< const Eigen::VectorXd >::type off(offSEXP);
     Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
-    Rcpp::traits::input_parameter< int >::type max_iter_beta(max_iter_betaSEXP);
-    Rcpp::traits::input_parameter< int >::type max_iter_kappa(max_iter_kappaSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
     Rcpp::traits::input_parameter< double >::type eps_theta(eps_thetaSEXP);
-    Rcpp::traits::input_parameter< double >::type eps_beta(eps_betaSEXP);
-    Rcpp::traits::input_parameter< bool >::type fit_overdispersion(fit_overdispersionSEXP);
     Rcpp::traits::input_parameter< int >::type newton_max(newton_maxSEXP);
     Rcpp::traits::input_parameter< int >::type y_unique_cap(y_unique_capSEXP);
-    rcpp_result_gen = Rcpp::wrap(two_step_fit_cpp(y, X, mu_beta, off, kappa, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, fit_overdispersion, newton_max, y_unique_cap));
-    return rcpp_result_gen;
-END_RCPP
-}
-// two_step_fit_batched_cpp
-List two_step_fit_batched_cpp(const Eigen::MatrixXd Y, const Eigen::MatrixXd X, Eigen::MatrixXd mu_beta_mat, const Eigen::VectorXd off, Eigen::VectorXd kappa_vec, int max_iter_beta, int max_iter_kappa, double eps_theta, double eps_beta, int newton_max, int y_unique_cap, int n_threads);
-RcppExport SEXP _devil_two_step_fit_batched_cpp(SEXP YSEXP, SEXP XSEXP, SEXP mu_beta_matSEXP, SEXP offSEXP, SEXP kappa_vecSEXP, SEXP max_iter_betaSEXP, SEXP max_iter_kappaSEXP, SEXP eps_thetaSEXP, SEXP eps_betaSEXP, SEXP newton_maxSEXP, SEXP y_unique_capSEXP, SEXP n_threadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd >::type X(XSEXP);
-    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type mu_beta_mat(mu_beta_matSEXP);
-    Rcpp::traits::input_parameter< const Eigen::VectorXd >::type off(offSEXP);
-    Rcpp::traits::input_parameter< Eigen::VectorXd >::type kappa_vec(kappa_vecSEXP);
-    Rcpp::traits::input_parameter< int >::type max_iter_beta(max_iter_betaSEXP);
-    Rcpp::traits::input_parameter< int >::type max_iter_kappa(max_iter_kappaSEXP);
-    Rcpp::traits::input_parameter< double >::type eps_theta(eps_thetaSEXP);
-    Rcpp::traits::input_parameter< double >::type eps_beta(eps_betaSEXP);
-    Rcpp::traits::input_parameter< int >::type newton_max(newton_maxSEXP);
-    Rcpp::traits::input_parameter< int >::type y_unique_cap(y_unique_capSEXP);
-    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(two_step_fit_batched_cpp(Y, X, mu_beta_mat, off, kappa_vec, max_iter_beta, max_iter_kappa, eps_theta, eps_beta, newton_max, y_unique_cap, n_threads));
+    rcpp_result_gen = Rcpp::wrap(fit_overdispersion_cppp(y, X, mu_beta, off, kappa, max_iter, eps_theta, newton_max, y_unique_cap));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -291,8 +266,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
     {"_devil_H_log_gh_cpp", (DL_FUNC) &_devil_H_log_gh_cpp, 6},
     {"_devil_H_log_gh_pmhalf", (DL_FUNC) &_devil_H_log_gh_pmhalf, 5},
-    {"_devil_two_step_fit_cpp", (DL_FUNC) &_devil_two_step_fit_cpp, 12},
-    {"_devil_two_step_fit_batched_cpp", (DL_FUNC) &_devil_two_step_fit_batched_cpp, 12},
+    {"_devil_fit_overdispersion_cppp", (DL_FUNC) &_devil_fit_overdispersion_cppp, 9},
     {"_devil_make_table_if_small", (DL_FUNC) &_devil_make_table_if_small, 2},
     {"_devil_conventional_loglikelihood_fast", (DL_FUNC) &_devil_conventional_loglikelihood_fast, 7},
     {"_devil_conventional_score_function_fast", (DL_FUNC) &_devil_conventional_score_function_fast, 7},
