@@ -191,9 +191,9 @@ fit_devil <- function(
     if (remainder > 0) {
       beta_extra = res_beta_fit_extra$mu_beta
       beta <- rbind(beta, beta_extra)
-      iterations=c(res_beta_fit$iter, res_beta_fit_extra$iter)
+      beta_iters=c(res_beta_fit$iter, res_beta_fit_extra$iter)
     } else {
-      iterations=c(res_beta_fit$iter)
+      beta_iters=c(res_beta_fit$iter)
     }
 
     if (is.null(dim(beta))) {
