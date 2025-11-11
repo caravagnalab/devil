@@ -77,38 +77,38 @@ List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float
 }
 
 // // [[Rcpp::export]]
-// List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::MatrixXf mu_beta, Eigen::VectorXf off, Eigen::VectorXf k, int max_iter, float eps,int batch_size) {
-//   auto t1 = std::chrono::high_resolution_clock::now();
-//   auto y_float = y.transpose().eval();
-//   auto X_float = X.transpose().eval();
-//   auto mu_beta_float = mu_beta.transpose().eval();
+List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::MatrixXf mu_beta, Eigen::VectorXf off, Eigen::VectorXf k, int max_iter, float eps,int batch_size) {
+  auto t1 = std::chrono::high_resolution_clock::now();
+  auto y_float = y.transpose().eval();
+  auto X_float = X.transpose().eval();
+  auto mu_beta_float = mu_beta.transpose().eval();
 
-//   auto t2 = std::chrono::high_resolution_clock::now();
-//   auto elapsed{t2-t1};
-//   std::cout << "TIME Reorder cost " << std::chrono::duration<double, std::milli>(elapsed).count()
-//             << " ms" << std::endl;
-//   std::cout << "Start GPU "
-//             << "Iteration max:" << max_iter << ", EPS:" << eps << ", batch_size: " << batch_size
-//             << std::endl;
-//   std::vector<int> iterations(y.rows());
+  auto t2 = std::chrono::high_resolution_clock::now();
+  auto elapsed{t2-t1};
+  std::cout << "TIME Reorder cost " << std::chrono::duration<double, std::milli>(elapsed).count()
+            << " ms" << std::endl;
+  std::cout << "Start GPU "
+            << "Iteration max:" << max_iter << ", EPS:" << eps << ", batch_size: " << batch_size
+            << std::endl;
+  std::vector<int> iterations(y.rows());
 
 
-//  t1 = std::chrono::high_resolution_clock::now();
-//  //create iteration vector, pass by reference.
-//  auto result= beta_fit_gpu_external(y_float, X_float, mu_beta_float, off, k, max_iter,
-// 				    eps,batch_size,iterations);
-//   t2  =std::chrono::high_resolution_clock::now();
-//   elapsed= t2-t1;
-//   std::cout << "TIME: Compute cost " << std::chrono::duration<double, std::milli>(elapsed).count() << " ms"
-//             << std::endl;
+ t1 = std::chrono::high_resolution_clock::now();
+ //create iteration vector, pass by reference.
+ auto result= beta_fit_gpu_external(y_float, X_float, mu_beta_float, off, k, max_iter,
+				    eps,batch_size,iterations);
+  t2  =std::chrono::high_resolution_clock::now();
+  elapsed= t2-t1;
+  std::cout << "TIME: Compute cost " << std::chrono::duration<double, std::milli>(elapsed).count() << " ms"
+            << std::endl;
 
-//  //Eigen::Matrix<float, result.rows(), result.cols(), Eigen::RowMajor> resultr =result;
-//  std::cout<<"END GPU" << std::endl;
-//  //  Return both mu_beta and Zigma as a List
+ //Eigen::Matrix<float, result.rows(), result.cols(), Eigen::RowMajor> resultr =result;
+ std::cout<<"END GPU" << std::endl;
+ //  Return both mu_beta and Zigma as a List
 
-//  return List::create(Named("mu_beta") = result.cast<double>().transpose(), Named("iter") = iterations);
+ return List::create(Named("mu_beta") = result.cast<double>().transpose(), Named("iter") = iterations);
 
-// }
+}
 
 
 /*
