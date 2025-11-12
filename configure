@@ -1,15 +1,51 @@
 set -x
 set -e
 
+# Parse command line arguments for CUDA support
+USE_CUDA=0
+for arg in "$@"; do
+  case $arg in
+    --with-cuda)
+      USE_CUDA=1
+      shift
+      ;;
+    --without-cuda)
+      USE_CUDA=0
+      shift
+      ;;
+  esac
+done
+
 which cmake
 
-
-if [ ! -d RACES ]; then
-
+if [ ! -d devil-cuda ]; then
     git clone https://github.com/NiccoloTosato/devil-cuda.git
     (cd devil-cuda; git checkout low-memory && rm -rf .git )
-
 fi
 
 ${R_HOME}/bin/R --vanilla --silent -e 'Rcpp::compileAttributes()'
+
+# Write USE_CUDA to a file that Makevars can include
+echo "Configuring with CUDA support: $USE_CUDA"
+echo "USE_CUDA=$USE_CUDA" > src/Makevars.config
+
+# If CUDA is disabled, remove the Rcpp::export annotation from beta_fit_gpu
+# to prevent Rcpp from generating exports for unavailable functions
+if [ "$USE_CUDA" -eq 0 ]; then
+    echo "Removing beta_fit_gpu export (CUDA disabled)"
+    # Create backup
+    cp src/beta.cpp src/beta.cpp.bak
+    # Remove the // [[Rcpp::export]] line immediately before beta_fit_gpu
+    sed -i '/^#ifdef USE_CUDA$/{
+        n
+        /^\/\/ \[\[Rcpp::export\]\]$/d
+    }' src/beta.cpp
+
+    # Regenerate Rcpp exports without beta_fit_gpu
+    ${R_HOME}/bin/R --vanilla --silent -e 'Rcpp::compileAttributes()'
+    # Restore original file for version control
+    mv src/beta.cpp.bak src/beta.cpp
+else
+    echo "CUDA support enabled - beta_fit_gpu will be available"
+fi
 

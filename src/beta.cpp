@@ -1,7 +1,9 @@
 #include <RcppEigen.h>
 #include <iostream>
 #include <chrono>
+#ifdef USE_CUDA
 #include "batch.hpp"
+#endif
 // [[Rcpp::depends(RcppEigen)]]
 using namespace Rcpp;
 using namespace Eigen;
@@ -78,6 +80,7 @@ List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float
   return List::create(Named("mu_beta") = mu_beta, Named("iter") = iter);
 }
 
+#ifdef USE_CUDA
 // [[Rcpp::export]]
 List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::MatrixXf mu_beta, Eigen::VectorXf off, Eigen::VectorXf k, int max_iter, float eps,int batch_size) {
   auto t1 = std::chrono::high_resolution_clock::now();
@@ -111,6 +114,7 @@ List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::MatrixXf mu_beta
  return List::create(Named("mu_beta") = result.cast<double>().transpose(), Named("iter") = iterations);
 
 }
+#endif // USE_CUDA
 
 
 /*
