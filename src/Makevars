@@ -1,12 +1,25 @@
 CXX_STD = CXX17
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -L$(CUTENSOR_HOME)/lib/12/ -L$(CUDA_HOME)/lib64 -L/usr/local/cuda-12.2/lib64/  -lcutensor -lcuda -lcudart -lcusolver -lcublas
-PKG_CPPFLAGS =   -Wno-ignored-attributes
 SHELL := /bin/bash
+
+# Read CUDA configuration if it exists (set by configure script)
+# Default to no CUDA if config file doesn't exist
+-include Makevars.config
+USE_CUDA ?= 0
+
+# Base flags
+PKG_CPPFLAGS = -Wno-ignored-attributes
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+
+# Add CUDA libraries only if USE_CUDA=1
+ifeq ($(USE_CUDA),1)
+PKG_CPPFLAGS += -DUSE_CUDA
+PKG_LIBS += -L$(CUTENSOR_HOME)/lib/12/ -L$(CUDA_HOME)/lib64 -L/usr/local/cuda-12.2/lib64/ -lBETA_FIT -lcutensor -lcuda -lcudart -lcusolver -lcublas
+endif
 
 BUILD_DIR = ../_builds
 INSTALL_DIR = ../_install
 
-PKG_LIBS += -L$(INSTALL_DIR)/lib/ -lBETA_FIT
+PKG_LIBS += -L$(INSTALL_DIR)/lib/ 
 PKG_CXXFLAGS += -I$(INSTALL_DIR)/include/
 
 LIBBETA = $(INSTALL_DIR)/lib/libBETA_FIT.so
@@ -15,14 +28,15 @@ all: $(LIBBETA)
 
 $(LIBBETA):
 	#ls ../devil-cuda/src/
-	cmake -S . -H../devil-cuda/ -B$(BUILD_DIR) -DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR)
+ifeq ($(USE_CUDA),1)
+	cmake -S . -H../devil-cuda/ -B$(BUILD_DIR) -DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR) -DUSE_CUDA=ON
 	cmake --build $(BUILD_DIR)
 	cmake --install $(BUILD_DIR)
 	[ -d $(INSTALL_DIR)/lib64 ] && ln -s $(INSTALL_DIR)/lib64 $(INSTALL_DIR)/lib || echo "Don't create symlink"
-#	ls  $(INSTALL_DIR)/lib64/
-
-	#cat $(INSTALL_DIR)/include/batch.hpp
 	cp $(INSTALL_DIR)/lib/*FIT.a $(LIBBETA)
+else
+	@echo "No CUDA support - skipping devil-cuda build"
+endif
 .PHONY: all clean
 
 clean:

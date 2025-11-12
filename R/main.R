@@ -120,8 +120,16 @@ fit_devil <- function(
   # Check if CUDA is available
   CUDA_is_available <- FALSE
   if (CUDA) {
-    message("Check CUDA availability function need to be implemented")
-    CUDA_is_available <- TRUE
+    if (!exists("beta_fit_gpu", mode = "function")) {
+      warning("CUDA support was not enabled during package installation. ",
+              "The beta_fit_gpu function is not available. ",
+              "Reinstall with configure.args='--with-cuda' to enable GPU acceleration. ",
+              "Falling back to CPU computation.")
+      CUDA <- FALSE
+    } else {
+      message("CUDA support detected - using GPU acceleration")
+      CUDA_is_available <- TRUE
+    }
   }
 
   # Compute size factors
