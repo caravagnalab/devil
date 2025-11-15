@@ -18,9 +18,11 @@ done
 
 which cmake
 
-if [ ! -d devil-cuda ]; then
-    git clone https://github.com/NiccoloTosato/devil-cuda.git
-    (cd devil-cuda; git checkout low-memory && rm -rf .git )
+# Check if cuda directory exists
+if [ ! -d cuda ]; then
+    echo "ERROR: cuda directory not found!"
+    echo "The cuda directory should be included in the package source."
+    exit 1
 fi
 
 ${R_HOME}/bin/R --vanilla --silent -e 'Rcpp::compileAttributes()'
