@@ -68,8 +68,6 @@ List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float
     mu_g = (k + y.array()) / (1 + k * w_q.array());
     Zigma = 1.0 / (k * (mu_g.array() * w_q.array()).sum());
 
-
-
     delta = Zigma * (k * (mu_g.array() * w_q.array() - 1).sum());
     mu_beta += delta;
     converged = delta < eps;

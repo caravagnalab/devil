@@ -2,23 +2,25 @@
 #'
 #' @description
 #' Fits a statistical model to count data, particularly designed for RNA sequencing data analysis.
-#' The function estimates multiple parameters including regression coefficients (beta),
-#' overdispersion parameters, and normalizes data using size factors. It supports both CPU
-#' and GPU-based computation with parallel processing capabilities.
+#' The function estimates regression coefficients (beta), gene-wise overdispersion parameters,
+#' and normalizes data using size factors. It supports both CPU and (optionally) GPU-based
+#' computation with parallel processing capabilities.
 #'
 #' @details
 #' The function implements a negative binomial regression model with the following steps:
-#' 1. Computes size factors for data normalization (if requested)
-#' 2. Initializes model parameters including beta coefficients and overdispersion
-#' 3. Fits the model using either CPU (parallel) or GPU computation
-#' 4. Optionally estimates overdispersion parameters
+#' \enumerate{
+#'   \item Computes size factors for data normalization (if requested)
+#'   \item Initializes model parameters including beta coefficients and overdispersion
+#'   \item Fits the regression coefficients using either CPU (parallel) or GPU computation
+#'   \item Optionally fits/updates overdispersion parameters using one of several strategies
+#' }
 #'
 #' The model fitting process uses iterative optimization with configurable convergence
 #' criteria and maximum iterations. For large datasets, the GPU implementation processes
 #' genes in batches for improved memory efficiency.
 #'
 #' @section Size Factor Methods:
-#' Three normalization methods are available:
+#' Three normalization methods are available when \code{size_factors} is a character string:
 #' \itemize{
 #'   \item \code{"normed_sum"} (default): Geometric mean normalization based on library sizes.
 #'     Fast and works well for most datasets.
@@ -27,20 +29,40 @@
 #'   \item \code{"edgeR"}: edgeR's TMM with singleton pairing method.
 #'     Requires the edgeR package from Bioconductor.
 #' }
+#' If \code{size_factors = NULL}, no normalization is performed and all size factors are set to 1.
+#'
+#' @section Overdispersion Strategies:
+#' The \code{overdispersion} argument controls how gene-wise overdispersion is handled:
+#' \itemize{
+#'   \item \code{"old"} or \code{"MLE"}: Overdispersion is fit via the original (legacy) NB
+#'         MLE-based procedure (with Cox–Reid adjustment inside \code{fit_dispersion()}).
+#'   \item \code{"new"} or \code{"I"}: Overdispersion is fit via the new iterative NB
+#'         routine implemented in \code{fit_overdispersion_cppp()}, typically faster and
+#'         more stable for large single-cell datasets.
+#'   \item \code{"MOM"}: Overdispersion is estimated using a method-of-moments approach via
+#'         \code{estimate_mom_dispersion_cpp()}, which is cheap and provides a rough
+#'         dispersion estimate.
+#'   \item \code{FALSE}: Disable overdispersion fitting and use a Poisson model
+#'         (overdispersion fixed to 0).
+#' }
 #'
 #' @param input_matrix A numeric matrix of count data (genes × samples).
 #'   Rows represent genes/features, columns represent samples/cells.
 #' @param design_matrix A numeric matrix of predictor variables (samples × predictors).
 #'   Each row corresponds to a sample, each column to a predictor variable.
-#' @param overdispersion Logical. Whether to estimate the overdispersion parameter.
-#'   Set to FALSE for Poisson regression. Either "new" or "old" Default: "new"
-#' @param init_overdispersion Numeric or NULL. Initial value for overdispersion parameter.
-#'   If NULL, estimates initial value from data. Recommended value if specified: 100.
-#'   Default: NULL
-#' @param offset Numeric. Value added to counts to avoid numerical issues with zero counts.
-#'   Default: 1e-6
-#' @param size_factors Character string or NULL. Method for computing normalization factors
-#'   to account for different sequencing depths. Options are:
+#'   Must have \code{nrow(design_matrix) == ncol(input_matrix)}.
+#' @param overdispersion Character or logical. Strategy for estimating overdispersion:
+#'   one of \code{"new"}, \code{"I"}, \code{"old"}, \code{"MLE"}, \code{"MOM"}, or
+#'   \code{FALSE} to disable overdispersion fitting (Poisson model).
+#'   Default: \code{"new"}.
+#' @param init_overdispersion Numeric scalar or \code{NULL}. Initial value for the
+#'   overdispersion parameter used as a starting point for the iterative procedures.
+#'   If \code{NULL}, an initial value is estimated from the data via \code{estimate_dispersion()}.
+#'   Recommended value if specified: \code{100}. Default: \code{NULL}.
+#' @param offset Numeric scalar. Value used when computing the offset vector to avoid
+#'   numerical issues with zero counts. Default: \code{0}.
+#' @param size_factors Character string or \code{NULL}. Method for computing normalization
+#'   factors to account for different sequencing depths. Options are:
 #'   \itemize{
 #'     \item \code{"normed_sum"} (default): Geometric mean normalization
 #'     \item \code{"psinorm"}: Psi-normalization
@@ -48,40 +70,34 @@
 #'     \item \code{NULL}: No normalization (all size factors set to 1)
 #'   }
 #' @param verbose Logical. Whether to print progress messages during execution.
-#'   Default: FALSE
-#' @param max_iter Integer. Maximum number of iterations for parameter optimization.
-#'   Default: 100
+#'   Default: \code{FALSE}.
+#' @param max_iter Integer. Maximum number of iterations for parameter optimization
+#'   (both beta and overdispersion routines). Default: \code{200}.
 #' @param tolerance Numeric. Convergence criterion for parameter optimization.
-#'   Default: 1e-3
-#' @param CUDA Logical. Whether to use GPU acceleration (requires CUDA support).
-#'   Default: FALSE
+#'   Default: \code{1e-3}.
+#' @param CUDA Logical. Whether to use GPU acceleration (requires CUDA support and
+#'   a compiled \code{beta_fit_gpu()} implementation). Default: \code{FALSE}.
 #' @param batch_size Integer. Number of genes to process per batch in GPU mode.
-#'   Only relevant if CUDA = TRUE. Default: 1024
-#' @param parallel.cores Integer or NULL. Number of CPU cores for parallel processing.
-#'   If NULL, uses all available cores. Default: 1
+#'   Only relevant if \code{CUDA = TRUE}. Default: \code{1024}.
+#' @param parallel.cores Integer or \code{NULL}. Number of CPU cores for parallel
+#'   processing with \code{parallel::mclapply}. If \code{NULL}, uses all available cores.
+#'   Default: \code{1}.
+#' @param profiling Logical. If \code{TRUE}, prints timing information for major
+#'   steps (size factors, offset computation, initial dispersion, beta fit, theta fit).
+#'   Useful for performance profiling. Default: \code{FALSE}.
 #'
 #' @return A list containing:
 #' \describe{
-#'   \item{beta}{Matrix of fitted coefficients (genes × predictors)}
-#'   \item{overdispersion}{Vector of fitted overdispersion parameters (one per gene)}
-#'   \item{iterations}{Vector of iteration counts for convergence (one per gene)}
-#'   \item{size_factors}{Vector of computed size factors (one per sample)}
-#'   \item{offset_vector}{Vector of offset values used in the model}
-#'   \item{design_matrix}{Input design matrix (as provided)}
-#'   \item{input_matrix}{Input count matrix (as provided)}
-#'   \item{input_parameters}{List of used parameter values (max_iter, tolerance, parallel.cores)}
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' # Basic usage with default parameters
-#' fit <- fit_devil(counts, design)
-#'
-#' # Using GPU acceleration with custom batch size
-#' fit <- fit_devil(counts, design, CUDA = TRUE, batch_size = 2048)
-#'
-#' # Disable overdispersion estimation (Poisson model)
-#' fit <- fit_devil(counts, design, overdispersion = FALSE)
+#'   \item{beta}{Matrix of fitted coefficients (genes × predictors).}
+#'   \item{overdispersion}{Vector of fitted overdispersion parameters (one per gene).}
+#'   \item{iterations}{List with elements \code{beta_iters} and \code{theta_iters}
+#'         giving the number of iterations used for each gene.}
+#'   \item{size_factors}{Vector of computed size factors (one per sample).}
+#'   \item{offset_vector}{Vector of offset values used in the model (length = number of samples).}
+#'   \item{design_matrix}{Input design matrix (as provided, possibly coerced to numeric matrix).}
+#'   \item{input_matrix}{Input count matrix (as provided, possibly coerced to numeric matrix).}
+#'   \item{input_parameters}{List of used parameter values
+#'         (\code{max_iter}, \code{tolerance}, \code{parallel.cores}).}
 #' }
 #'
 #' @export
@@ -99,7 +115,8 @@ fit_devil <- function(
     tolerance=1e-3,
     CUDA = FALSE,
     batch_size = 1024L,
-    parallel.cores=1) {
+    parallel.cores=1,
+    profiling = FALSE) {
 
   # Read general info about input matrix and design matrix
   gene_names <- rownames(input_matrix)
@@ -133,6 +150,8 @@ fit_devil <- function(
   }
 
   # Compute size factors
+  if (profiling) start = Sys.time()
+
   if (!is.null(size_factors)) {
     if (verbose) { message("Compute size factors") }
     sf <- calculate_sf(input_matrix, method = size_factors, verbose = verbose)
@@ -140,22 +159,43 @@ fit_devil <- function(
     sf <- rep(1, nrow(design_matrix))
   }
 
+  if (profiling) {
+    end = Sys.time()
+    message(paste0("Size factors computing : ", end - start))
+  }
+
   # Calculate offset vector
+  if (profiling) start = Sys.time()
   offset_vector = compute_offset_vector(offset, input_matrix, sf)
+  if (profiling) {
+    end = Sys.time()
+    message(paste0("Offset vector computing : ", end - start))
+  }
 
   # Initialize overdispersion
+  if (profiling) start = Sys.time()
   if (is.null(init_overdispersion)) {
     dispersion_init <- c(estimate_dispersion(input_matrix, offset_vector))
   } else {
     dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
+  }
+  if (profiling) {
+    end = Sys.time()
+    message(paste0("Theta init computing : ", end - start))
   }
 
   # if (verbose) { message("Initialize beta estimate") }
   # groups <- devil:::get_groups_for_model_matrix(design_matrix)
 
   if (verbose) { message("Initialize beta estimate") }
+  if (profiling) start = Sys.time()
   beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
+  if (profiling) {
+    end = Sys.time()
+    message(paste0("Beta init computing : ", end - start))
+  }
 
+  if (profiling) start = Sys.time()
   if (CUDA & CUDA_is_available) {
     message("Messing with CUDA! Implementation still needed")
 
@@ -219,67 +259,23 @@ fit_devil <- function(
     beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
     rownames(beta) <- gene_names
     beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
-
-
-    # # To remove
-    # y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
-    #
-    # tmp <- parallel::mclapply(1:ngenes, function(i) {
-    #   two_step_fit_cpp(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i],
-    #                    max_iter_beta = max_iter, max_iter_kappa = max_iter, eps_theta = tolerance, eps_beta = tolerance,
-    #                    newton_max = 16, y_unique_cap = y_unique_cap, fit_overdispersion = overdispersion)
-    # }, mc.cores = n.cores)
-    #
-    # beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-    # theta = lapply(1:ngenes, function(i) { tmp[[i]]$kappa }) %>% unlist()
-    #
-    # if (!overdispersion) theta = dispersion_init
-    #
-    # rownames(beta) <- gene_names
-    # beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$beta_iters }) %>% unlist()
-    # theta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$kappa_iters }) %>% unlist()
-
-    # if (batch_size == 1) {
-    #   tmp <- parallel::mclapply(1:ngenes, function(i) {
-    #     two_step_fit_cpp(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i],
-    #                      max_iter_beta = max_iter, max_iter_kappa = max_iter, eps_theta = tolerance, eps_beta = tolerance,
-    #                      newton_max = 16, y_unique_cap = y_unique_cap)
-    #
-    #   }, mc.cores = n.cores)
-    #   beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-    #   theta = lapply(1:ngenes, function(i) { tmp[[i]]$kappa }) %>% unlist()
-    #   rownames(beta) <- gene_names
-    #   beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$beta_iters }) %>% unlist()
-    #   theta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$kappa_iters }) %>% unlist()
-    # } else {
-    #   batch_size = min(ngenes, batch_size)
-    #   n_batches = ceiling(ngenes / batch_size)
-    #   tmp = lapply(1:n_batches, function(nb) {
-    #     idxs = (batch_size*(nb-1)+1):(min((batch_size*nb),ngenes))
-    #     tmp = two_step_fit_batched_cpp(t(input_matrix[idxs,]), design_matrix, t(beta_0[idxs,]), offset_vector, kappa_vec = dispersion_init[idxs],
-    #                                    max_iter, max_iter, tolerance, tolerance, 16, y_unique_cap = y_unique_cap, n_threads = 1)
-    #     list(mu_beta = tmp$mu_beta, kappa = tmp$kappa, beta_iters = tmp$beta_iters, kappa_iters = tmp$kappa_iters)
-    #   })
-    #
-    #   beta = lapply(tmp, function(x) t(x$mu_beta)) %>% do.call("rbind", .)
-    #   theta = lapply(tmp, function(x) x$kappa) %>% unlist()
-    #   rownames(beta) <- gene_names
-    #   beta_iters = lapply(tmp, function(x) x$beta_iters) %>% unlist()
-    #   theta_iters = lapply(tmp, function(x) x$kappa_iters) %>% unlist()
-    # }
+  }
+  if (profiling) {
+    end = Sys.time()
+    message(paste0("Beta fit computing : ", end - start))
   }
 
+  if (profiling) start = Sys.time()
   if (!isFALSE(overdispersion)) {
     if (verbose) { message("Fit overdispersion") }
 
-
-    if (overdispersion == "old") {
+    if (overdispersion %in% c("old", "MLE")) {
       theta <- parallel::mclapply(1:ngenes, function(i) {
         fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_vector,
                        tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = TRUE)
       }, mc.cores = n.cores) %>% unlist()
       theta_iters = NA
-    } else if (overdispersion == "new") {
+    } else if (overdispersion %in% c("new", "I")) {
       y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
       tmp <- parallel::mclapply(1:ngenes, function(i) {
         fit_overdispersion_cppp(y = input_matrix[i,], X = design_matrix, mu_beta = beta[i,], off = offset_vector,
@@ -289,12 +285,19 @@ fit_devil <- function(
 
       theta = lapply(tmp, function(x) x$kappa) %>% unlist()
       theta_iters = lapply(tmp, function(x) x$kappa_iters) %>% unlist()
+    } else if (overdispersion == "MOM") {
+      theta = estimate_mom_dispersion_cpp(input_matrix, design_matrix, beta, sf)
+      theta_iters = 0
     } else {
       stop()
     }
   } else {
     theta = rep(0, ngenes)
     theta_iters = 0
+  }
+  if (profiling) {
+    end = Sys.time()
+    message(paste0("Theta fit computing : ", end - start))
   }
 
   return(list(
