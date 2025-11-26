@@ -7,7 +7,7 @@
 fit_devil(
   input_matrix,
   design_matrix,
-  overdispersion = TRUE,
+  overdispersion = "new",
   init_overdispersion = NULL,
   offset = 0,
   size_factors = "normed_sum",
@@ -16,7 +16,8 @@ fit_devil(
   tolerance = 0.001,
   CUDA = FALSE,
   batch_size = 1024L,
-  parallel.cores = 1
+  parallel.cores = 1,
+  profiling = FALSE
 )
 }
 \arguments{
@@ -24,20 +25,24 @@ fit_devil(
 Rows represent genes/features, columns represent samples/cells.}
 
 \item{design_matrix}{A numeric matrix of predictor variables (samples × predictors).
-Each row corresponds to a sample, each column to a predictor variable.}
+Each row corresponds to a sample, each column to a predictor variable.
+Must have \code{nrow(design_matrix) == ncol(input_matrix)}.}
 
-\item{overdispersion}{Logical. Whether to estimate the overdispersion parameter.
-Set to FALSE for Poisson regression. Default: TRUE}
+\item{overdispersion}{Character or logical. Strategy for estimating overdispersion:
+one of \code{"new"}, \code{"I"}, \code{"old"}, \code{"MLE"}, \code{"MOM"}, or
+\code{FALSE} to disable overdispersion fitting (Poisson model).
+Default: \code{"new"}.}
 
-\item{init_overdispersion}{Numeric or NULL. Initial value for overdispersion parameter.
-If NULL, estimates initial value from data. Recommended value if specified: 100.
-Default: NULL}
+\item{init_overdispersion}{Numeric scalar or \code{NULL}. Initial value for the
+overdispersion parameter used as a starting point for the iterative procedures.
+If \code{NULL}, an initial value is estimated from the data via \code{estimate_dispersion()}.
+Recommended value if specified: \code{100}. Default: \code{NULL}.}
 
-\item{offset}{Numeric. Value added to counts to avoid numerical issues with zero counts.
-Default: 1e-6}
+\item{offset}{Numeric scalar. Value used when computing the offset vector to avoid
+numerical issues with zero counts. Default: \code{0}.}
 
-\item{size_factors}{Character string or NULL. Method for computing normalization factors
-to account for different sequencing depths. Options are:
+\item{size_factors}{Character string or \code{NULL}. Method for computing normalization
+factors to account for different sequencing depths. Options are:
 \itemize{
 \item \code{"normed_sum"} (default): Geometric mean normalization
 \item \code{"psinorm"}: Psi-normalization
@@ -46,49 +51,56 @@ to account for different sequencing depths. Options are:
 }}
 
 \item{verbose}{Logical. Whether to print progress messages during execution.
-Default: FALSE}
+Default: \code{FALSE}.}
 
-\item{max_iter}{Integer. Maximum number of iterations for parameter optimization.
-Default: 100}
+\item{max_iter}{Integer. Maximum number of iterations for parameter optimization
+(both beta and overdispersion routines). Default: \code{200}.}
 
 \item{tolerance}{Numeric. Convergence criterion for parameter optimization.
-Default: 1e-3}
+Default: \code{1e-3}.}
 
-\item{CUDA}{Logical. Whether to use GPU acceleration (requires CUDA support).
-Default: FALSE}
+\item{CUDA}{Logical. Whether to use GPU acceleration (requires CUDA support and
+a compiled \code{beta_fit_gpu()} implementation). Default: \code{FALSE}.}
 
 \item{batch_size}{Integer. Number of genes to process per batch in GPU mode.
-Only relevant if CUDA = TRUE. Default: 1024}
+Only relevant if \code{CUDA = TRUE}. Default: \code{1024}.}
 
-\item{parallel.cores}{Integer or NULL. Number of CPU cores for parallel processing.
-If NULL, uses all available cores. Default: 1}
+\item{parallel.cores}{Integer or \code{NULL}. Number of CPU cores for parallel
+processing with \code{parallel::mclapply}. If \code{NULL}, uses all available cores.
+Default: \code{1}.}
+
+\item{profiling}{Logical. If \code{TRUE}, prints timing information for major
+steps (size factors, offset computation, initial dispersion, beta fit, theta fit).
+Useful for performance profiling. Default: \code{FALSE}.}
 }
 \value{
 A list containing:
 \describe{
-\item{beta}{Matrix of fitted coefficients (genes × predictors)}
-\item{overdispersion}{Vector of fitted overdispersion parameters (one per gene)}
-\item{iterations}{Vector of iteration counts for convergence (one per gene)}
-\item{size_factors}{Vector of computed size factors (one per sample)}
-\item{offset_vector}{Vector of offset values used in the model}
-\item{design_matrix}{Input design matrix (as provided)}
-\item{input_matrix}{Input count matrix (as provided)}
-\item{input_parameters}{List of used parameter values (max_iter, tolerance, parallel.cores)}
+\item{beta}{Matrix of fitted coefficients (genes × predictors).}
+\item{overdispersion}{Vector of fitted overdispersion parameters (one per gene).}
+\item{iterations}{List with elements \code{beta_iters} and \code{theta_iters}
+giving the number of iterations used for each gene.}
+\item{size_factors}{Vector of computed size factors (one per sample).}
+\item{offset_vector}{Vector of offset values used in the model (length = number of samples).}
+\item{design_matrix}{Input design matrix (as provided, possibly coerced to numeric matrix).}
+\item{input_matrix}{Input count matrix (as provided, possibly coerced to numeric matrix).}
+\item{input_parameters}{List of used parameter values
+(\code{max_iter}, \code{tolerance}, \code{parallel.cores}).}
 }
 }
 \description{
 Fits a statistical model to count data, particularly designed for RNA sequencing data analysis.
-The function estimates multiple parameters including regression coefficients (beta),
-overdispersion parameters, and normalizes data using size factors. It supports both CPU
-and GPU-based computation with parallel processing capabilities.
+The function estimates regression coefficients (beta), gene-wise overdispersion parameters,
+and normalizes data using size factors. It supports both CPU and (optionally) GPU-based
+computation with parallel processing capabilities.
 }
 \details{
 The function implements a negative binomial regression model with the following steps:
 \enumerate{
 \item Computes size factors for data normalization (if requested)
 \item Initializes model parameters including beta coefficients and overdispersion
-\item Fits the model using either CPU (parallel) or GPU computation
-\item Optionally estimates overdispersion parameters
+\item Fits the regression coefficients using either CPU (parallel) or GPU computation
+\item Optionally fits/updates overdispersion parameters using one of several strategies
 }
 
 The model fitting process uses iterative optimization with configurable convergence
@@ -97,7 +109,7 @@ genes in batches for improved memory efficiency.
 }
 \section{Size Factor Methods}{
 
-Three normalization methods are available:
+Three normalization methods are available when \code{size_factors} is a character string:
 \itemize{
 \item \code{"normed_sum"} (default): Geometric mean normalization based on library sizes.
 Fast and works well for most datasets.
@@ -106,18 +118,23 @@ More robust to highly variable genes.
 \item \code{"edgeR"}: edgeR's TMM with singleton pairing method.
 Requires the edgeR package from Bioconductor.
 }
+If \code{size_factors = NULL}, no normalization is performed and all size factors are set to 1.
 }
 
-\examples{
-\dontrun{
-# Basic usage with default parameters
-fit <- fit_devil(counts, design)
+\section{Overdispersion Strategies}{
 
-# Using GPU acceleration with custom batch size
-fit <- fit_devil(counts, design, CUDA = TRUE, batch_size = 2048)
-
-# Disable overdispersion estimation (Poisson model)
-fit <- fit_devil(counts, design, overdispersion = FALSE)
+The \code{overdispersion} argument controls how gene-wise overdispersion is handled:
+\itemize{
+\item \code{"old"} or \code{"MLE"}: Overdispersion is fit via the original (legacy) NB
+MLE-based procedure (with Cox–Reid adjustment inside \code{fit_dispersion()}).
+\item \code{"new"} or \code{"I"}: Overdispersion is fit via the new iterative NB
+routine implemented in \code{fit_overdispersion_cppp()}, typically faster and
+more stable for large single-cell datasets.
+\item \code{"MOM"}: Overdispersion is estimated using a method-of-moments approach via
+\code{estimate_mom_dispersion_cpp()}, which is cheap and provides a rough
+dispersion estimate.
+\item \code{FALSE}: Disable overdispersion fitting and use a Poisson model
+(overdispersion fixed to 0).
+}
 }
 
-}

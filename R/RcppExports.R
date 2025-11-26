@@ -21,6 +21,10 @@ get_row_groups <- function(matrix, n_groups, tolerance = 1e-10) {
     .Call('_devil_get_row_groups', PACKAGE = 'devil', matrix, n_groups, tolerance)
 }
 
+estimate_mom_dispersion_cpp <- function(count_matrix, design_matrix, beta_matrix, sf) {
+    .Call('_devil_estimate_mom_dispersion_cpp', PACKAGE = 'devil', count_matrix, design_matrix, beta_matrix, sf)
+}
+
 H_log_gh_cpp <- function(p, s, t, gh_order = 32L, max_newton = 8L, newton_tol = 1e-12) {
     .Call('_devil_H_log_gh_cpp', PACKAGE = 'devil', p, s, t, gh_order, max_newton, newton_tol)
 }

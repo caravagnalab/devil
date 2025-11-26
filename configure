@@ -38,10 +38,19 @@ if [ "$USE_CUDA" -eq 0 ]; then
     # Create backup
     cp src/beta.cpp src/beta.cpp.bak
     # Remove the // [[Rcpp::export]] line immediately before beta_fit_gpu
-    sed -i '/^#ifdef USE_CUDA$/{
-        n
-        /^\/\/ \[\[Rcpp::export\]\]$/d
-    }' src/beta.cpp
+    if sed --version >/dev/null 2>&1; then
+        # GNU sed
+        sed -i '/^#ifdef USE_CUDA$/{
+            n
+            /^\/\/ \[\[Rcpp::export\]\]$/d
+        }' src/beta.cpp
+    else
+        # BSD sed (macOS)
+        sed -i '' '/^#ifdef USE_CUDA$/{
+            n
+            /^\/\/ \[\[Rcpp::export\]\]$/d
+        }' src/beta.cpp
+    fi
 
     # Regenerate Rcpp exports without beta_fit_gpu
     ${R_HOME}/bin/R --vanilla --silent -e 'Rcpp::compileAttributes()'

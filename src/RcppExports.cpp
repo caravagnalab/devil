@@ -83,6 +83,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// estimate_mom_dispersion_cpp
+NumericVector estimate_mom_dispersion_cpp(const NumericMatrix& count_matrix, const NumericMatrix& design_matrix, const NumericMatrix& beta_matrix, const NumericVector& sf);
+RcppExport SEXP _devil_estimate_mom_dispersion_cpp(SEXP count_matrixSEXP, SEXP design_matrixSEXP, SEXP beta_matrixSEXP, SEXP sfSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type count_matrix(count_matrixSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type design_matrix(design_matrixSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type beta_matrix(beta_matrixSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type sf(sfSEXP);
+    rcpp_result_gen = Rcpp::wrap(estimate_mom_dispersion_cpp(count_matrix, design_matrix, beta_matrix, sf));
+    return rcpp_result_gen;
+END_RCPP
+}
 // H_log_gh_cpp
 double H_log_gh_cpp(double p, double s, double t, int gh_order, int max_newton, double newton_tol);
 RcppExport SEXP _devil_H_log_gh_cpp(SEXP pSEXP, SEXP sSEXP, SEXP tSEXP, SEXP gh_orderSEXP, SEXP max_newtonSEXP, SEXP newton_tolSEXP) {
@@ -264,6 +278,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_beta_fit_group", (DL_FUNC) &_devil_beta_fit_group, 6},
     {"_devil_lte_n_equal_rows", (DL_FUNC) &_devil_lte_n_equal_rows, 3},
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
+    {"_devil_estimate_mom_dispersion_cpp", (DL_FUNC) &_devil_estimate_mom_dispersion_cpp, 4},
     {"_devil_H_log_gh_cpp", (DL_FUNC) &_devil_H_log_gh_cpp, 6},
     {"_devil_H_log_gh_pmhalf", (DL_FUNC) &_devil_H_log_gh_pmhalf, 5},
     {"_devil_fit_overdispersion_cppp", (DL_FUNC) &_devil_fit_overdispersion_cppp, 9},
