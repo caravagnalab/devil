@@ -189,7 +189,8 @@ fit_devil <- function(
 
   if (verbose) { message("Initialize beta estimate") }
   if (profiling) start = Sys.time()
-  beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
+  # beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
+  beta_0 = initialize_beta_univariate_matrix_cpp(design_matrix, input_matrix, sf)
   if (profiling) {
     end = Sys.time()
     message(paste0("Beta init computing : ", end - start))

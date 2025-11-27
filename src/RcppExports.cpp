@@ -83,6 +83,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// initialize_beta_univariate_matrix_cpp
+Rcpp::NumericMatrix initialize_beta_univariate_matrix_cpp(const Rcpp::NumericMatrix& X, const Rcpp::NumericMatrix& Y, const Rcpp::NumericVector& sf);
+RcppExport SEXP _devil_initialize_beta_univariate_matrix_cpp(SEXP XSEXP, SEXP YSEXP, SEXP sfSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type sf(sfSEXP);
+    rcpp_result_gen = Rcpp::wrap(initialize_beta_univariate_matrix_cpp(X, Y, sf));
+    return rcpp_result_gen;
+END_RCPP
+}
 // estimate_mom_dispersion_cpp
 NumericVector estimate_mom_dispersion_cpp(const NumericMatrix& count_matrix, const NumericMatrix& design_matrix, const NumericMatrix& beta_matrix, const NumericVector& sf);
 RcppExport SEXP _devil_estimate_mom_dispersion_cpp(SEXP count_matrixSEXP, SEXP design_matrixSEXP, SEXP beta_matrixSEXP, SEXP sfSEXP) {
@@ -278,6 +291,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_beta_fit_group", (DL_FUNC) &_devil_beta_fit_group, 6},
     {"_devil_lte_n_equal_rows", (DL_FUNC) &_devil_lte_n_equal_rows, 3},
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
+    {"_devil_initialize_beta_univariate_matrix_cpp", (DL_FUNC) &_devil_initialize_beta_univariate_matrix_cpp, 3},
     {"_devil_estimate_mom_dispersion_cpp", (DL_FUNC) &_devil_estimate_mom_dispersion_cpp, 4},
     {"_devil_H_log_gh_cpp", (DL_FUNC) &_devil_H_log_gh_cpp, 6},
     {"_devil_H_log_gh_pmhalf", (DL_FUNC) &_devil_H_log_gh_pmhalf, 5},

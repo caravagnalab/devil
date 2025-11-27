@@ -21,6 +21,10 @@ get_row_groups <- function(matrix, n_groups, tolerance = 1e-10) {
     .Call('_devil_get_row_groups', PACKAGE = 'devil', matrix, n_groups, tolerance)
 }
 
+initialize_beta_univariate_matrix_cpp <- function(X, Y, sf) {
+    .Call('_devil_initialize_beta_univariate_matrix_cpp', PACKAGE = 'devil', X, Y, sf)
+}
+
 estimate_mom_dispersion_cpp <- function(count_matrix, design_matrix, beta_matrix, sf) {
     .Call('_devil_estimate_mom_dispersion_cpp', PACKAGE = 'devil', count_matrix, design_matrix, beta_matrix, sf)
 }
