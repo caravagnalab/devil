@@ -1,0 +1,8 @@
+{
+    "cmake.ignoreCMakeListsMissing": true,
+    "files.associations": {
+        "core": "cpp",
+        "chrono": "cpp",
+        "functional": "cpp"
+    }
+}

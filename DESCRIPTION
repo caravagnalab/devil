@@ -16,7 +16,8 @@ Imports:
     methods,
     Rcpp (>= 1.0.12),
     rlang,
-    stats
+    stats,
+    torch
 Suggests:
     scRNAseq,
     edgeR
