@@ -54,7 +54,7 @@
 #' @param overdispersion Character or logical. Strategy for estimating overdispersion:
 #'   one of \code{"new"}, \code{"I"}, \code{"old"}, \code{"MLE"}, \code{"MOM"}, or
 #'   \code{FALSE} to disable overdispersion fitting (Poisson model).
-#'   Default: \code{"new"}.
+#'   Default: \code{"MOM"}.
 #' @param init_overdispersion Numeric scalar or \code{NULL}. Initial value for the
 #'   overdispersion parameter used as a starting point for the iterative procedures.
 #'   If \code{NULL}, an initial value is estimated from the data via \code{estimate_dispersion()}.
@@ -64,10 +64,10 @@
 #' @param size_factors Character string or \code{NULL}. Method for computing normalization
 #'   factors to account for different sequencing depths. Options are:
 #'   \itemize{
-#'     \item \code{"normed_sum"} (default): Geometric mean normalization
+#'     \item \code{NULL} (default):  No normalization (all size factors set to 1)
+#'     \item \code{"normed_sum"}: Geometric mean normalization
 #'     \item \code{"psinorm"}: Psi-normalization
 #'     \item \code{"edgeR"}: edgeR TMM method
-#'     \item \code{NULL}: No normalization (all size factors set to 1)
 #'   }
 #' @param verbose Logical. Whether to print progress messages during execution.
 #'   Default: \code{FALSE}.
@@ -105,11 +105,11 @@
 fit_devil <- function(
     input_matrix,
     design_matrix,
-    overdispersion = "new",
+    overdispersion = "MOM",
     init_overdispersion = NULL,
     # do_cox_reid_adjustment = TRUE,
     offset=0,
-    size_factors="normed_sum",
+    size_factors=NULL,
     verbose=FALSE,
     max_iter=200,
     tolerance=1e-3,
