@@ -9,6 +9,7 @@ fit_devil(
   design_matrix,
   overdispersion = "MOM",
   init_overdispersion = NULL,
+  init_beta_rough = FALSE,
   offset = 0,
   size_factors = NULL,
   verbose = FALSE,
