@@ -107,6 +107,7 @@ fit_devil <- function(
     design_matrix,
     overdispersion = "MOM",
     init_overdispersion = NULL,
+    init_beta_rough = FALSE,
     # do_cox_reid_adjustment = TRUE,
     offset=0,
     size_factors=NULL,
@@ -189,8 +190,14 @@ fit_devil <- function(
 
   if (verbose) { message("Initialize beta estimate") }
   if (profiling) start = Sys.time()
-  # beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
-  beta_0 = initialize_beta_univariate_matrix_cpp(design_matrix, input_matrix, sf)
+
+  if (init_beta_rough) {
+    beta_0 = matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
+    beta_0[,1] = rowMeans(input_matrix) %>% log1p()
+  } else {
+    beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
+  }
+  #beta_0 = initialize_beta_univariate_matrix_cpp(design_matrix, input_matrix, sf)
   if (profiling) {
     end = Sys.time()
     message(paste0("Beta init computing : ", end - start))
