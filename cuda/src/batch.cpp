@@ -22,6 +22,7 @@
 #include <omp.h>
 #include <Eigen/Dense>
 #include <list>
+#include "batch.hpp"
 
 template <typename T>
 struct CudaDeleter {
@@ -54,7 +55,7 @@ void toGPU(T vec,float* const vec_gpu) {
   CUDA_CHECK( cudaMemcpy(vec_gpu, vec.data(), vec.size() * sizeof(float), cudaMemcpyHostToDevice) );
 }
 
-Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>
+BatchResult
 beta_fit_gpu_external(
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const
         &Y_host,
@@ -63,7 +64,7 @@ beta_fit_gpu_external(
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const
         &mu_beta_host,
     Eigen::VectorXf const  &offset_host,
-    Eigen::VectorXf const &kk_host, int max_iter, float eps, int batch_size,
+    int max_iter, float eps, int batch_size,
     std::vector<int>& iterations) {
 
   /******************************
@@ -78,17 +79,20 @@ beta_fit_gpu_external(
   std::cout << "Y {" << Y_host.rows() << "," << Y_host.cols() << "}\n";
   std::cout << "offset {"<<offset_host.size()<<", 1" <<"}\n";
   std::cout << "mu_beta {" << mu_beta_host.rows()  << "," << mu_beta_host.cols() << "}\n";
-  std::cout << "K {" << kk_host.size() << "," << 1 << "}\n";
   std::cout << "Genes " << genes <<std::endl;
   std::cout << "Cells " << cells <<std::endl;
   std::cout << "Features " << features <<std::endl;
   std::size_t genesBatch = batch_size;
-  Eigen::VectorXf k_host(kk_host.size());
 
-  for (int i=0;i<genes;++i){
-    k_host[i] = 1 / kk_host[i];
-  }  
-    std::vector<float> mu_beta_final(genes*features, 0.0);
+  // Calculate mean(exp(offset_vector)) once on CPU
+  float offset_sum = 0.0f;
+  for (int i = 0; i < offset_host.size(); i++) {
+    offset_sum += exp(offset_host[i]);
+  }
+  float offset_inv = 1.0f / (offset_sum / offset_host.size());
+  
+  std::vector<float> mu_beta_final(genes*features, 0.0);
+  std::vector<float> k_final(genes, 0.0);  // Store final k values
 
     int deviceCount = 0;
     CUDA_CHECK(cudaGetDeviceCount(&deviceCount));
@@ -173,6 +177,11 @@ beta_fit_gpu_external(
       CUDA_CHECK( cudaMalloc((void**)&k[me], genesBatch*sizeof(float)) );
       CUDA_CHECK( cudaMalloc((void**)&w_q[me], genesBatch*cells*sizeof(float)) );
       CUDA_CHECK( cudaMalloc((void**)&mu_g[me], genesBatch*cells*sizeof(float)) );
+      
+      // Allocate temporary buffers for dispersion calculation
+      float *d_means, *d_vars;
+      CUDA_CHECK( cudaMalloc((void**)&d_means, genesBatch*sizeof(float)) );
+      CUDA_CHECK( cudaMalloc((void**)&d_vars, genesBatch*sizeof(float)) );
 
       /*********************************
        * Initialize the Tensor object, this doesn't allocate nothing ! 
@@ -265,18 +274,31 @@ beta_fit_gpu_external(
 				  offset_host.data() + i  * genesBatch * cells,
 				  genesBatch * cells * sizeof(float), cudaMemcpyHostToDevice)); //CORRETTO
 	    */
+	    
 	    CUDA_CHECK(cudaMemcpy(mu_beta[me],
 				  mu_beta_host.data() + i * genesBatch * features,
 				  genesBatch * features * sizeof(float),
 				  cudaMemcpyHostToDevice)); // CORRETTO
 	  
-	    CUDA_CHECK(cudaMemcpy(k[me], k_host.data() + i * genesBatch * 1,
-				  genesBatch * 1 * sizeof(float),
-				  cudaMemcpyHostToDevice)); // CORRETTO
-	  
 	    CUDA_CHECK(cudaMemcpy(
 				  Y[me], Y_host.data() +  i * genesBatch * cells ,
 				  genesBatch * cells * sizeof(float), cudaMemcpyHostToDevice));
+	    
+	    // Calculate dispersion (k) on GPU for this batch
+	    dim3 threads1D(256);
+	    dim3 blocks1D_genes((genesBatch + threads1D.x - 1) / threads1D.x);
+	    
+	    // Compute row means of Y
+	    compute_row_means<<<blocks1D_genes, threads1D>>>(Y[me], d_means, genesBatch, cells);
+	    
+	    // Compute row variances of Y
+	    compute_row_variances<<<blocks1D_genes, threads1D>>>(Y[me], d_means, d_vars, genesBatch, cells);
+	    
+	    // Compute dispersion and store in k (already stores 1/dispersion)
+	    compute_dispersion<<<blocks1D_genes, threads1D>>>(d_means, d_vars, offset_inv, k[me], genesBatch);
+	    
+	    CUDA_CHECK(cudaDeviceSynchronize());
+	    
 	    //set something to zero, required ? BOH,sicuro non falliremo per sta cosa qui
 	    CUDA_CHECK( cudaMemset(w_q[me], 0, genesBatch * cells * sizeof(float)));
 	    CUDA_CHECK( cudaMemset(mu_g[me], 0, genesBatch*cells*sizeof(float)));
@@ -334,11 +356,16 @@ beta_fit_gpu_external(
               << " ms [avg iter time]" << std::endl;
 	    */
 	    /***********************************
-	     * Copy beta and iterations to host
+	     * Copy beta, k, and iterations to host
 	     **********************************/
 	    CUDA_CHECK(cudaMemcpy(mu_beta_final.data() +  i *genesBatch * features,
 				  mu_beta[me], 
 				  genesBatch*features* sizeof(float),
+				  cudaMemcpyDeviceToHost));
+	    
+	    CUDA_CHECK(cudaMemcpy(k_final.data() + i * genesBatch,
+				  k[me],
+				  genesBatch * sizeof(float),
 				  cudaMemcpyDeviceToHost));
 
 	    std::fill(iterations.begin()  +  i *genesBatch , iterations.begin() +  +  (i+1) *genesBatch, iter);
@@ -349,6 +376,8 @@ beta_fit_gpu_external(
       /*********************
        * Free Cuda Memory
        ********************/
+      CUDA_CHECK(cudaFree(d_means));
+      CUDA_CHECK(cudaFree(d_vars));
       CUDA_CHECK(cudaFree(Zigma[me]));
       CUDA_CHECK(cudaFree(Bk_pointer[me]));
       CUDA_CHECK(cudaFree(Zigma_pointer[me]));
@@ -374,7 +403,12 @@ beta_fit_gpu_external(
       CUTENSOR_CHECK( cutensorDestroy(cutensorH[me]) );
     }
 
-    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> result(mu_beta_final.data(), features,genes);
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> result_beta(mu_beta_final.data(), features, genes);
+    Eigen::Map<Eigen::VectorXf> result_k(k_final.data(), genes);
+    
+    BatchResult result;
+    result.beta = result_beta;
+    result.k = result_k;
     return result;
   }
 

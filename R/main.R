@@ -119,6 +119,9 @@ fit_devil <- function(
     parallel.cores=1,
     profiling = FALSE) {
 
+  # Start total timing
+  t_total_start <- Sys.time()
+  
   # Read general info about input matrix and design matrix
   gene_names <- rownames(input_matrix)
   ngenes <- nrow(input_matrix)
@@ -151,38 +154,32 @@ fit_devil <- function(
   }
 
   # Compute size factors
-  if (profiling) start = Sys.time()
-
   if (!is.null(size_factors)) {
     if (verbose) { message("Compute size factors") }
+    if (profiling) t_start <- Sys.time()
     sf <- calculate_sf(input_matrix, method = size_factors, verbose = verbose)
+    if (profiling) {
+      t_end <- Sys.time()
+      message(sprintf("[TIMING] Size factors computation: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+    }
   } else {
     sf <- rep(1, nrow(design_matrix))
   }
 
-  if (profiling) {
-    end = Sys.time()
-    message(paste0("Size factors computing : ", end - start))
-  }
-
   # Calculate offset vector
-  if (profiling) start = Sys.time()
   offset_vector = compute_offset_vector(offset, input_matrix, sf)
-  if (profiling) {
-    end = Sys.time()
-    message(paste0("Offset vector computing : ", end - start))
-  }
 
   # Initialize overdispersion
-  if (profiling) start = Sys.time()
   if (is.null(init_overdispersion)) {
-    dispersion_init <- c(estimate_dispersion(input_matrix, offset_vector))
+    if (verbose) { message("Initialize overdispersion") }
+    if (profiling) t_start <- Sys.time()
+    # dispersion_init <- c(estimate_dispersion(input_matrix, offset_vector))
+    if (profiling) {
+      t_end <- Sys.time()
+      message(sprintf("[TIMING] Overdispersion initialization: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+    }
   } else {
     dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
-  }
-  if (profiling) {
-    end = Sys.time()
-    message(paste0("Theta init computing : ", end - start))
   }
 
   # if (verbose) { message("Initialize beta estimate") }
@@ -191,19 +188,21 @@ fit_devil <- function(
   if (verbose) { message("Initialize beta estimate") }
   if (profiling) start = Sys.time()
 
+  #beta_0 = initialize_beta_univariate_matrix_cpp(design_matrix, input_matrix, sf)
+  if (profiling) t_start <- Sys.time()
+
   if (init_beta_rough) {
     beta_0 = matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
     beta_0[,1] = rowMeans(input_matrix) %>% log1p()
   } else {
     beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
   }
-  #beta_0 = initialize_beta_univariate_matrix_cpp(design_matrix, input_matrix, sf)
+
   if (profiling) {
-    end = Sys.time()
-    message(paste0("Beta init computing : ", end - start))
+    t_end <- Sys.time()
+    message(sprintf("[TIMING] Beta initialization: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
   }
 
-  if (profiling) start = Sys.time()
   if (CUDA & CUDA_is_available) {
     message("Messing with CUDA! Implementation still needed")
 
@@ -211,15 +210,14 @@ fit_devil <- function(
     extra_genes = remainder
     genes_batch = ngenes - extra_genes
 
-    message("Fit beta CUDA")
-    start_time <- Sys.time()
+    if (verbose) { message("Fit beta coefficients (GPU)") }
+    if (profiling) t_start <- Sys.time()
 
     res_beta_fit <- beta_fit_gpu(
       input_matrix[1:genes_batch,],
       design_matrix,
       beta_0[1:genes_batch,],
       offset_vector,
-      dispersion_init[1:genes_batch],
       max_iter = max_iter,
       eps = tolerance,
       batch_size = batch_size
@@ -231,51 +229,98 @@ fit_devil <- function(
         design_matrix,
         beta_0[(genes_batch+1):ngenes,],
         offset_vector,
-        dispersion_init[(genes_batch+1):ngenes],
         max_iter = max_iter,
         eps = tolerance,
         batch_size = extra_genes
       )
     }
 
-    end_time <- Sys.time()
-    message("BETA GPU RUNTIME:")
-    message(as.numeric(difftime(end_time, start_time, units = "secs")))
+    if (profiling) {
+      t_end <- Sys.time()
+      message(sprintf("[TIMING] Beta fitting (GPU): %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+    }
 
+    if (verbose) { message("Process GPU results") }
+    if (profiling) t_start <- Sys.time()
     beta = res_beta_fit$mu_beta
+    # Get the GPU-computed k values (these are already 1/dispersion)
+    dispersion_init_gpu = res_beta_fit$k
 
     if (remainder > 0) {
       beta_extra = res_beta_fit_extra$mu_beta
       beta <- rbind(beta, beta_extra)
       beta_iters=c(res_beta_fit$iter, res_beta_fit_extra$iter)
+      # Combine k values from both batches
+      dispersion_init_gpu = c(dispersion_init_gpu, res_beta_fit_extra$k)
     } else {
       beta_iters=c(res_beta_fit$iter)
     }
+    
+    # Consistency check: compare GPU-computed k with CPU estimate
+    if (verbose) { message("Performing GPU vs CPU dispersion consistency check") }
+    dispersion_init_cpu <- c(estimate_dispersion(input_matrix, offset_vector))
+    # Convert GPU k (which is 1/dispersion) back to dispersion for comparison
+    dispersion_gpu <- 1.0 / dispersion_init_gpu
+    
+    # Calculate differences
+    abs_diff <- abs(dispersion_gpu - dispersion_init_cpu)
+    rel_diff <- abs_diff / (dispersion_init_cpu + 1e-10)  # Avoid division by zero
+    
+    message(sprintf("Dispersion consistency check:"))
+    message(sprintf("  Mean absolute difference: %.6f", mean(abs_diff)))
+    message(sprintf("  Median absolute difference: %.6f", median(abs_diff)))
+    message(sprintf("  Max absolute difference: %.6f", max(abs_diff)))
+    message(sprintf("  Mean relative difference: %.6f", mean(rel_diff)))
+    message(sprintf("  Median relative difference: %.6f", median(rel_diff)))
+    message(sprintf("  Max relative difference: %.6f", max(rel_diff)))
+    message(sprintf("  Correlation: %.6f", cor(dispersion_gpu, dispersion_init_cpu)))
+    
+    # Check for potential issues
+    n_large_diff <- sum(rel_diff > 0.1)  # More than 10% difference
+    if (n_large_diff > 0) {
+      warning(sprintf("Found %d genes (%.1f%%) with >10%% relative difference between GPU and CPU dispersion estimates",
+                     n_large_diff, 100 * n_large_diff / length(dispersion_gpu)))
+    }
+    
+    # Update dispersion_init with GPU-computed values for subsequent use
+    dispersion_init = dispersion_init_gpu
 
     if (is.null(dim(beta))) {
       beta = matrix(beta, ncol = 1)
     }
+    if (profiling) {
+      t_end <- Sys.time()
+      message(sprintf("[TIMING] GPU results processing: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+    }
 
   } else {
 
-    if (verbose) { message("Fitting beta coefficients") }
+    if (verbose) { message("Fitting beta coefficients (CPU)") }
+    if (profiling) t_start <- Sys.time()
 
     tmp <- parallel::mclapply(1:ngenes, function(i) {
       beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)
     }, mc.cores = n.cores)
 
+    if (profiling) {
+      t_end <- Sys.time()
+      message(sprintf("[TIMING] Beta fitting (CPU): %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+    }
+
+    if (verbose) { message("Process CPU results") }
+    if (profiling) t_start <- Sys.time()
     beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
     rownames(beta) <- gene_names
     beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
-  }
-  if (profiling) {
-    end = Sys.time()
-    message(paste0("Beta fit computing : ", end - start))
+    if (profiling) {
+      t_end <- Sys.time()
+      message(sprintf("[TIMING] CPU results processing: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+    }
   }
 
-  if (profiling) start = Sys.time()
   if (!isFALSE(overdispersion)) {
     if (verbose) { message("Fit overdispersion") }
+    if (profiling) t_start <- Sys.time()
 
     if (overdispersion %in% c("old", "MLE")) {
       theta <- parallel::mclapply(1:ngenes, function(i) {
@@ -299,16 +344,19 @@ fit_devil <- function(
     } else {
       stop()
     }
+
+    if (profiling) {
+      t_end <- Sys.time()
+      message(sprintf("[TIMING] Overdispersion fitting: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+    }
   } else {
     theta = rep(0, ngenes)
     theta_iters = 0
   }
-  if (profiling) {
-    end = Sys.time()
-    message(paste0("Theta fit computing : ", end - start))
-  }
 
-  return(list(
+  if (verbose) { message("Build result list") }
+  if (profiling) t_start <- Sys.time()
+  result <- list(
     beta=beta,
     overdispersion=theta,
     iterations=list(beta_iters=beta_iters, theta_iters = theta_iters),
@@ -317,8 +365,19 @@ fit_devil <- function(
     design_matrix=design_matrix,
     input_matrix=input_matrix,
     input_parameters=list(max_iter=max_iter, tolerance=tolerance, parallel.cores=n.cores)
-    )
   )
+  if (profiling) {
+    t_end <- Sys.time()
+    message(sprintf("[TIMING] Result list creation: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+  }
+
+  # Print total execution time
+  if (profiling) {
+    t_total_end <- Sys.time()
+    message(sprintf("[TIMING] TOTAL execution time: %.3f seconds", as.numeric(difftime(t_total_end, t_total_start, units = "secs"))))
+  }
+
+  return(result)
 }
 
 get_groups_for_model_matrix <- function(model_matrix){
