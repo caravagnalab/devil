@@ -87,11 +87,13 @@ List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::VectorXf off, in
 
   auto t2 = std::chrono::high_resolution_clock::now();
   auto elapsed{t2-t1};
-  std::cout << "TIME Reorder cost " << std::chrono::duration<double, std::milli>(elapsed).count()
-            << " ms" << std::endl;
-  std::cout << "Start GPU "
-            << "Iteration max:" << max_iter << ", EPS:" << eps << ", batch_size: " << batch_size
-            << std::endl;
+  if (TEST) {
+    std::cout << "TIME Reorder cost " << std::chrono::duration<double, std::milli>(elapsed).count()
+              << " ms" << std::endl;
+    std::cout << "Start GPU "
+              << "Iteration max:" << max_iter << ", EPS:" << eps << ", batch_size: " << batch_size
+              << std::endl;
+  }
   std::vector<int> iterations(y.rows());
 
 
@@ -101,11 +103,14 @@ List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::VectorXf off, in
 				    eps,batch_size,iterations, TEST);
   t2  =std::chrono::high_resolution_clock::now();
   elapsed= t2-t1;
-  std::cout << "TIME: Compute cost " << std::chrono::duration<double, std::milli>(elapsed).count() << " ms"
-            << std::endl;
+  if (TEST) {
+    std::cout << "TIME: Compute cost " << std::chrono::duration<double, std::milli>(elapsed).count() << " ms"
+              << std::endl;
+     std::cout<<"END GPU" << std::endl;
+
+  }
 
  //Eigen::Matrix<float, result.rows(), result.cols(), Eigen::RowMajor> resultr =result;
- std::cout<<"END GPU" << std::endl;
  //  Return both mu_beta and Zigma as a List
 
  if (TEST) {

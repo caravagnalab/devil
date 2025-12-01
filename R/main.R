@@ -85,6 +85,9 @@
 #' @param profiling Logical. If \code{TRUE}, prints timing information for major
 #'   steps (size factors, offset computation, initial dispersion, beta fit, theta fit).
 #'   Useful for performance profiling. Default: \code{FALSE}.
+#' @param TEST Logical. If \code{TRUE}, enables consistency checks between GPU and CPU
+#'   implementations (beta, dispersion, overdispersion). Only relevant when \code{CUDA = TRUE}.
+#'   Adds computational overhead for validation. Default: \code{FALSE}.
 #'
 #' @return A list containing:
 #' \describe{
@@ -117,7 +120,8 @@ fit_devil <- function(
     CUDA = FALSE,
     batch_size = 1024L,
     parallel.cores=1,
-    profiling = FALSE) {
+    profiling = FALSE,
+    TEST = FALSE) {
 
   # Start total timing
   t_total_start <- Sys.time()
@@ -208,9 +212,6 @@ fit_devil <- function(
   }
 
   if (CUDA & CUDA_is_available) {
-    # Set TEST_MODE to enable consistency checks (disable for production)
-    TEST_MODE <- TRUE
-    
     remainder = ngenes %% batch_size
     extra_genes = remainder
     genes_batch = ngenes - extra_genes
@@ -225,7 +226,7 @@ fit_devil <- function(
       max_iter = max_iter,
       eps = tolerance,
       batch_size = batch_size,
-      TEST = TEST_MODE
+      TEST = TEST
     )
 
     if (remainder > 0) {
@@ -236,7 +237,7 @@ fit_devil <- function(
         max_iter = max_iter,
         eps = tolerance,
         batch_size = extra_genes,
-        TEST = TEST_MODE
+        TEST = TEST
       )
     }
 
@@ -261,8 +262,8 @@ fit_devil <- function(
       beta_iters=c(res_beta_fit$iter)
     }
     
-    # Debug: Consistency check for beta initialization (only if TEST_MODE enabled)
-    if (TEST_MODE && !is.null(res_beta_fit$beta_init)) {
+    # Debug: Consistency check for beta initialization (only if TEST enabled)
+    if (TEST && !is.null(res_beta_fit$beta_init)) {
       if (verbose) { message("Performing GPU vs CPU beta initialization consistency check") }
       if (profiling) t_start_init <- Sys.time()
       
@@ -303,7 +304,7 @@ fit_devil <- function(
     }
     
     # Compute or retrieve dispersion (k) values
-    if (TEST_MODE && !is.null(res_beta_fit$k)) {
+    if (TEST && !is.null(res_beta_fit$k)) {
       # TEST mode: use GPU-computed k values for consistency check
       if (verbose) { message("Performing GPU vs CPU dispersion consistency check") }
       dispersion_init_gpu = res_beta_fit$k
@@ -350,8 +351,8 @@ fit_devil <- function(
       }
     }
     
-    # Consistency check for MOM overdispersion: compare GPU vs CPU (only if TEST_MODE enabled)
-    if (overdispersion == "MOM" && TEST_MODE) {
+    # Consistency check for MOM overdispersion: compare GPU vs CPU (only if TEST enabled)
+    if (overdispersion == "MOM" && TEST) {
       if (verbose) { message("Performing GPU vs CPU MOM overdispersion consistency check") }
       if (profiling) t_start <- Sys.time()
       
@@ -391,8 +392,8 @@ fit_devil <- function(
       theta_iters = 0
     }
     
-    # Consistency check for beta fitting: compare GPU vs CPU (only if TEST_MODE enabled)
-    if (TEST_MODE) {
+    # Consistency check for beta fitting: compare GPU vs CPU (only if TEST enabled)
+    if (TEST) {
       if (verbose) { message("Performing GPU vs CPU beta fitting consistency check") }
       if (profiling) t_start_beta <- Sys.time()
       
