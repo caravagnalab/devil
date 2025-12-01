@@ -3,6 +3,8 @@
     "files.associations": {
         "core": "cpp",
         "chrono": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "algorithm": "cpp",
+        "format": "cpp"
     }
 }
