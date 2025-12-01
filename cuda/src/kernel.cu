@@ -84,3 +84,65 @@ __global__ void compute_dispersion(const float* means, const float* vars, float 
         k[i] = 1.0f / disp;
     }
 }
+
+// Compute mu from eta: mu[g,j] = exp(eta[g,j] + offset[j])
+// Note: offset contains log(size_factors), eta is linear predictor
+// Therefore: mu = sf * exp(eta) = exp(log(sf) + eta) = exp(eta + offset)
+__global__ void compute_mu_from_eta(const float* eta, const float* offset, 
+                                     float* mu, int genes, int cells) {
+    int g = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (g < genes && j < cells) {
+        int idx = g * cells + j;
+        mu[idx] = expf(eta[idx] + offset[j]);
+    }
+}
+
+// Compute MOM components: diff_sq_minus_mu[g,j] = (Y[g,j] - mu[g,j])² - mu[g,j]
+//                         mu_sq[g,j] = mu[g,j]²
+__global__ void compute_mom_components(const float* Y, const float* mu,
+                                        float* diff_sq_minus_mu, float* mu_sq,
+                                        int genes, int cells) {
+    int g = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (g < genes && j < cells) {
+        int idx = g * cells + j;
+        float y_val = Y[idx];
+        float mu_val = mu[idx];
+        float diff = y_val - mu_val;
+        
+        diff_sq_minus_mu[idx] = diff * diff - mu_val;
+        mu_sq[idx] = mu_val * mu_val;
+    }
+}
+
+// Final theta computation: theta[g] = max(0, corr * num[g] / den[g])
+__global__ void compute_theta_from_num_den(const float* num, const float* den,
+                                            float corr, float* theta, int genes) {
+    int g = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (g < genes) {
+        float th = 0.0f;
+        if (den[g] > 0.0f) {
+            th = corr * num[g] / den[g];
+            if (th < 0.0f) th = 0.0f;
+        }
+        theta[g] = th;
+    }
+}
+
+// Rough beta initialization: beta[g, 0] = log1p(mean[g]), beta[g, f>0] = 0
+__global__ void init_beta_rough_kernel(const float* means, float* beta, 
+                                        int genes, int features) {
+    int g = blockIdx.x * blockDim.x + threadIdx.x;
+    if (g < genes) {
+        // Set first column to log1p(mean)
+        beta[g * features] = log1pf(means[g]);
+        // Set remaining columns to zero
+        for (int f = 1; f < features; ++f) {
+            beta[g * features + f] = 0.0f;
+        }
+    }
+}

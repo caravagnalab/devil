@@ -153,7 +153,7 @@ fit_devil <- function(
     }
   }
 
-  # Compute size factors
+  # Compute size factors, common to CPU and GPU path
   if (!is.null(size_factors)) {
     if (verbose) { message("Compute size factors") }
     if (profiling) t_start <- Sys.time()
@@ -166,24 +166,24 @@ fit_devil <- function(
     sf <- rep(1, nrow(design_matrix))
   }
 
-  # Calculate offset vector
+  # Calculate offset vector, common to CPU and GPU path
   offset_vector = compute_offset_vector(offset, input_matrix, sf)
 
-  # Initialize overdispersion
-  if (is.null(init_overdispersion)) {
-    if (verbose) { message("Initialize overdispersion") }
-    if (profiling) t_start <- Sys.time()
-    # dispersion_init <- c(estimate_dispersion(input_matrix, offset_vector))
-    if (profiling) {
-      t_end <- Sys.time()
-      message(sprintf("[TIMING] Overdispersion initialization: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+  # Initialize overdispersion, only CPU, in case of GPU the dispersion is initialized on device.
+  if (!CUDA) {
+    if (is.null(init_overdispersion)) {
+      if (verbose) { message("Initialize overdispersion") }
+      if (profiling) t_start <- Sys.time()
+      # dispersion_init <- c(estimate_dispersion(input_matrix, offset_vector))
+      if (profiling) {
+        t_end <- Sys.time()
+        message(sprintf("[TIMING] Overdispersion initialization: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+      }
+    } else {
+      dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
     }
-  } else {
-    dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
   }
 
-  # if (verbose) { message("Initialize beta estimate") }
-  # groups <- devil:::get_groups_for_model_matrix(design_matrix)
 
   if (verbose) { message("Initialize beta estimate") }
   if (profiling) start = Sys.time()
@@ -191,11 +191,15 @@ fit_devil <- function(
   #beta_0 = initialize_beta_univariate_matrix_cpp(design_matrix, input_matrix, sf)
   if (profiling) t_start <- Sys.time()
 
-  if (init_beta_rough) {
-    beta_0 = matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
-    beta_0[,1] = rowMeans(input_matrix) %>% log1p()
-  } else {
-    beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
+  # GPU always uses rough initialization (computed on device)
+  # CPU can use either rough or full initialization
+  if (!CUDA | !CUDA_is_available) {
+    if (init_beta_rough) {
+      beta_0 = matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
+      beta_0[,1] = rowMeans(input_matrix) %>% log1p()
+    } else {
+      beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
+    }
   }
 
   if (profiling) {
@@ -204,8 +208,9 @@ fit_devil <- function(
   }
 
   if (CUDA & CUDA_is_available) {
-    message("Messing with CUDA! Implementation still needed")
-
+    # Set TEST_MODE to enable consistency checks (disable for production)
+    TEST_MODE <- TRUE
+    
     remainder = ngenes %% batch_size
     extra_genes = remainder
     genes_batch = ngenes - extra_genes
@@ -216,22 +221,22 @@ fit_devil <- function(
     res_beta_fit <- beta_fit_gpu(
       input_matrix[1:genes_batch,],
       design_matrix,
-      beta_0[1:genes_batch,],
       offset_vector,
       max_iter = max_iter,
       eps = tolerance,
-      batch_size = batch_size
+      batch_size = batch_size,
+      TEST = TEST_MODE
     )
 
     if (remainder > 0) {
       res_beta_fit_extra <- beta_fit_gpu(
         input_matrix[(genes_batch+1):ngenes,],
         design_matrix,
-        beta_0[(genes_batch+1):ngenes,],
         offset_vector,
         max_iter = max_iter,
         eps = tolerance,
-        batch_size = extra_genes
+        batch_size = extra_genes,
+        TEST = TEST_MODE
       )
     }
 
@@ -243,47 +248,206 @@ fit_devil <- function(
     if (verbose) { message("Process GPU results") }
     if (profiling) t_start <- Sys.time()
     beta = res_beta_fit$mu_beta
-    # Get the GPU-computed k values (these are already 1/dispersion)
-    dispersion_init_gpu = res_beta_fit$k
+    # Get the GPU-computed theta values (MOM overdispersion)
+    theta_gpu = res_beta_fit$theta
 
     if (remainder > 0) {
       beta_extra = res_beta_fit_extra$mu_beta
       beta <- rbind(beta, beta_extra)
       beta_iters=c(res_beta_fit$iter, res_beta_fit_extra$iter)
-      # Combine k values from both batches
-      dispersion_init_gpu = c(dispersion_init_gpu, res_beta_fit_extra$k)
+      # Combine theta values from both batches
+      theta_gpu = c(theta_gpu, res_beta_fit_extra$theta)
     } else {
       beta_iters=c(res_beta_fit$iter)
     }
     
-    # Consistency check: compare GPU-computed k with CPU estimate
-    if (verbose) { message("Performing GPU vs CPU dispersion consistency check") }
-    dispersion_init_cpu <- c(estimate_dispersion(input_matrix, offset_vector))
-    # Convert GPU k (which is 1/dispersion) back to dispersion for comparison
-    dispersion_gpu <- 1.0 / dispersion_init_gpu
-    
-    # Calculate differences
-    abs_diff <- abs(dispersion_gpu - dispersion_init_cpu)
-    rel_diff <- abs_diff / (dispersion_init_cpu + 1e-10)  # Avoid division by zero
-    
-    message(sprintf("Dispersion consistency check:"))
-    message(sprintf("  Mean absolute difference: %.6f", mean(abs_diff)))
-    message(sprintf("  Median absolute difference: %.6f", median(abs_diff)))
-    message(sprintf("  Max absolute difference: %.6f", max(abs_diff)))
-    message(sprintf("  Mean relative difference: %.6f", mean(rel_diff)))
-    message(sprintf("  Median relative difference: %.6f", median(rel_diff)))
-    message(sprintf("  Max relative difference: %.6f", max(rel_diff)))
-    message(sprintf("  Correlation: %.6f", cor(dispersion_gpu, dispersion_init_cpu)))
-    
-    # Check for potential issues
-    n_large_diff <- sum(rel_diff > 0.1)  # More than 10% difference
-    if (n_large_diff > 0) {
-      warning(sprintf("Found %d genes (%.1f%%) with >10%% relative difference between GPU and CPU dispersion estimates",
-                     n_large_diff, 100 * n_large_diff / length(dispersion_gpu)))
+    # Debug: Consistency check for beta initialization (only if TEST_MODE enabled)
+    if (TEST_MODE && !is.null(res_beta_fit$beta_init)) {
+      if (verbose) { message("Performing GPU vs CPU beta initialization consistency check") }
+      if (profiling) t_start_init <- Sys.time()
+      
+      # Get GPU beta_init
+      beta_init_gpu = res_beta_fit$beta_init
+      if (remainder > 0) {
+        beta_init_gpu = rbind(beta_init_gpu, res_beta_fit_extra$beta_init)
+      }
+      
+      # Compute CPU rough initialization for comparison
+      beta_init_cpu = matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
+      beta_init_cpu[,1] = rowMeans(input_matrix) %>% log1p()
+      
+      if (profiling) {
+        t_end_init <- Sys.time()
+        message(sprintf("[TIMING] CPU beta initialization (for comparison): %.3f seconds", as.numeric(difftime(t_end_init, t_start_init, units = "secs"))))
+      }
+      
+      # Compare first column (intercept) since other columns are all zeros
+      abs_diff_init <- abs(beta_init_gpu[, 1] - beta_init_cpu[, 1])
+      rel_diff_init <- abs_diff_init / (abs(beta_init_cpu[, 1]) + 1e-10)
+      
+      message(sprintf("Beta initialization consistency check (intercept only):"))
+      message(sprintf("  Mean absolute difference: %.6f", mean(abs_diff_init)))
+      message(sprintf("  Median absolute difference: %.6f", median(abs_diff_init)))
+      message(sprintf("  Max absolute difference: %.6f", max(abs_diff_init)))
+      message(sprintf("  Mean relative difference: %.6f", mean(rel_diff_init)))
+      message(sprintf("  Median relative difference: %.6f", median(rel_diff_init)))
+      message(sprintf("  Max relative difference: %.6f", max(rel_diff_init)))
+      message(sprintf("  Correlation: %.6f", cor(beta_init_gpu[, 1], beta_init_cpu[, 1])))
+      
+      # Check for potential issues
+      n_large_diff_init <- sum(rel_diff_init > 0.01)  # More than 1% difference
+      if (n_large_diff_init > 0) {
+        warning(sprintf("Found %d genes (%.1f%%) with >1%% relative difference in beta initialization",
+                       n_large_diff_init, 100 * n_large_diff_init / length(beta_init_gpu[, 1])))
+      }
     }
     
-    # Update dispersion_init with GPU-computed values for subsequent use
-    dispersion_init = dispersion_init_gpu
+    # Compute or retrieve dispersion (k) values
+    if (TEST_MODE && !is.null(res_beta_fit$k)) {
+      # TEST mode: use GPU-computed k values for consistency check
+      if (verbose) { message("Performing GPU vs CPU dispersion consistency check") }
+      dispersion_init_gpu = res_beta_fit$k
+      if (remainder > 0) {
+        dispersion_init_gpu = c(dispersion_init_gpu, res_beta_fit_extra$k)
+      }
+      
+      dispersion_init_cpu <- c(estimate_dispersion(input_matrix, offset_vector))
+      # Convert GPU k (which is 1/dispersion) back to dispersion for comparison
+      dispersion_gpu <- 1.0 / dispersion_init_gpu
+      
+      # Calculate differences
+      abs_diff <- abs(dispersion_gpu - dispersion_init_cpu)
+      rel_diff <- abs_diff / (dispersion_init_cpu + 1e-10)  # Avoid division by zero
+      
+      message(sprintf("Dispersion consistency check:"))
+      message(sprintf("  Mean absolute difference: %.6f", mean(abs_diff)))
+      message(sprintf("  Median absolute difference: %.6f", median(abs_diff)))
+      message(sprintf("  Max absolute difference: %.6f", max(abs_diff)))
+      message(sprintf("  Mean relative difference: %.6f", mean(rel_diff)))
+      message(sprintf("  Median relative difference: %.6f", median(rel_diff)))
+      message(sprintf("  Max relative difference: %.6f", max(rel_diff)))
+      message(sprintf("  Correlation: %.6f", cor(dispersion_gpu, dispersion_init_cpu)))
+      
+      # Check for potential issues
+      n_large_diff <- sum(rel_diff > 0.1)  # More than 10% difference
+      if (n_large_diff > 0) {
+        warning(sprintf("Found %d genes (%.1f%%) with >10%% relative difference between GPU and CPU dispersion estimates",
+                       n_large_diff, 100 * n_large_diff / length(dispersion_gpu)))
+      }
+      
+      # Use GPU k values
+      dispersion_init = dispersion_init_gpu
+    } else {
+      # Production mode: compute dispersion on CPU (no GPU transfer overhead)
+      if (verbose) { message("Computing dispersion on CPU") }
+      if (profiling) t_start_disp <- Sys.time()
+      
+      dispersion_init <- c(estimate_dispersion(input_matrix, offset_vector))
+      
+      if (profiling) {
+        t_end_disp <- Sys.time()
+        message(sprintf("[TIMING] CPU dispersion computation: %.3f seconds", as.numeric(difftime(t_end_disp, t_start_disp, units = "secs"))))
+      }
+    }
+    
+    # Consistency check for MOM overdispersion: compare GPU vs CPU (only if TEST_MODE enabled)
+    if (overdispersion == "MOM" && TEST_MODE) {
+      if (verbose) { message("Performing GPU vs CPU MOM overdispersion consistency check") }
+      if (profiling) t_start <- Sys.time()
+      
+      # Compute MOM overdispersion on CPU for comparison
+      theta_cpu = estimate_mom_dispersion_cpp(input_matrix, design_matrix, beta, sf)
+      
+      if (profiling) {
+        t_end <- Sys.time()
+        message(sprintf("[TIMING] CPU MOM overdispersion (for comparison): %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+      }
+      
+      # Calculate differences
+      abs_diff_theta <- abs(theta_gpu - theta_cpu)
+      rel_diff_theta <- abs_diff_theta / (theta_cpu + 1e-10)  # Avoid division by zero
+      
+      message(sprintf("MOM Overdispersion (theta) consistency check:"))
+      message(sprintf("  Mean absolute difference: %.6f", mean(abs_diff_theta)))
+      message(sprintf("  Median absolute difference: %.6f", median(abs_diff_theta)))
+      message(sprintf("  Max absolute difference: %.6f", max(abs_diff_theta)))
+      message(sprintf("  Mean relative difference: %.6f", mean(rel_diff_theta)))
+      message(sprintf("  Median relative difference: %.6f", median(rel_diff_theta)))
+      message(sprintf("  Max relative difference: %.6f", max(rel_diff_theta)))
+      message(sprintf("  Correlation: %.6f", cor(theta_gpu, theta_cpu)))
+      
+      # Check for potential issues
+      n_large_diff_theta <- sum(rel_diff_theta > 0.1)  # More than 10% difference
+      if (n_large_diff_theta > 0) {
+        warning(sprintf("Found %d genes (%.1f%%) with >10%% relative difference between GPU and CPU MOM overdispersion estimates",
+                       n_large_diff_theta, 100 * n_large_diff_theta / length(theta_gpu)))
+      }
+    }
+    
+    # Use GPU-computed MOM overdispersion if available
+    if (overdispersion == "MOM") {
+      if (verbose) { message("Using GPU-computed MOM overdispersion (theta)") }
+      theta = theta_gpu
+      theta_iters = 0
+    }
+    
+    # Consistency check for beta fitting: compare GPU vs CPU (only if TEST_MODE enabled)
+    if (TEST_MODE) {
+      if (verbose) { message("Performing GPU vs CPU beta fitting consistency check") }
+      if (profiling) t_start_beta <- Sys.time()
+      
+      # Compute rough beta initialization for CPU comparison (same as GPU uses)
+      beta_0_test = matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
+      beta_0_test[,1] = rowMeans(input_matrix) %>% log1p()
+      
+      # Compute beta on CPU for comparison
+      tmp_cpu <- parallel::mclapply(1:ngenes, function(i) {
+        beta_fit(input_matrix[i,], design_matrix, beta_0_test[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)
+      }, mc.cores = n.cores)
+      
+      beta_cpu <- lapply(1:ngenes, function(i) { tmp_cpu[[i]]$mu_beta }) %>% do.call("rbind", .)
+      
+      if (profiling) {
+        t_end_beta <- Sys.time()
+        message(sprintf("[TIMING] CPU beta fitting (for comparison): %.3f seconds", as.numeric(difftime(t_end_beta, t_start_beta, units = "secs"))))
+      }
+      
+      # Calculate differences
+      abs_diff_beta <- abs(beta - beta_cpu)
+      rel_diff_beta <- abs_diff_beta / (abs(beta_cpu) + 1e-10)  # Avoid division by zero
+      
+      # Find problematic elements (large relative diff but check if absolute is also large)
+      large_rel_idx <- which(rel_diff_beta > 1.0)  # >100% relative difference
+      
+      message(sprintf("Beta fitting consistency check:"))
+      message(sprintf("  Mean absolute difference: %.6f", mean(abs_diff_beta)))
+      message(sprintf("  Median absolute difference: %.6f", median(abs_diff_beta)))
+      message(sprintf("  Max absolute difference: %.6f", max(abs_diff_beta)))
+      message(sprintf("  Mean relative difference: %.6f", mean(rel_diff_beta)))
+      message(sprintf("  Median relative difference: %.6f", median(rel_diff_beta)))
+      message(sprintf("  Max relative difference: %.6f", max(rel_diff_beta)))
+      message(sprintf("  Correlation: %.6f", cor(c(beta), c(beta_cpu))))
+      
+      # Additional diagnostics for large relative differences
+      if (length(large_rel_idx) > 0) {
+        message(sprintf("  Found %d elements with >100%% relative difference:", length(large_rel_idx)))
+        message(sprintf("    - Their mean absolute difference: %.6f", mean(abs_diff_beta[large_rel_idx])))
+        message(sprintf("    - Their mean |beta_cpu| value: %.6f (small values amplify relative diff)", mean(abs(c(beta_cpu)[large_rel_idx]))))
+        
+        # Check if large relative differences are actually problematic
+        large_abs_and_rel <- sum(abs_diff_beta > 0.1 & rel_diff_beta > 0.1)
+        if (large_abs_and_rel > 0) {
+          warning(sprintf("Found %d elements with BOTH >0.1 absolute AND >10%% relative difference - this may indicate a real problem!", large_abs_and_rel))
+        }
+      }
+      
+      # Check for potential issues (use combined threshold)
+      n_large_diff_beta <- sum(abs_diff_beta > 0.01 & rel_diff_beta > 0.01)  # More than 1% relative AND >0.01 absolute difference
+      if (n_large_diff_beta > 0) {
+        warning(sprintf("Found %d elements (%.1f%%) with >1%% relative difference between GPU and CPU beta estimates",
+                       n_large_diff_beta, 100 * n_large_diff_beta / length(c(beta))))
+      }
+    }
 
     if (is.null(dim(beta))) {
       beta = matrix(beta, ncol = 1)
@@ -319,10 +483,15 @@ fit_devil <- function(
   }
 
   if (!isFALSE(overdispersion)) {
-    if (verbose) { message("Fit overdispersion") }
-    if (profiling) t_start <- Sys.time()
+    # Skip overdispersion fitting if already computed on GPU
+    if (CUDA & CUDA_is_available & overdispersion == "MOM" & exists("theta_gpu")) {
+      # Already computed on GPU, theta is set above
+      if (verbose) { message("Overdispersion already computed on GPU") }
+    } else {
+      if (verbose) { message("Fit overdispersion") }
+      if (profiling) t_start <- Sys.time()
 
-    if (overdispersion %in% c("old", "MLE")) {
+      if (overdispersion %in% c("old", "MLE")) {
       theta <- parallel::mclapply(1:ngenes, function(i) {
         fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_vector,
                        tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = TRUE)
@@ -345,9 +514,10 @@ fit_devil <- function(
       stop()
     }
 
-    if (profiling) {
-      t_end <- Sys.time()
-      message(sprintf("[TIMING] Overdispersion fitting: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+      if (profiling) {
+        t_end <- Sys.time()
+        message(sprintf("[TIMING] Overdispersion fitting: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+      }
     }
   } else {
     theta = rep(0, ngenes)

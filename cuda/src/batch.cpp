@@ -61,11 +61,9 @@ beta_fit_gpu_external(
         &Y_host,
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const
         &X_host,
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const
-        &mu_beta_host,
     Eigen::VectorXf const  &offset_host,
     int max_iter, float eps, int batch_size,
-    std::vector<int>& iterations) {
+    std::vector<int>& iterations, bool TEST) {
 
   /******************************
    * Shape definition
@@ -78,8 +76,7 @@ beta_fit_gpu_external(
   std::cout << "X {"<<X_host.rows()<<","<<X_host.cols() <<"}\n";
   std::cout << "Y {" << Y_host.rows() << "," << Y_host.cols() << "}\n";
   std::cout << "offset {"<<offset_host.size()<<", 1" <<"}\n";
-  std::cout << "mu_beta {" << mu_beta_host.rows()  << "," << mu_beta_host.cols() << "}\n";
-  std::cout << "Genes " << genes <<std::endl;
+  std::cout << "Genes" << genes <<std::endl;
   std::cout << "Cells " << cells <<std::endl;
   std::cout << "Features " << features <<std::endl;
   std::size_t genesBatch = batch_size;
@@ -92,7 +89,15 @@ beta_fit_gpu_external(
   float offset_inv = 1.0f / (offset_sum / offset_host.size());
   
   std::vector<float> mu_beta_final(genes*features, 0.0);
-  std::vector<float> k_final(genes, 0.0);  // Store final k values
+  std::vector<float> k_final;
+  if (TEST) {
+    k_final.resize(genes, 0.0);  // Store final k values only if TEST mode
+  }
+  std::vector<float> theta_final(genes, 0.0);  // Store final theta (MOM overdispersion) values
+  std::vector<float> beta_init_final;
+  if (TEST) {
+    beta_init_final.resize(genes*features, 0.0);  // Debug: store initial beta values only if TEST mode
+  }
 
     int deviceCount = 0;
     CUDA_CHECK(cudaGetDeviceCount(&deviceCount));
@@ -182,6 +187,20 @@ beta_fit_gpu_external(
       float *d_means, *d_vars;
       CUDA_CHECK( cudaMalloc((void**)&d_means, genesBatch*sizeof(float)) );
       CUDA_CHECK( cudaMalloc((void**)&d_vars, genesBatch*sizeof(float)) );
+      
+      // Allocate buffers for MOM overdispersion calculation
+      float *d_mu_mom, *d_diff_sq_minus_mu, *d_mu_sq, *d_num, *d_den, *d_theta, *d_ones;
+      CUDA_CHECK( cudaMalloc((void**)&d_mu_mom, genesBatch * cells * sizeof(float)) );
+      CUDA_CHECK( cudaMalloc((void**)&d_diff_sq_minus_mu, genesBatch * cells * sizeof(float)) );
+      CUDA_CHECK( cudaMalloc((void**)&d_mu_sq, genesBatch * cells * sizeof(float)) );
+      CUDA_CHECK( cudaMalloc((void**)&d_num, genesBatch * sizeof(float)) );
+      CUDA_CHECK( cudaMalloc((void**)&d_den, genesBatch * sizeof(float)) );
+      CUDA_CHECK( cudaMalloc((void**)&d_theta, genesBatch * sizeof(float)) );
+      CUDA_CHECK( cudaMalloc((void**)&d_ones, cells * sizeof(float)) );
+      
+      // Initialize ones vector
+      std::vector<float> ones_host(cells, 1.0f);
+      CUDA_CHECK( cudaMemcpy(d_ones, ones_host.data(), cells * sizeof(float), cudaMemcpyHostToDevice) );
 
       /*********************************
        * Initialize the Tensor object, this doesn't allocate nothing ! 
@@ -275,20 +294,34 @@ beta_fit_gpu_external(
 				  genesBatch * cells * sizeof(float), cudaMemcpyHostToDevice)); //CORRETTO
 	    */
 	    
-	    CUDA_CHECK(cudaMemcpy(mu_beta[me],
-				  mu_beta_host.data() + i * genesBatch * features,
-				  genesBatch * features * sizeof(float),
-				  cudaMemcpyHostToDevice)); // CORRETTO
-	  
+	    // Copy Y data for this batch
 	    CUDA_CHECK(cudaMemcpy(
 				  Y[me], Y_host.data() +  i * genesBatch * cells ,
 				  genesBatch * cells * sizeof(float), cudaMemcpyHostToDevice));
 	    
-	    // Calculate dispersion (k) on GPU for this batch
+	    // Initialize beta with rough approximation on GPU
 	    dim3 threads1D(256);
 	    dim3 blocks1D_genes((genesBatch + threads1D.x - 1) / threads1D.x);
 	    
-	    // Compute row means of Y
+	    // Compute row means of Y for beta initialization
+	    compute_row_means<<<blocks1D_genes, threads1D>>>(Y[me], d_means, genesBatch, cells);
+	    
+	    // Initialize beta: beta[g, 0] = log1p(mean[g]), beta[g, f>0] = 0
+	    init_beta_rough_kernel<<<blocks1D_genes, threads1D>>>(d_means, mu_beta[me],
+	                                                           genesBatch, features);
+	    
+	    CUDA_CHECK(cudaDeviceSynchronize());
+	    
+	    // Debug: Copy initialized beta back to host for consistency check (only if TEST mode)
+	    if (TEST) {
+	      CUDA_CHECK(cudaMemcpy(beta_init_final.data() + i * genesBatch * features,
+				    mu_beta[me],
+				    genesBatch * features * sizeof(float),
+				    cudaMemcpyDeviceToHost));
+	    }
+	    
+	    // Calculate dispersion (k) on GPU for this batch
+	    // Compute row means of Y (recompute since d_means was used for beta init)
 	    compute_row_means<<<blocks1D_genes, threads1D>>>(Y[me], d_means, genesBatch, cells);
 	    
 	    // Compute row variances of Y
@@ -298,6 +331,14 @@ beta_fit_gpu_external(
 	    compute_dispersion<<<blocks1D_genes, threads1D>>>(d_means, d_vars, offset_inv, k[me], genesBatch);
 	    
 	    CUDA_CHECK(cudaDeviceSynchronize());
+	    
+	    // Copy k back to host only if TEST mode enabled
+	    if (TEST) {
+	      CUDA_CHECK(cudaMemcpy(k_final.data() + i * genesBatch,
+				    k[me],
+				    genesBatch * sizeof(float),
+				    cudaMemcpyDeviceToHost));
+	    }
 	    
 	    //set something to zero, required ? BOH,sicuro non falliremo per sta cosa qui
 	    CUDA_CHECK( cudaMemset(w_q[me], 0, genesBatch * cells * sizeof(float)));
@@ -355,21 +396,76 @@ beta_fit_gpu_external(
 	      iter
               << " ms [avg iter time]" << std::endl;
 	    */
+	    
 	    /***********************************
-	     * Copy beta, k, and iterations to host
+	     * Compute MOM overdispersion (theta) after beta converges
 	     **********************************/
-	    CUDA_CHECK(cudaMemcpy(mu_beta_final.data() +  i *genesBatch * features,
+	    // 1. Compute eta = mu_beta @ X (reuse einsum, cg_tmp2 already contains this)
+	    einsum_cg_tmp2[me].execute(cutensorH[me], X[me], mu_beta[me], workspace[me]);
+	    
+	    // 2. Compute mu = sf * exp(eta)
+	    dim3 threads2D_mom(16, 16);
+	    dim3 blocks2D_mom((cells + 15) / 16, (genesBatch + 15) / 16);
+	    compute_mu_from_eta<<<blocks2D_mom, threads2D_mom>>>(cg_tmp2[me], offset[me], 
+	                                                          d_mu_mom, genesBatch, cells);
+	    
+	    // 3. Compute MOM components: (Y-mu)² - mu and mu²
+	    compute_mom_components<<<blocks2D_mom, threads2D_mom>>>(Y[me], d_mu_mom,
+	                                                             d_diff_sq_minus_mu, d_mu_sq,
+	                                                             genesBatch, cells);
+	    
+	    // 4. Compute row sums using cuBLAS GEMV: num = matrix @ ones, den = matrix @ ones
+	    const float alpha = 1.0f;
+	    const float beta_zero = 0.0f;
+	    
+	    CUBLAS_CHECK(cublasSgemv(cublasH[me], CUBLAS_OP_T, 
+	                             cells, genesBatch,
+	                             &alpha, 
+	                             d_diff_sq_minus_mu, cells,
+	                             d_ones, 1,
+	                             &beta_zero, 
+	                             d_num, 1));
+	    
+	    CUBLAS_CHECK(cublasSgemv(cublasH[me], CUBLAS_OP_T,
+	                             cells, genesBatch,
+	                             &alpha,
+	                             d_mu_sq, cells,
+	                             d_ones, 1,
+	                             &beta_zero,
+	                             d_den, 1));
+	    
+	    // 5. Compute theta = corr * num / den
+	    float corr = (float)cells / (cells - features);
+	    dim3 threads1D_mom(256);
+	    dim3 blocks1D_mom((genesBatch + 255) / 256);
+	    compute_theta_from_num_den<<<blocks1D_mom, threads1D_mom>>>(d_num, d_den, corr, 
+	                                                                  d_theta, genesBatch);
+	    
+	    CUDA_CHECK(cudaDeviceSynchronize());
+	    
+	    /***********************************
+	     * Copy beta, k, theta, and iterations to host
+	     **********************************/
+	    CUDA_CHECK(cudaMemcpy(mu_beta_final.data() + i * genesBatch * features,
 				  mu_beta[me], 
 				  genesBatch*features* sizeof(float),
 				  cudaMemcpyDeviceToHost));
 	    
-	    CUDA_CHECK(cudaMemcpy(k_final.data() + i * genesBatch,
-				  k[me],
+	    // Copy k back to host only if TEST mode enabled
+	    if (TEST) {
+	      CUDA_CHECK(cudaMemcpy(k_final.data() + i * genesBatch,
+				    k[me],
+				    genesBatch * sizeof(float),
+				    cudaMemcpyDeviceToHost));
+	    }
+	    
+	    CUDA_CHECK(cudaMemcpy(theta_final.data() + i * genesBatch,
+				  d_theta,
 				  genesBatch * sizeof(float),
 				  cudaMemcpyDeviceToHost));
 
 	    std::fill(iterations.begin()  +  i *genesBatch , iterations.begin() +  +  (i+1) *genesBatch, iter);
-
+      
 	  }
 	}
       }
@@ -378,6 +474,13 @@ beta_fit_gpu_external(
        ********************/
       CUDA_CHECK(cudaFree(d_means));
       CUDA_CHECK(cudaFree(d_vars));
+      CUDA_CHECK(cudaFree(d_mu_mom));
+      CUDA_CHECK(cudaFree(d_diff_sq_minus_mu));
+      CUDA_CHECK(cudaFree(d_mu_sq));
+      CUDA_CHECK(cudaFree(d_num));
+      CUDA_CHECK(cudaFree(d_den));
+      CUDA_CHECK(cudaFree(d_theta));
+      CUDA_CHECK(cudaFree(d_ones));
       CUDA_CHECK(cudaFree(Zigma[me]));
       CUDA_CHECK(cudaFree(Bk_pointer[me]));
       CUDA_CHECK(cudaFree(Zigma_pointer[me]));
@@ -404,11 +507,30 @@ beta_fit_gpu_external(
     }
 
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> result_beta(mu_beta_final.data(), features, genes);
-    Eigen::Map<Eigen::VectorXf> result_k(k_final.data(), genes);
+    Eigen::Map<Eigen::VectorXf> result_theta(theta_final.data(), genes);
     
     BatchResult result;
     result.beta = result_beta;
-    result.k = result_k;
+    result.theta = result_theta;
+    
+    // Only populate k if TEST mode is enabled
+    if (TEST) {
+      Eigen::Map<Eigen::VectorXf> result_k(k_final.data(), genes);
+      result.k = result_k;
+    } else {
+      // Return empty vector when not in TEST mode
+      result.k = Eigen::VectorXf(0);
+    }
+    
+    // Only populate beta_init if TEST mode is enabled
+    if (TEST) {
+      Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> result_beta_init(beta_init_final.data(), features, genes);
+      result.beta_init = result_beta_init;
+    } else {
+      // Return empty matrix when not in TEST mode
+      result.beta_init = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>(0, 0);
+    }
+    
     return result;
   }
 
