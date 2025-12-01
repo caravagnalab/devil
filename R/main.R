@@ -59,6 +59,8 @@
 #'   overdispersion parameter used as a starting point for the iterative procedures.
 #'   If \code{NULL}, an initial value is estimated from the data via \code{estimate_dispersion()}.
 #'   Recommended value if specified: \code{100}. Default: \code{NULL}.
+#' @param init_beta_rough Logical. Whether to initialize betas in a rough but extremely fast way.
+#'   Default: \code{FALSE}.
 #' @param offset Numeric scalar. Value used when computing the offset vector to avoid
 #'   numerical issues with zero counts. Default: \code{0}.
 #' @param size_factors Character string or \code{NULL}. Method for computing normalization
@@ -85,9 +87,6 @@
 #' @param profiling Logical. If \code{TRUE}, prints timing information for major
 #'   steps (size factors, offset computation, initial dispersion, beta fit, theta fit).
 #'   Useful for performance profiling. Default: \code{FALSE}.
-#' @param TEST Logical. If \code{TRUE}, enables consistency checks between GPU and CPU
-#'   implementations (beta, dispersion, overdispersion). Only relevant when \code{CUDA = TRUE}.
-#'   Adds computational overhead for validation. Default: \code{FALSE}.
 #'
 #' @return A list containing:
 #' \describe{
@@ -105,13 +104,12 @@
 #'
 #' @export
 #' @rawNamespace useDynLib(devil);
-fit_devil <- function(
+fit_devil = function(
     input_matrix,
     design_matrix,
     overdispersion = "MOM",
     init_overdispersion = NULL,
     init_beta_rough = FALSE,
-    # do_cox_reid_adjustment = TRUE,
     offset=0,
     size_factors=NULL,
     verbose=FALSE,
@@ -122,9 +120,6 @@ fit_devil <- function(
     parallel.cores=1,
     profiling = FALSE,
     TEST = FALSE) {
-
-  # Start total timing
-  t_total_start <- Sys.time()
   
   # Read general info about input matrix and design matrix
   gene_names <- rownames(input_matrix)
@@ -134,12 +129,12 @@ fit_devil <- function(
   # Detect cores to use
   max.cores <- parallel::detectCores()
   if (is.null(parallel.cores)) {
-    n.cores = max.cores
+    n.cores <- max.cores
   } else {
     if (parallel.cores > max.cores) {
       message(paste0("Requested ", parallel.cores, " cores, but only ", max.cores, " available."))
     }
-    n.cores = min(max.cores, parallel.cores)
+    n.cores <- min(max.cores, parallel.cores)
   }
 
   # Check if CUDA is available
@@ -171,7 +166,7 @@ fit_devil <- function(
   }
 
   # Calculate offset vector, common to CPU and GPU path
-  offset_vector = compute_offset_vector(offset, input_matrix, sf)
+  offset_vector <- compute_offset_vector(offset, input_matrix, sf)
 
   # Initialize overdispersion, only CPU, in case of GPU the dispersion is initialized on device.
   if (!CUDA) {
@@ -199,8 +194,8 @@ fit_devil <- function(
   # CPU can use either rough or full initialization
   if (!CUDA | !CUDA_is_available) {
     if (init_beta_rough) {
-      beta_0 = matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
-      beta_0[,1] = rowMeans(input_matrix) %>% log1p()
+      beta_0 <- matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
+      beta_0[,1] <- DelayedMatrixStats::rowMeans2(input_matrix) %>% log1p()
     } else {
       beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
     }
@@ -451,7 +446,7 @@ fit_devil <- function(
     }
 
     if (is.null(dim(beta))) {
-      beta = matrix(beta, ncol = 1)
+      beta <- matrix(beta, ncol = 1)
     }
     if (profiling) {
       t_end <- Sys.time()
@@ -459,96 +454,148 @@ fit_devil <- function(
     }
 
   } else {
-
-    if (verbose) { message("Fitting beta coefficients (CPU)") }
-    if (profiling) t_start <- Sys.time()
-
-    tmp <- parallel::mclapply(1:ngenes, function(i) {
-      beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)
-    }, mc.cores = n.cores)
-
-    if (profiling) {
-      t_end <- Sys.time()
-      message(sprintf("[TIMING] Beta fitting (CPU): %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
-    }
-
-    if (verbose) { message("Process CPU results") }
-    if (profiling) t_start <- Sys.time()
-    beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-    rownames(beta) <- gene_names
-    beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
-    if (profiling) {
-      t_end <- Sys.time()
-      message(sprintf("[TIMING] CPU results processing: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
-    }
+    ## - CPU branch ----
+    fit_res <- cpu_fit(input_matrix = input_matrix,
+                      design_matrix = design_matrix,
+                      offset_vector = offset_vector,
+                      init_overdispersion = init_overdispersion,
+                      init_beta_rough = init_beta_rough,
+                      overdispersion = overdispersion,
+                      n.cores = n.cores, max_iter = max_iter,
+                      tolerance = tolerance, verbose = verbose)
   }
 
-  if (!isFALSE(overdispersion)) {
-    # Skip overdispersion fitting if already computed on GPU
-    if (CUDA & CUDA_is_available & overdispersion == "MOM" & exists("theta_gpu")) {
-      # Already computed on GPU, theta is set above
-      if (verbose) { message("Overdispersion already computed on GPU") }
-    } else {
-      if (verbose) { message("Fit overdispersion") }
-      if (profiling) t_start <- Sys.time()
-
-      if (overdispersion %in% c("old", "MLE")) {
-      theta <- parallel::mclapply(1:ngenes, function(i) {
-        fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_vector,
-                       tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = TRUE)
-      }, mc.cores = n.cores) %>% unlist()
-      theta_iters = NA
-    } else if (overdispersion %in% c("new", "I")) {
-      y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
-      tmp <- parallel::mclapply(1:ngenes, function(i) {
-        fit_overdispersion_cppp(y = input_matrix[i,], X = design_matrix, mu_beta = beta[i,], off = offset_vector,
-                                        kappa = dispersion_init[i], max_iter = max_iter, eps_theta = tolerance,
-                                        newton_max = 16, y_unique_cap = y_unique_cap)
-      }, mc.cores = n.cores)
-
-      theta = lapply(tmp, function(x) x$kappa) %>% unlist()
-      theta_iters = lapply(tmp, function(x) x$kappa_iters) %>% unlist()
-    } else if (overdispersion == "MOM") {
-      theta = estimate_mom_dispersion_cpp(input_matrix, design_matrix, beta, sf)
-      theta_iters = 0
-    } else {
-      stop()
-    }
-
-      if (profiling) {
-        t_end <- Sys.time()
-        message(sprintf("[TIMING] Overdispersion fitting: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
-      }
-    }
-  } else {
-    theta = rep(0, ngenes)
-    theta_iters = 0
-  }
-
-  if (verbose) { message("Build result list") }
-  if (profiling) t_start <- Sys.time()
-  result <- list(
-    beta=beta,
-    overdispersion=theta,
-    iterations=list(beta_iters=beta_iters, theta_iters = theta_iters),
+  return(list(
+    beta=fit_res$beta,
+    overdispersion=fit_res$theta,
+    iterations=fit_res$iterations,
     size_factors=sf,
     offset_vector=offset_vector,
     design_matrix=design_matrix,
     input_matrix=input_matrix,
     input_parameters=list(max_iter=max_iter, tolerance=tolerance, parallel.cores=n.cores)
+  ))
+}
+
+# Inner CPU fitting function
+cpu_fit <- function(input_matrix, design_matrix, offset_vector,
+                    init_overdispersion, init_beta_rough, overdispersion,
+                    n.cores, max_iter, tolerance, verbose) {
+
+  ngenes <- nrow(input_matrix)
+  gene_names <- rownames(input_matrix)
+
+  # - Initialize dispersion ---
+  if (verbose) message("Initialize theta")
+  if (is.null(init_overdispersion)) {
+    dispersion_init <- estimate_dispersion(input_matrix, offset_vector)
+  } else {
+    dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
+  }
+
+  # - Initialize beta ---
+  if (verbose) message("Initialize beta")
+  if (isTRUE(init_beta_rough)) {
+    beta_0 <- matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
+    beta_0[, 1] <- DelayedMatrixStats::rowMeans2(input_matrix) %>% log1p()
+  } else {
+    beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
+  }
+
+  # - Fit betas ---
+  if (verbose) message("Fitting beta coefficients")
+
+  tmp <- parallel::mclapply(
+    X = seq_len(ngenes),
+    mc.cores = n.cores,
+    FUN = function(i) {
+      beta_fit(
+        input_matrix[i, ],
+        design_matrix,
+        beta_0[i, ],
+        offset_vector,
+        dispersion_init[i],
+        max_iter = max_iter,
+        eps      = tolerance
+      )
+    }
   )
-  if (profiling) {
-    t_end <- Sys.time()
-    message(sprintf("[TIMING] Result list creation: %.3f seconds", as.numeric(difftime(t_end, t_start, units = "secs"))))
+
+  beta       <- do.call(rbind, lapply(tmp, `[[`, "mu_beta"))
+  beta_iters <- vapply(tmp, `[[`, integer(1L), "iter")
+  rownames(beta) <- gene_names
+
+  # - Fit theta (overdispersion) ---
+  if (!isFALSE(overdispersion)) {
+    if (verbose) message("Fit overdispersion (mode = ", overdispersion, ")")
+
+    if (overdispersion %in% c("old", "MLE")) {
+
+      theta <- parallel::mclapply(
+        X = seq_len(ngenes),
+        mc.cores = n.cores,
+        FUN = function(i) {
+          fit_dispersion(
+            beta      = beta[i, ],
+            design_matrix,
+            input_matrix[i, ],
+            offset_vector,
+            tolerance = tolerance,
+            max_iter  = max_iter,
+            do_cox_reid_adjustment = TRUE
+          )
+        }
+      ) %>% unlist()
+
+      theta_iters <- NA_integer_
+
+    } else if (overdispersion %in% c("new", "I")) {
+
+      y_unique_cap <- as.integer(ncol(input_matrix) / 2L)
+
+      tmp_theta <- parallel::mclapply(
+        X = seq_len(ngenes),
+        mc.cores = n.cores,
+        FUN = function(i) {
+          fit_overdispersion_cppp(
+            y            = input_matrix[i, ],
+            X            = design_matrix,
+            mu_beta      = beta[i, ],
+            off          = offset_vector,
+            kappa        = dispersion_init[i],
+            max_iter     = max_iter,
+            eps_theta    = tolerance,
+            newton_max   = 16L,
+            y_unique_cap = y_unique_cap
+          )
+        }
+      )
+
+      theta       <- vapply(tmp_theta, `[[`, numeric(1L), "kappa")
+      theta_iters <- vapply(tmp_theta, `[[`, integer(1L), "kappa_iters")
+
+    } else if (overdispersion == "MOM") {
+
+      theta       <- estimate_mom_dispersion_cpp(input_matrix, design_matrix, beta, exp(offset_vector))
+      theta_iters <- 0L
+
+    } else {
+      stop("Unknown overdispersion mode: ", overdispersion)
+    }
+
+  } else {
+    theta       <- rep(0, ngenes)
+    theta_iters <- 0L
   }
 
-  # Print total execution time
-  if (profiling) {
-    t_total_end <- Sys.time()
-    message(sprintf("[TIMING] TOTAL execution time: %.3f seconds", as.numeric(difftime(t_total_end, t_total_start, units = "secs"))))
-  }
-
-  return(result)
+  list(
+    beta       = beta,
+    theta      = theta,
+    iterations = list(
+      beta_iters  = beta_iters,
+      theta_iters = theta_iters
+    )
+  )
 }
 
 get_groups_for_model_matrix <- function(model_matrix){
