@@ -140,6 +140,10 @@ beta_fit_gpu_external(
     std::vector<float **> Zigma_pointer(deviceCount);
     std::vector<float **> Bk_pointer(deviceCount);
     std::vector<float *> Zigma(deviceCount);
+    
+    // Allocate pivot and info arrays once per device
+    std::vector<int *> pivot(deviceCount, nullptr);
+    std::vector<int *> info(deviceCount, nullptr);
 
     // Allocate vectors for temporary buffers (per-device)
     std::vector<float *> d_means(deviceCount);
@@ -275,6 +279,13 @@ beta_fit_gpu_external(
 	Zigma_pointer[me][i] = Zigma[me] + features * features * i;
 	Bk_pointer[me][i] = Bk[me] + features * features * i;
       }
+      
+      /******************************
+       * Allocate pivot and info for matrix inversion
+       ******************************/
+        CUDA_CHECK(cudaMallocManaged(&pivot[me], sizeof(int)*features*genesBatch));
+        CUDA_CHECK(cudaMallocManaged(&info[me], sizeof(int)*genesBatch));
+      
       cudaDeviceSynchronize();
 
 #pragma omp single
@@ -383,7 +394,7 @@ beta_fit_gpu_external(
 	      einsum_B[me].execute(cutensorH[me], A[me], X[me],workspace[me]);
 	      einsum_Bk[me].execute(cutensorH[me], B[me], k[me],workspace[me]);
 	      inverseMatrix2(cublasH[me], Bk_pointer[me], Zigma_pointer[me],
-			     features, genesBatch);
+			     features, genesBatch, pivot[me], info[me]);
 	      elementWiseSub<<<blocks1D,threads1D>>>(mu_g[me], genesBatch*cells);
 	      einsum_C[me].execute(cutensorH[me], X[me], mu_g[me],workspace[me]);
 	      einsum_last[me].execute(cutensorH[me], k[me], C[me],workspace[me]);
@@ -484,6 +495,13 @@ beta_fit_gpu_external(
       /*********************
        * Free Cuda Memory
        ********************/
+      // Free pivot and info if allocated
+      if (pivot[me] != nullptr) {
+        CUDA_CHECK(cudaFree(pivot[me]));
+      }
+      if (info[me] != nullptr) {
+        CUDA_CHECK(cudaFree(info[me]));
+      }
       CUDA_CHECK(cudaFree(d_means[me]));
       CUDA_CHECK(cudaFree(d_vars[me]));
       CUDA_CHECK(cudaFree(d_mu_mom[me]));
