@@ -20,28 +20,29 @@ using namespace Eigen;
  */
 // [[Rcpp::export]]
 Eigen::MatrixXd compute_hessian(const Eigen::VectorXd& beta,
-                                const double overdispersion,
-                                const Eigen::VectorXd& y,
-                                const Eigen::MatrixXd& design_matrix,
-                                const Eigen::VectorXd& size_factors) {
+                                    const double overdispersion,
+                                    const Eigen::VectorXd& y,
+                                    const Eigen::MatrixXd& design_matrix,
+                                    const Eigen::VectorXd& size_factors) {
   const double alpha = 1.0 / overdispersion;
-  const int n = y.size();
-  const int p = design_matrix.cols();
-  MatrixXd H = MatrixXd::Zero(p, p);
 
-  for (int sample_idx = 0; sample_idx < n; ++sample_idx) {
-    double yi = y(sample_idx);
-    VectorXd design_v = design_matrix.row(sample_idx);
+  // n x 1
+  Eigen::VectorXd eta = design_matrix * beta;
 
-    double eta = design_v.dot(beta);
-    double k = size_factors(sample_idx) * std::exp(eta);
-    double denom = 1.0 + alpha * k;
-    double gamma_sq = denom * denom;
+  // mu = sf * exp(eta)
+  Eigen::ArrayXd mu = (size_factors.array() * eta.array().exp());
 
-    double scalar = (yi * alpha + 1.0) * k / gamma_sq;
-    H.noalias() -= scalar * (design_v * design_v.transpose());
-  }
+  // denom = 1 + alpha * mu
+  Eigen::ArrayXd denom = 1.0 + alpha * mu;
+  Eigen::ArrayXd gamma_sq = denom * denom;
 
+  // scalar s_i = (y_i * alpha + 1) * mu_i / gamma_sq_i
+  Eigen::ArrayXd scalar = (y.array() * alpha + 1.0).array() * mu / gamma_sq;
+
+  // H = - X^T diag(scalar) X
+  Eigen::MatrixXd H = -(design_matrix.transpose() * scalar.matrix().asDiagonal() * design_matrix);
+
+  // Return -H^{-1}, i.e. (X^T W X)^{-1}
   return -H.inverse();
 }
 
@@ -61,20 +62,26 @@ Eigen::MatrixXd compute_hessian(const Eigen::VectorXd& beta,
  */
 // [[Rcpp::export]]
 Eigen::MatrixXd compute_scores(const Eigen::MatrixXd& design_matrix,
-                               const Eigen::VectorXd& y,
-                               const Eigen::VectorXd& beta,
-                               const double overdispersion,
-                               const Eigen::VectorXd& size_factors) {
-  double alpha = 1.0 / overdispersion;
+                                   const Eigen::VectorXd& y,
+                                   const Eigen::VectorXd& beta,
+                                   const double overdispersion,
+                                   const Eigen::VectorXd& size_factors) {
+  const double alpha = 1.0 / overdispersion;
 
-  // Vectorized computation
-  VectorXd eta = design_matrix * beta;
-  VectorXd mu = size_factors.array() * eta.array().exp();
-  VectorXd residuals = (y.array() - mu.array()) / mu.array();
-  VectorXd weights = mu.array() / (1.0 + mu.array() / alpha);
-  VectorXd wr = residuals.array() * weights.array();
+  Eigen::VectorXd eta = design_matrix * beta;
+  Eigen::ArrayXd mu   = size_factors.array() * eta.array().exp();
 
-  return design_matrix.array().colwise() * wr.array();
+  // residuals = (y - mu) / mu
+  Eigen::ArrayXd residuals = (y.array() - mu) / mu;
+
+  // weights = mu / (1 + mu / alpha)
+  Eigen::ArrayXd weights = mu / (1.0 + mu / alpha);
+
+  // wr = residuals * weights
+  Eigen::ArrayXd wr = residuals * weights;
+
+  // broadcast wr over columns: each row i of X is multiplied by wr_i
+  return design_matrix.array().colwise() * wr;
 }
 
 
@@ -95,33 +102,40 @@ Eigen::MatrixXd compute_scores(const Eigen::MatrixXd& design_matrix,
  */
 // [[Rcpp::export]]
 Eigen::MatrixXd compute_clustered_meat(const Eigen::MatrixXd& design_matrix,
-                                       const Eigen::VectorXd& y,
-                                       const Eigen::VectorXd& beta,
-                                       const double overdispersion,
-                                       const Eigen::VectorXd& size_factors,
-                                       const Eigen::VectorXi& clusters) {
+                                           const Eigen::VectorXd& y,
+                                           const Eigen::VectorXd& beta,
+                                           const double overdispersion,
+                                           const Eigen::VectorXd& size_factors,
+                                           const Eigen::VectorXi& clusters) {
+  const int n  = design_matrix.rows();
+  const int k  = design_matrix.cols();
 
-  Eigen::MatrixXd ef = compute_scores(design_matrix, y, beta, overdispersion, size_factors);
-  int k = design_matrix.cols();
-  int n = design_matrix.rows();
-  int ng = clusters.maxCoeff();
-  double adj = (ng > 1) ? double(ng) / (ng - 1.0) : 1.0;
+  // ef: n x k score contributions
+  Eigen::MatrixXd ef = compute_scores(design_matrix, y, beta,
+                                          overdispersion, size_factors);
 
-  Eigen::MatrixXd rval = Eigen::MatrixXd::Zero(k, k);
+  // number of clusters (assumes clusters are 1..ng)
+  const int ng = clusters.maxCoeff();
 
-  for (int j = 1; j <= ng; ++j) {
-    // Sum rows directly without creating mask array
-    Eigen::VectorXd ef_sum = Eigen::VectorXd::Zero(k);
-    for (int i = 0; i < n; ++i) {
-      if (clusters(i) == j) {
-        ef_sum += ef.row(i).transpose();
-      }
+  // finite-sample correction factor
+  const double adj = (ng > 1) ? double(ng) / (ng - 1.0) : 1.0;
+
+  // cluster_sums[g, :] = sum of scores in cluster g+1
+  Eigen::MatrixXd cluster_sums = Eigen::MatrixXd::Zero(ng, k);
+
+  for (int i = 0; i < n; ++i) {
+    int g = clusters(i) - 1; // convert 1-based -> 0-based index
+    if (g >= 0 && g < ng) {
+      cluster_sums.row(g) += ef.row(i);
     }
-    rval.noalias() += ef_sum * ef_sum.transpose();
   }
+
+  // rval = sum_g s_g s_g^T = cluster_sums^T cluster_sums
+  Eigen::MatrixXd rval = cluster_sums.transpose() * cluster_sums;
 
   return (adj / n) * rval;
 }
+
 
 
 /**
