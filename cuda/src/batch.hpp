@@ -8,6 +8,8 @@ Eigen::VectorXf k_host, int max_iter, float eps);
 struct BatchResult {
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> beta;
     Eigen::VectorXf k;
+    Eigen::VectorXf theta;
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> beta_init;  // Debug: initial beta values
 };
 
 BatchResult
@@ -16,7 +18,5 @@ beta_fit_gpu_external(
         Y_host,
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const &
         X_host,
-	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const &
-        mu_beta_host,
     Eigen::VectorXf const & offset_host,
-    int max_iter, float eps,int batch_size,std::vector<int>& iter);
+    int max_iter, float eps,int batch_size,std::vector<int>& iter, bool TEST = false);

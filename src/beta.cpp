@@ -80,11 +80,10 @@ List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float
 
 #ifdef USE_CUDA
 // [[Rcpp::export]]
-List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::MatrixXf mu_beta, Eigen::VectorXf off, int max_iter, float eps,int batch_size) {
+List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::VectorXf off, int max_iter, float eps,int batch_size, bool TEST = false) {
   auto t1 = std::chrono::high_resolution_clock::now();
   auto y_float = y.transpose().eval();
   auto X_float = X.transpose().eval();
-  auto mu_beta_float = mu_beta.transpose().eval();
 
   auto t2 = std::chrono::high_resolution_clock::now();
   auto elapsed{t2-t1};
@@ -98,8 +97,8 @@ List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::MatrixXf mu_beta
 
  t1 = std::chrono::high_resolution_clock::now();
  //create iteration vector, pass by reference.
- auto result= beta_fit_gpu_external(y_float, X_float, mu_beta_float, off, max_iter,
-				    eps,batch_size,iterations);
+ auto result= beta_fit_gpu_external(y_float, X_float, off, max_iter,
+				    eps,batch_size,iterations, TEST);
   t2  =std::chrono::high_resolution_clock::now();
   elapsed= t2-t1;
   std::cout << "TIME: Compute cost " << std::chrono::duration<double, std::milli>(elapsed).count() << " ms"
@@ -109,9 +108,17 @@ List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::MatrixXf mu_beta
  std::cout<<"END GPU" << std::endl;
  //  Return both mu_beta and Zigma as a List
 
- return List::create(Named("mu_beta") = result.beta.cast<double>().transpose(), 
-                     Named("k") = result.k.cast<double>(),
-                     Named("iter") = iterations);
+ if (TEST) {
+   return List::create(Named("mu_beta") = result.beta.cast<double>().transpose(), 
+                       Named("k") = result.k.cast<double>(),
+                       Named("theta") = result.theta.cast<double>(),
+                       Named("beta_init") = result.beta_init.cast<double>().transpose(),
+                       Named("iter") = iterations);
+ } else {
+   return List::create(Named("mu_beta") = result.beta.cast<double>().transpose(), 
+                       Named("theta") = result.theta.cast<double>(),
+                       Named("iter") = iterations);
+ }
 
 }
 #endif // USE_CUDA
