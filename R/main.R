@@ -210,9 +210,8 @@ fit_devil = function(
     extra_genes = remainder
     genes_batch = ngenes - extra_genes
 
-    message("Fit beta CUDA")
+    message("Fit beta, using CUDA acceleration")
     start_time <- Sys.time()
-
     res_beta_fit <- beta_fit_gpu(
       input_matrix[1:genes_batch,],
       design_matrix,
@@ -236,7 +235,7 @@ fit_devil = function(
     }
 
     end_time <- Sys.time()
-    message("[TIMING] BETA GPU RUNTIME:")
+    message("[TIMING] Beta fit computing (GPU):")
     message(as.numeric(difftime(end_time, start_time, units = "secs")))
 
     # Extract beta and theta from GPU results
@@ -384,7 +383,7 @@ fit_devil = function(
 
   if (profiling) {
     end = Sys.time()
-    message(paste0("[TIMING] Beta fit computing : ", end - start))
+    message(paste0("[TIMING] Beta fit computing (CPU) : ", end - start))
   }
 
   return(list(
@@ -521,248 +520,3 @@ cpu_fit <- function(input_matrix, design_matrix, offset_vector,
 }
 
 
-# get_groups_for_model_matrix <- function(model_matrix){
-#   if(! lte_n_equal_rows(model_matrix, ncol(model_matrix))){
-#     return(NULL)
-#   }else{
-#     get_row_groups(model_matrix, n_groups = ncol(model_matrix))
-#   }
-# }
-#
-# handle_input_matrix <- function(input_matrix, verbose) {
-#   if(is.matrix(input_matrix)){
-#     if(!is.numeric(input_matrix)){
-#       stop("The input_matrix argument must consist of numeric values and not of ", mode(input_matrix), " values")
-#     }
-#     data_mat <- input_matrix
-#   } else if (methods::is(input_matrix, "DelayedArray")){
-#     data_mat <- input_matrix
-#   } else if (methods::is(input_matrix, "dgCMatrix") || methods::is(input_matrix, "dgTMatrix")) {
-#     data_mat <- as.matrix(input_matrix)
-#   }else{
-#     stop("Cannot handle data of class '", class(input_matrix), "'.",
-#          "It must be of type dense matrix object (i.e., a base matrix or DelayedArray),",
-#          " or a container for such a matrix (for example: SummarizedExperiment).")
-#   }
-#   data_mat
-# }
-
-
-# fit_devil_old <- function(
-#     input_matrix,
-#     design_matrix,
-#     overdispersion = "MOM",
-#     init_overdispersion = NULL,
-#     init_beta_rough = FALSE,
-#     # do_cox_reid_adjustment = TRUE,
-#     offset=0,
-#     size_factors=NULL,
-#     verbose=FALSE,
-#     max_iter=200,
-#     tolerance=1e-3,
-#     CUDA = FALSE,
-#     batch_size = 1024L,
-#     parallel.cores=1,
-#     profiling = FALSE) {
-#
-#   # Read general info about input matrix and design matrix
-#   gene_names <- rownames(input_matrix)
-#   ngenes <- nrow(input_matrix)
-#   nfeatures <- ncol(design_matrix)
-#
-#   # Detect cores to use
-#   max.cores <- parallel::detectCores()
-#   if (is.null(parallel.cores)) {
-#     n.cores = max.cores
-#   } else {
-#     if (parallel.cores > max.cores) {
-#       message(paste0("Requested ", parallel.cores, " cores, but only ", max.cores, " available."))
-#     }
-#     n.cores = min(max.cores, parallel.cores)
-#   }
-#
-#   # Check if CUDA is available
-#   CUDA_is_available <- FALSE
-#   if (CUDA) {
-#     if (!exists("beta_fit_gpu", mode = "function")) {
-#       warning("CUDA support was not enabled during package installation. ",
-#               "The beta_fit_gpu function is not available. ",
-#               "Reinstall with configure.args='--with-cuda' to enable GPU acceleration. ",
-#               "Falling back to CPU computation.")
-#       CUDA <- FALSE
-#     } else {
-#       message("CUDA support detected - using GPU acceleration")
-#       CUDA_is_available <- TRUE
-#     }
-#   }
-#
-#   # Compute size factors
-#   if (profiling) start = Sys.time()
-#
-#   if (!is.null(size_factors)) {
-#     if (verbose) { message("Compute size factors") }
-#     sf <- calculate_sf(input_matrix, method = size_factors, verbose = verbose)
-#   } else {
-#     sf <- rep(1, nrow(design_matrix))
-#   }
-#
-#   if (profiling) {
-#     end = Sys.time()
-#     message(paste0("Size factors computing : ", end - start))
-#   }
-#
-#   # Calculate offset vector
-#   if (profiling) start = Sys.time()
-#   offset_vector = compute_offset_vector(offset, input_matrix, sf)
-#   if (profiling) {
-#     end = Sys.time()
-#     message(paste0("Offset vector computing : ", end - start))
-#   }
-#
-#   # Initialize overdispersion
-#   if (profiling) start = Sys.time()
-#   if (is.null(init_overdispersion)) {
-#     dispersion_init <- c(estimate_dispersion(input_matrix, offset_vector))
-#   } else {
-#     dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
-#   }
-#   if (profiling) {
-#     end = Sys.time()
-#     message(paste0("Theta init computing : ", end - start))
-#   }
-#
-#   # if (verbose) { message("Initialize beta estimate") }
-#   # groups <- devil:::get_groups_for_model_matrix(design_matrix)
-#
-#   if (verbose) { message("Initialize beta estimate") }
-#   if (profiling) start = Sys.time()
-#
-#   if (init_beta_rough) {
-#     beta_0 = matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
-#     beta_0[,1] = rowMeans(input_matrix) %>% log1p()
-#   } else {
-#     beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
-#   }
-#   #beta_0 = initialize_beta_univariate_matrix_cpp(design_matrix, input_matrix, sf)
-#   if (profiling) {
-#     end = Sys.time()
-#     message(paste0("Beta init computing : ", end - start))
-#   }
-#
-#   if (profiling) start = Sys.time()
-#   if (CUDA & CUDA_is_available) {
-#     message("Messing with CUDA! Implementation still needed")
-#
-#     remainder = ngenes %% batch_size
-#     extra_genes = remainder
-#     genes_batch = ngenes - extra_genes
-#
-#     message("Fit beta CUDA")
-#     start_time <- Sys.time()
-#
-#     res_beta_fit <- beta_fit_gpu(
-#       input_matrix[1:genes_batch,],
-#       design_matrix,
-#       beta_0[1:genes_batch,],
-#       offset_vector,
-#       dispersion_init[1:genes_batch],
-#       max_iter = max_iter,
-#       eps = tolerance,
-#       batch_size = batch_size
-#     )
-#
-#     if (remainder > 0) {
-#       res_beta_fit_extra <- beta_fit_gpu(
-#         input_matrix[(genes_batch+1):ngenes,],
-#         design_matrix,
-#         beta_0[(genes_batch+1):ngenes,],
-#         offset_vector,
-#         dispersion_init[(genes_batch+1):ngenes],
-#         max_iter = max_iter,
-#         eps = tolerance,
-#         batch_size = extra_genes
-#       )
-#     }
-#
-#     end_time <- Sys.time()
-#     message("BETA GPU RUNTIME:")
-#     message(as.numeric(difftime(end_time, start_time, units = "secs")))
-#
-#     beta = res_beta_fit$mu_beta
-#
-#     if (remainder > 0) {
-#       beta_extra = res_beta_fit_extra$mu_beta
-#       beta <- rbind(beta, beta_extra)
-#       beta_iters=c(res_beta_fit$iter, res_beta_fit_extra$iter)
-#     } else {
-#       beta_iters=c(res_beta_fit$iter)
-#     }
-#
-#     if (is.null(dim(beta))) {
-#       beta = matrix(beta, ncol = 1)
-#     }
-#
-#   } else {
-#
-#     if (verbose) { message("Fitting beta coefficients") }
-#
-#     tmp <- parallel::mclapply(1:ngenes, function(i) {
-#       beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)
-#     }, mc.cores = n.cores)
-#
-#     beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
-#     rownames(beta) <- gene_names
-#     beta_iters <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
-#   }
-#   if (profiling) {
-#     end = Sys.time()
-#     message(paste0("Beta fit computing : ", end - start))
-#   }
-#
-#   if (profiling) start = Sys.time()
-#   if (!isFALSE(overdispersion)) {
-#     if (verbose) { message("Fit overdispersion") }
-#
-#     if (overdispersion %in% c("old", "MLE")) {
-#       theta <- parallel::mclapply(1:ngenes, function(i) {
-#         fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_vector,
-#                        tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = TRUE)
-#       }, mc.cores = n.cores) %>% unlist()
-#       theta_iters = NA
-#     } else if (overdispersion %in% c("new", "I")) {
-#       y_unique_cap = as.integer(dim(input_matrix)[2] / 2)
-#       tmp <- parallel::mclapply(1:ngenes, function(i) {
-#         fit_overdispersion_cppp(y = input_matrix[i,], X = design_matrix, mu_beta = beta[i,], off = offset_vector,
-#                                 kappa = dispersion_init[i], max_iter = max_iter, eps_theta = tolerance,
-#                                 newton_max = 16, y_unique_cap = y_unique_cap)
-#       }, mc.cores = n.cores)
-#
-#       theta = lapply(tmp, function(x) x$kappa) %>% unlist()
-#       theta_iters = lapply(tmp, function(x) x$kappa_iters) %>% unlist()
-#     } else if (overdispersion == "MOM") {
-#       theta = estimate_mom_dispersion_cpp(input_matrix, design_matrix, beta, sf)
-#       theta_iters = 0
-#     } else {
-#       stop()
-#     }
-#   } else {
-#     theta = rep(0, ngenes)
-#     theta_iters = 0
-#   }
-#   if (profiling) {
-#     end = Sys.time()
-#     message(paste0("Theta fit computing : ", end - start))
-#   }
-#
-#   return(list(
-#     beta=beta,
-#     overdispersion=theta,
-#     iterations=list(beta_iters=beta_iters, theta_iters = theta_iters),
-#     size_factors=sf,
-#     offset_vector=offset_vector,
-#     design_matrix=design_matrix,
-#     input_matrix=input_matrix,
-#     input_parameters=list(max_iter=max_iter, tolerance=tolerance, parallel.cores=n.cores)
-#   )
-#   )
-# }
