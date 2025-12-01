@@ -39,6 +39,9 @@ overdispersion parameter used as a starting point for the iterative procedures.
 If \code{NULL}, an initial value is estimated from the data via \code{estimate_dispersion()}.
 Recommended value if specified: \code{100}. Default: \code{NULL}.}
 
+\item{init_beta_rough}{Logial. Whether to initialize betas in a rough but extremely fast way.
+Default: \code{FALSE}.}
+
 \item{offset}{Numeric scalar. Value used when computing the offset vector to avoid
 numerical issues with zero counts. Default: \code{0}.}
 
