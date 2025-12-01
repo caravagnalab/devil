@@ -18,15 +18,7 @@ __global__ void initIdentityGPU(float *Matrix, int rows, int cols,float alpha) {
 }
 
 
-void inverseMatrix2(cublasHandle_t cublasH, float *A_device[], float *A_inv_device[], int n ,int batchSize){
-
-  // preliminaries declarations
-  int *pivot = NULL; // pivot indices
-  int *info = NULL; // error info
-
-  //allocation for pivot and info
-  CUDA_CHECK(cudaMallocManaged(&pivot, sizeof(int)*n*batchSize));
-  CUDA_CHECK(cudaMallocManaged(&info, sizeof(int)*batchSize));
+void inverseMatrix2(cublasHandle_t cublasH, float *A_device[], float *A_inv_device[], int n, int batchSize, int*& pivot, int*& info){
 
   //factorize !
   CUBLAS_CHECK( cublasSgetrfBatched(cublasH,
@@ -52,9 +44,8 @@ void inverseMatrix2(cublasHandle_t cublasH, float *A_device[], float *A_inv_devi
       assert(0 == info[i]);
     }
   }
-
-  CUDA_CHECK(cudaFree(pivot));
-  CUDA_CHECK(cudaFree(info));
+  
+  // Don't free here - caller manages memory
   
   return; 
   

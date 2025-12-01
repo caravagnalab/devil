@@ -20,6 +20,9 @@ void invertExactBatch(std::vector<float> vec_exact,std::vector<float> vec_invers
 
   float **vec_pointer;
   float **vec_inverse_pointer;
+  
+  int *pivot = nullptr;
+  int *info = nullptr;
 
   int col2 = col * col;
   //alloc su device la memoria
@@ -28,6 +31,11 @@ void invertExactBatch(std::vector<float> vec_exact,std::vector<float> vec_invers
   //alloco array di matrici
   CUDA_CHECK(cudaMallocManaged(&vec_pointer, sizeof(float *) * batchSize));
   CUDA_CHECK(cudaMallocManaged(&vec_inverse_pointer, sizeof(float*) * batchSize));
+  
+  // Allocate pivot and info arrays
+  CUDA_CHECK(cudaMallocManaged(&pivot, sizeof(int) * col * batchSize));
+  CUDA_CHECK(cudaMallocManaged(&info, sizeof(int) * batchSize));
+  
   for (int j =0;j<batchSize;++j) {
     for (int i = 0; i < col2; ++i)
       vec[i + j * col2] = vec_exact[i];
@@ -37,14 +45,20 @@ void invertExactBatch(std::vector<float> vec_exact,std::vector<float> vec_invers
   CUDA_CHECK(cudaDeviceSynchronize());
   cublasHandle_t cublasH;
   cublasCreate(&cublasH);
-  inverseMatrix2(cublasH, vec_pointer, vec_inverse_pointer, col ,batchSize ) ;
+  inverseMatrix2(cublasH, vec_pointer, vec_inverse_pointer, col, batchSize, pivot, info);
   CUDA_CHECK(cudaDeviceSynchronize());
   for(int j=0;j<batchSize;++j) {
   for(int i=0;i<col2;++i) 
     EXPECT_NEAR(vec_inverse[i+j*col2], vec_inverse_exact[i], 2E-6);
   }
+  // Free allocated memory
+  CUDA_CHECK(cudaFree(pivot));
+  CUDA_CHECK(cudaFree(info));
   CUDA_CHECK( cudaFree(vec) );
   CUDA_CHECK( cudaFree(vec_inverse) );
+  CUDA_CHECK( cudaFree(vec_pointer) );
+  CUDA_CHECK( cudaFree(vec_inverse_pointer) );
+  cublasDestroy(cublasH);
 }
 
 float* einSum(std::vector<float> a, std::vector<int> a_shape,
