@@ -7,8 +7,8 @@ test_that("estimate_dispersion matches manual method-of-moments formula without 
   disp <- estimate_dispersion(count_matrix, offset_vector)
 
   # Manual calculation per gene
-  var_manual  <- matrixStats::rowVars(count_matrix)
-  mean_manual <- matrixStats::rowMeans2(count_matrix)
+  var_manual  <- DelayedMatrixStats::rowVars(count_matrix)
+  mean_manual <- DelayedMatrixStats::rowMeans2(count_matrix)
   mom <- (var_manual - mean_manual) / (mean_manual^2)
   mom[mom < 0 | is.na(mom)] <- 0.01
 

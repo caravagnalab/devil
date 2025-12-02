@@ -1,6 +1,6 @@
 
 test_that("plot_volcano runs without error on simple input", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = paste0("g", 1:10),
     adj_pval = runif(10),
     lfc = rnorm(10)
@@ -11,7 +11,7 @@ test_that("plot_volcano runs without error on simple input", {
 })
 
 test_that("plot_volcano assigns classes correctly", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = c("A","B","C","D"),
     adj_pval = c(0.1, 0.001, 0.1, 0.001),
     lfc = c(0.2, 0.2, 2, 2)
@@ -30,7 +30,7 @@ test_that("plot_volcano assigns classes correctly", {
 })
 
 test_that("plot_volcano removes NA and prints message", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = c("g1","g2","g3"),
     adj_pval = c(0.01, NA, 0.2),
     lfc = c(1, 0.5, -2)
@@ -45,7 +45,7 @@ test_that("plot_volcano removes NA and prints message", {
 })
 
 test_that("plot_volcano replaces zero adj_pval with smallest non-zero value", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = paste0("g", 1:5),
     adj_pval = c(0, 0.01, 0.02, 0, 0.03),
     lfc = rnorm(5)
@@ -64,7 +64,7 @@ test_that("plot_volcano replaces zero adj_pval with smallest non-zero value", {
 })
 
 test_that("plot_volcano centers x-axis when center=TRUE", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = paste0("g", 1:4),
     adj_pval = runif(4),
     lfc = c(-3, -1, 1, 2)
@@ -77,7 +77,7 @@ test_that("plot_volcano centers x-axis when center=TRUE", {
 })
 
 test_that("plot_volcano labels only genes meeting both criteria", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = c("A","B","C"),
     adj_pval = c(0.1, 0.001, 0.001),
     lfc = c(0.5, 0.5, 3)
@@ -90,7 +90,7 @@ test_that("plot_volcano labels only genes meeting both criteria", {
 })
 
 test_that("plot_volcano accepts custom colors", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = paste0("g", 1:3),
     adj_pval = c(0.1, 0.001, 0.001),
     lfc = c(0.2, 0.2, 2)
@@ -103,7 +103,7 @@ test_that("plot_volcano accepts custom colors", {
 })
 
 test_that("plot_volcano sets point alpha and size", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name="g1",
     adj_pval=0.01,
     lfc=2
@@ -117,7 +117,7 @@ test_that("plot_volcano sets point alpha and size", {
 })
 
 test_that("plot_volcano leaves x-axis unconstrained when center=FALSE", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = paste0("g", 1:4),
     adj_pval = runif(4),
     lfc = c(-4, -2, 1, 3)
@@ -129,7 +129,7 @@ test_that("plot_volcano leaves x-axis unconstrained when center=FALSE", {
 })
 
 test_that("plot_volcano works when no genes are significant", {
-  df <- tibble::tibble(
+  df <- dplyr::tibble(
     name = paste0("g", 1:5),
     adj_pval = rep(0.5, 5),
     lfc = rep(0, 5)
