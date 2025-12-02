@@ -235,8 +235,9 @@ fit_devil = function(
     }
 
     end_time <- Sys.time()
-    message("[TIMING] Beta fit computing (GPU):")
-    message(as.numeric(difftime(end_time, start_time, units = "secs")))
+      message(paste0("[TIMING] Beta fit computing (GPU):",difftime(end_time, start_time, units = "secs")))
+
+
 
     # Extract beta and theta from GPU results
     beta <- res_beta_fit$mu_beta
