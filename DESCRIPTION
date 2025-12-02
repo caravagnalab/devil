@@ -11,13 +11,10 @@ Imports:
     DelayedMatrixStats,
     dplyr,
     ggplot2,
-    HDF5Array,
     magrittr,
-    methods,
     Rcpp (>= 1.0.12),
     rlang,
-    stats,
-    torch
+    stats
 Suggests:
     scRNAseq,
     edgeR,
