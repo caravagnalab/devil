@@ -112,9 +112,9 @@ if (is.null(cluster) && "patient" %in% names(meta)) cluster <- factor(meta$patie
 fit <- devil::fit_devil(
   input_matrix        = as.matrix(counts),
   design_matrix       = design,
-  overdispersion      = TRUE,
+  overdispersion      = "MOM",
   offset              = 1e-6, 
-  init_overdispersion = 100,
+  init_overdispersion = NULL,
   size_factors        = "normed_sum",
   parallel.cores      = 1,
   verbose             = TRUE, 

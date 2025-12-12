@@ -18,7 +18,9 @@ Imports:
 Suggests:
     scRNAseq,
     edgeR,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
 LinkingTo: 
     Rcpp,
     RcppArmadillo,
@@ -29,3 +31,4 @@ RoxygenNote: 7.3.3
 URL: https://caravagnalab.github.io/devil/
 Config/Needs/website: rmarkdown
 Config/testthat/edition: 3
+VignetteBuilder: knitr
