@@ -1,5 +1,10 @@
-.Rproj.user
-.Rhistory
 docs
-*DS_Store
-inst/doc
+
+# macOS
+.DS_Store
+
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
