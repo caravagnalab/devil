@@ -8,3 +8,14 @@ docs
 .Rhistory
 .RData
 .Ruserdata
+
+# RStudio project
+*.Rproj
+
+# compiled artifacts
+*.o
+*.so
+*.dll
+*.a
+*.dylib
+
