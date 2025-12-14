@@ -22,3 +22,4 @@ docs
 *.Rproj
 src/*.o
 src/*.so
+inst/doc

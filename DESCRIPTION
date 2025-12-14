@@ -1,9 +1,8 @@
 Package: devil
 Title: devil
-Version: 0.1.0
-Author: Giovanni Santacatterina and Niccolò Tosato
+Version: 0.99.0
 Authors@R: c(person("Giovanni", "Santacatterina", role=c("aut", "cre"), email="santacatterinagiovanni@gmail.com"))
-Description: An R package to perform fast and scalable single cell differential expression analysis.
+Description: devil is an R package for fast and scalable single-cell differential expression analysis using sandwich covariance estimators to account for multi-patient variability, with optional GPU acceleration for efficient inference.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports: 
@@ -29,6 +28,8 @@ LinkingTo:
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 URL: https://caravagnalab.github.io/devil/
+BugReports: https://github.com/caravagnalab/devil/issues
+biocViews: RNASeq, Software, SingleCell, DifferentialExpression
 Config/Needs/website: rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr

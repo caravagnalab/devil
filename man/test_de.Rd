@@ -10,7 +10,7 @@ test_de(
   pval_adjust_method = "BH",
   max_lfc = 10,
   clusters = NULL,
-  parallel.cores = NULL
+  parallel.cores = 1
 )
 }
 \arguments{
@@ -36,7 +36,7 @@ Larger values are capped at ±max_lfc. Default: 10}
 variance estimation. Length must match number of samples. Default: NULL}
 
 \item{parallel.cores}{Integer or NULL. Number of CPU cores for parallel processing.
-If NULL, uses all available cores. Default: NULL}
+If NULL, uses all available cores. Default: 1}
 }
 \value{
 A tibble with columns:
@@ -66,14 +66,42 @@ The variance estimation can account for sample clustering (e.g., multiple sample
 from the same patient) using a sandwich estimator for robust inference.
 }
 \examples{
-\dontrun{
-# Basic differential expression test
-results <- test_de(fit, contrast = c(0, 1, -1))
+## Example: test_de() on a simple two-group comparison
+set.seed(1)
 
-# With sample clustering and stricter fold change threshold
-results <- test_de(fit, contrast = c(0, 1, -1),
-                   clusters = patient_ids,
-                   max_lfc = 5)
-}
+# Simulate counts (genes x cells)
+counts <- matrix(rnbinom(1000, mu = 0.2, size = 1), nrow = 100, ncol = 10)
+rownames(counts) <- paste0("gene", seq_len(nrow(counts)))
+
+# Two-group design (no intercept)
+group <- factor(rep(c("A", "B"), each = 5))
+design <- model.matrix(~ 0 + group)
+colnames(design) <- levels(group)
+
+# Fit model
+fit <- fit_devil(
+    input_matrix  = counts,
+    design_matrix = design,
+    size_factors  = "normed_sum"
+)
+
+# Test A vs B (contrast = +1*A -1*B)
+res <- test_de(
+    fit,
+    contrast = c(A = 1, B = -1)
+)
+head(res[order(res$adj_pval), ])
+
+## Example: clustered (patient-aware) variance (sandwich SE)
+
+patient <- factor(rep(c("P1", "P2"), each = 5))
+
+res_clustered <- test_de(
+    fit,
+    contrast = c(A = 1, B = -1),
+    clusters = patient
+)
+
+head(res_clustered[order(res_clustered$adj_pval), ])
 
 }
