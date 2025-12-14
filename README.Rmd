@@ -7,10 +7,10 @@ output: github_document
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "man/figures/README-",
-  out.width = "100%"
+    collapse = TRUE,
+    comment = "#>",
+    fig.path = "man/figures/README-",
+    out.width = "100%"
 )
 ```
 
@@ -44,7 +44,7 @@ This is a basic example which shows you how to fit the expression for a single g
 ```{r example}
 library(devil)
 y <- t(as.matrix(rnbinom(1000, 1, .1)))
-fit <- devil::fit_devil(input_matrix=y, design_matrix=matrix(1, ncol = 1, nrow = 1000), verbose=T, size_factors=T, overdispersion = T)
+fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = T, overdispersion = T)
 test <- devil::test_de(fit, c(1))
 ```
 

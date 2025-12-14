@@ -99,13 +99,15 @@ giving the number of iterations used for each gene.}
 }
 }
 \description{
-Fits a statistical model to count data, particularly designed for RNA sequencing data analysis.
-The function estimates regression coefficients (beta), gene-wise overdispersion parameters,
-and normalizes data using size factors. It supports both CPU and (optionally) GPU-based
-computation with parallel processing capabilities.
+Fits a statistical model to count data, particularly designed for RNA-seq
+data analysis. The function estimates regression coefficients (beta),
+gene-wise overdispersion parameters, and normalizes data using size factors.
+It supports both CPU and (optionally) GPU-based computation with
+parallel processing capabilities.
 }
 \details{
-The function implements a negative binomial regression model with the following steps:
+The function implements a negative binomial regression model with
+the following steps:
 \enumerate{
 \item Computes size factors for data normalization (if requested)
 \item Initializes model parameters including beta coefficients and overdispersion
@@ -148,3 +150,28 @@ dispersion estimate.
 }
 }
 
+\examples{
+## Example: fit a simple two-group model
+set.seed(1)
+
+# Simulate a small counts matrix (genes x cells)
+counts <- matrix(
+    rnbinom(1000, mu = 0.2, size = 1),
+    nrow = 100, ncol = 10
+)
+rownames(counts) <- paste0("gene", seq_len(nrow(counts)))
+
+# Two-group design (no intercept)
+group <- factor(rep(c("A", "B"), each = 5))
+design <- model.matrix(~ 0 + group)
+colnames(design) <- levels(group)
+
+# Fit the model
+fit <- fit_devil(
+    input_matrix  = counts,
+    design_matrix = design,
+    size_factors  = "normed_sum",
+    verbose       = TRUE
+)
+
+}

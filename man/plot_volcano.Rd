@@ -88,18 +88,23 @@ labels genes meeting both significance criteria.
 }
 }
 \examples{
-\dontrun{
+set.seed(1)
+y <- t(as.matrix(rnbinom(1000, 1, .1)))
+fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T)
+de_results <- devil::test_de(devil.fit = fit, contrast = c(1))
+
 # Basic volcano plot
 plot_volcano(de_results)
 
 # Custom thresholds and colors
 plot_volcano(de_results,
-            lfc_cut = 2,
-            pval_cut = 0.01,
-            colors = c("grey80", "blue", "green", "red"))
+    lfc_cut = 2,
+    pval_cut = 0.01,
+    colors = c("grey80", "blue", "green", "red")
+)
 
 # Without gene labels
+de_results$name <- "fake gene"
 plot_volcano(de_results, labels = FALSE)
-}
 
 }

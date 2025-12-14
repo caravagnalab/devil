@@ -52,64 +52,75 @@
 #' - Gene labels are placed with overlap prevention
 #'
 #' @examples
-#' \dontrun{
+#' set.seed(1)
+#' y <- t(as.matrix(rnbinom(1000, 1, .1)))
+#' fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T)
+#' de_results <- devil::test_de(devil.fit = fit, contrast = c(1))
+#'
 #' # Basic volcano plot
 #' plot_volcano(de_results)
 #'
 #' # Custom thresholds and colors
 #' plot_volcano(de_results,
-#'             lfc_cut = 2,
-#'             pval_cut = 0.01,
-#'             colors = c("grey80", "blue", "green", "red"))
+#'     lfc_cut = 2,
+#'     pval_cut = 0.01,
+#'     colors = c("grey80", "blue", "green", "red")
+#' )
 #'
 #' # Without gene labels
+#' de_results$name <- "fake gene"
 #' plot_volcano(de_results, labels = FALSE)
-#' }
 #'
 #' @export
 plot_volcano <- function(
     devil.res,
-    lfc_cut=1,
-    pval_cut=.05,
-    labels=TRUE,
-    colors=c("gray", "forestgreen", "steelblue", "indianred"),
-    color_alpha=.7,
-    point_size=1,
-    center=TRUE,
-    title="Volcano plot") {
+    lfc_cut = 1,
+    pval_cut = .05,
+    labels = TRUE,
+    colors = c("gray", "forestgreen", "steelblue", "indianred"),
+    color_alpha = .7,
+    point_size = 1,
+    center = TRUE,
+    title = "Volcano plot"
+) {
+    if (sum(is.na(devil.res))) {
+        message("Warning: some of the reults are unrealiable (i.e. contains NaN)\n Those genes will not be displayed")
+        devil.res <- stats::na.omit(devil.res)
+    }
 
-  if (sum(is.na(devil.res))) {
-    message('Warning: some of the reults are unrealiable (i.e. contains NaN)\n Those genes will not be displayed')
-    devil.res <- stats::na.omit(devil.res)
-  }
-
-  d <- devil.res %>%
-    dplyr::mutate(pval_filter = .data$adj_pval <= pval_cut, lfc_filter = abs(.data$lfc) >= lfc_cut) %>%
-    dplyr::mutate(class = dplyr::if_else(.data$pval_filter & .data$lfc_filter, "p-value and lfc",
-                                        dplyr::if_else(.data$pval_filter, "p-value",
-                                                      dplyr::if_else(.data$lfc_filter, "lfc", "non-significant")))) %>%
-    dplyr::mutate(class = factor(class, levels = c("non-significant", "lfc", 'p-value', 'p-value and lfc'))) %>%
-    dplyr::mutate(label = dplyr::if_else(class == 'p-value and lfc', .data$name, NA))
+    d <- devil.res %>%
+        dplyr::mutate(pval_filter = .data$adj_pval <= pval_cut, lfc_filter = abs(.data$lfc) >= lfc_cut) %>%
+        dplyr::mutate(class = dplyr::if_else(.data$pval_filter & .data$lfc_filter, "p-value and lfc",
+            dplyr::if_else(.data$pval_filter, "p-value",
+                dplyr::if_else(.data$lfc_filter, "lfc", "non-significant")
+            )
+        )) %>%
+        dplyr::mutate(class = factor(class, levels = c("non-significant", "lfc", "p-value", "p-value and lfc"))) %>%
+        dplyr::mutate(label = dplyr::if_else(class == "p-value and lfc", .data$name, NA))
 
 
-  if (sum(d$adj_pval == 0) > 0) {
-    min_value = min(d$adj_pval[d$adj_pval > 0])
-    message(paste0(sum(d$adj_pval == 0), ' genes have adjusted p-value equal to 0, will be set to ', min_value))
-    d$adj_pval[d$adj_pval == 0] <- min_value
-  }
+    if (sum(d$adj_pval == 0) > 0) {
+        min_value <- min(d$adj_pval[d$adj_pval > 0])
+        message(paste0(sum(d$adj_pval == 0), " genes have adjusted p-value equal to 0, will be set to ", min_value))
+        d$adj_pval[d$adj_pval == 0] <- min_value
+    }
 
-  p <- d %>%
-    ggplot2::ggplot(mapping = ggplot2::aes(x=.data$lfc, y=-log10(.data$adj_pval), col=.data$class, label=.data$label)) +
-    ggplot2::geom_point(alpha = color_alpha, size=point_size) +
-    ggplot2::theme_minimal() +
-    ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col="") +
-    ggplot2::scale_color_manual(values = colors) +
-    ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
-    ggplot2::geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
-    ggplot2::ggtitle(title) +
-    ggplot2::theme(legend.position = 'bottom')
+    p <- d %>%
+        ggplot2::ggplot(mapping = ggplot2::aes(x = .data$lfc, y = -log10(.data$adj_pval), col = .data$class, label = .data$label)) +
+        ggplot2::geom_point(alpha = color_alpha, size = point_size) +
+        ggplot2::theme_minimal() +
+        ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col = "") +
+        ggplot2::scale_color_manual(values = colors) +
+        ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = "dashed") +
+        ggplot2::geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
+        ggplot2::ggtitle(title) +
+        ggplot2::theme(legend.position = "bottom")
 
-  if (center) { p <- p + ggplot2::xlim(c(-max(abs(d$lfc)), max(abs(d$lfc))))}
-  if (labels) { p <- p + ggplot2::geom_text(col = 'black', check_overlap = TRUE, na.rm = TRUE)}
-  p
+    if (center) {
+        p <- p + ggplot2::xlim(c(-max(abs(d$lfc)), max(abs(d$lfc))))
+    }
+    if (labels) {
+        p <- p + ggplot2::geom_text(col = "black", check_overlap = TRUE, na.rm = TRUE)
+    }
+    p
 }

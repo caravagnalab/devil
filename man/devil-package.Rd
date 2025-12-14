@@ -8,12 +8,13 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-An R package to perform fast and scalable single cell differential expression analysis.
+devil is an R package for fast and scalable single-cell differential expression analysis using sandwich covariance estimators to account for multi-patient variability, with optional GPU acceleration for efficient inference.
 }
 \seealso{
 Useful links:
 \itemize{
   \item \url{https://caravagnalab.github.io/devil/}
+  \item Report bugs at \url{https://github.com/caravagnalab/devil/issues}
 }
 
 }
