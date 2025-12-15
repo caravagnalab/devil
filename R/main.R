@@ -162,7 +162,7 @@ fit_devil <- function(
         n.cores <- max.cores
     } else {
         if (parallel.cores > max.cores) {
-            message(paste0("Requested ", parallel.cores, " cores, but only ", max.cores, " available."))
+            message("Requested ", parallel.cores, " cores, but only ", max.cores, " available.")
         }
         n.cores <- min(max.cores, parallel.cores)
     }
@@ -199,7 +199,7 @@ fit_devil <- function(
     }
     if (profiling) {
         end <- Sys.time()
-        message(paste0("[TIMING] Size factors computing : ", end - start))
+        message("[TIMING] Size factors computing : ", end - start)
     }
 
     ## - Compute offset vector ----
@@ -207,7 +207,7 @@ fit_devil <- function(
     offset_vector <- compute_offset_vector(offset, input_matrix, sf)
     if (profiling) {
         end <- Sys.time()
-        message(paste0("[TIMING] Offset vector computing : ", end - start))
+        message("[TIMING] Offset vector computing : ", end - start)
     }
 
     # - Start GPU vs CPU branch ----
@@ -263,7 +263,7 @@ fit_devil <- function(
         }
 
         end_time <- Sys.time()
-        message(paste0("[TIMING] Beta fit computing (GPU):", difftime(end_time, start_time, units = "secs")))
+        message("[TIMING] Beta fit computing (GPU):", difftime(end_time, start_time, units = "secs"))
 
 
         # Extract beta and theta from GPU results
@@ -412,7 +412,7 @@ fit_devil <- function(
 
     if (profiling) {
         end <- Sys.time()
-        message(paste0("[TIMING] Beta fit computing (CPU) : ", end - start))
+        message("[TIMING] Beta fit computing (CPU) : ", end - start)
     }
 
     return(list(
