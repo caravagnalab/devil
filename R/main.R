@@ -86,13 +86,6 @@
 #' @param parallel.cores Integer or \code{NULL}. Number of CPU cores for parallel
 #'   processing with \code{parallel::mclapply}. If \code{NULL}, uses all available cores.
 #'   Default: \code{1}.
-#' @param profiling Logical. If \code{TRUE}, prints timing information for major
-#'   steps (size factors, offset computation, initial dispersion, beta fit, theta fit).
-#'   Useful for performance profiling. Default: \code{FALSE}.
-#' @param TEST Logical. If \code{TRUE}, enables GPU validation mode. When CUDA is enabled,
-#'   this will compute ground truth results on CPU and compare with GPU results, reporting
-#'   correlations and differences for init_beta, k (dispersion), theta (overdispersion),
-#'   and final beta coefficients. Default: \code{FALSE}.
 #'
 #' @return A list containing:
 #' \describe{
@@ -146,9 +139,7 @@ fit_devil <- function(
     tolerance = 1e-3,
     CUDA = FALSE,
     batch_size = 1024L,
-    parallel.cores = 1,
-    profiling = FALSE,
-    TEST = FALSE
+    parallel.cores = 1
 ) {
     # - Input parameters ----
     # Read general info about input matrix and design matrix
@@ -188,7 +179,6 @@ fit_devil <- function(
 
     # - CPU and GPU common part (i.e. size_factors and offset_vectors) ----
     ## - Compute size factors ----
-    if (profiling) start <- Sys.time()
     if (!is.null(size_factors)) {
         if (verbose) {
             message("Compute size factors")
@@ -197,43 +187,14 @@ fit_devil <- function(
     } else {
         sf <- rep(1, nrow(design_matrix))
     }
-    if (profiling) {
-        end <- Sys.time()
-        message("[TIMING] Size factors computing : ", end - start)
-    }
 
     ## - Compute offset vector ----
-    if (profiling) start <- Sys.time()
     offset_vector <- compute_offset_vector(offset, input_matrix, sf)
-    if (profiling) {
-        end <- Sys.time()
-        message("[TIMING] Offset vector computing : ", end - start)
-    }
 
     # - Start GPU vs CPU branch ----
-    if (profiling) start <- Sys.time()
     if (CUDA & CUDA_is_available) {
+
         ## - GPU branch ----
-
-        # If TEST mode, compute CPU ground truth for validation
-        cpu_ground_truth <- NULL
-        if (TEST) {
-            message("\n=== TEST MODE ENABLED: Computing CPU ground truth ===")
-            cpu_ground_truth <- cpu_fit(
-                input_matrix = input_matrix,
-                design_matrix = design_matrix,
-                offset_vector = offset_vector,
-                init_overdispersion = init_overdispersion,
-                init_beta_rough = init_beta_rough,
-                overdispersion = "MOM", # GPU uses MOM
-                n.cores = n.cores,
-                max_iter = max_iter,
-                tolerance = tolerance,
-                verbose = verbose
-            )
-            message("CPU ground truth computed.\n")
-        }
-
         remainder <- ngenes %% batch_size
         extra_genes <- remainder
         genes_batch <- ngenes - extra_genes
@@ -247,7 +208,7 @@ fit_devil <- function(
             max_iter = max_iter,
             eps = tolerance,
             batch_size = batch_size,
-            TEST = TEST
+            TEST = FALSE
         )
 
         if (remainder > 0) {
@@ -258,25 +219,19 @@ fit_devil <- function(
                 max_iter = max_iter,
                 eps = tolerance,
                 batch_size = extra_genes,
-                TEST = TEST
+                TEST = FALSE
             )
         }
 
         end_time <- Sys.time()
         message("[TIMING] Beta fit computing (GPU):", difftime(end_time, start_time, units = "secs"))
 
-
         # Extract beta and theta from GPU results
         beta <- res_beta_fit$mu_beta
         theta <- res_beta_fit$theta
 
-        # Extract TEST-specific outputs if available
-        gpu_k <- NULL
-        gpu_beta_init <- NULL
-        if (TEST && !is.null(res_beta_fit$k)) {
-            gpu_k <- res_beta_fit$k
-            gpu_beta_init <- res_beta_fit$beta_init
-        }
+        # gpu_k <- NULL
+        # gpu_beta_init <- NULL
 
         if (remainder > 0) {
             beta_extra <- res_beta_fit_extra$mu_beta
@@ -284,11 +239,6 @@ fit_devil <- function(
             beta <- rbind(beta, beta_extra)
             theta <- c(theta, theta_extra)
             beta_iters <- c(res_beta_fit$iter, res_beta_fit_extra$iter)
-
-            if (TEST && !is.null(res_beta_fit_extra$k)) {
-                gpu_k <- c(gpu_k, res_beta_fit_extra$k)
-                gpu_beta_init <- rbind(gpu_beta_init, res_beta_fit_extra$beta_init)
-            }
         } else {
             beta_iters <- c(res_beta_fit$iter)
         }
@@ -298,85 +248,6 @@ fit_devil <- function(
         }
 
         rownames(beta) <- gene_names
-
-        # === GPU VALIDATION AGAINST CPU GROUND TRUTH ===
-        if (TEST && !is.null(cpu_ground_truth)) {
-            message("\n===============================================")
-            message("=== GPU vs CPU VALIDATION RESULTS ===")
-            message("===============================================\n")
-
-            # 1. Validate init_beta (rough initialization)
-            if (!is.null(gpu_beta_init)) {
-                # CPU equivalent: rough init
-                cpu_beta_init <- matrix(0, nrow = nrow(input_matrix), ncol = ncol(design_matrix))
-                cpu_beta_init[, 1] <- log1p(rowMeans(input_matrix))
-
-                cor_beta_init <- stats::cor(as.vector(gpu_beta_init[, 1]), as.vector(cpu_beta_init[, 1]))
-                mae_beta_init <- mean(abs(gpu_beta_init[, 1] - cpu_beta_init[, 1]))
-                rmse_beta_init <- sqrt(mean((gpu_beta_init[, 1] - cpu_beta_init[, 1])^2))
-
-                message("1. BETA INITIALIZATION (rough)")
-                message(sprintf("   Correlation: %.6f", cor_beta_init))
-                message(sprintf("   MAE:         %.6e", mae_beta_init))
-                message(sprintf("   RMSE:        %.6e\n", rmse_beta_init))
-            }
-
-            # 2. Validate k (1/dispersion_init)
-            if (!is.null(gpu_k)) {
-                cpu_dispersion_init <- estimate_dispersion(input_matrix, offset_vector)
-                cpu_k <- 1.0 / cpu_dispersion_init
-
-                cor_k <- stats::cor(gpu_k, cpu_k)
-                mae_k <- mean(abs(gpu_k - cpu_k))
-                rmse_k <- sqrt(mean((gpu_k - cpu_k)^2))
-                rel_error_k <- mean(abs(gpu_k - cpu_k) / (abs(cpu_k) + 1e-10))
-
-                message("2. DISPERSION (k = 1/theta_init)")
-                message(sprintf("   Correlation:     %.6f", cor_k))
-                message(sprintf("   MAE:             %.6e", mae_k))
-                message(sprintf("   RMSE:            %.6e", rmse_k))
-                message(sprintf("   Relative Error:  %.6f\n", rel_error_k))
-            }
-
-            # 3. Validate theta (MOM overdispersion)
-            cor_theta <- stats::cor(theta, cpu_ground_truth$theta)
-            mae_theta <- mean(abs(theta - cpu_ground_truth$theta))
-            rmse_theta <- sqrt(mean((theta - cpu_ground_truth$theta)^2))
-            rel_error_theta <- mean(abs(theta - cpu_ground_truth$theta) / (abs(cpu_ground_truth$theta) + 1e-10))
-
-            message("3. OVERDISPERSION (MOM theta)")
-            message(sprintf("   Correlation:     %.6f", cor_theta))
-            message(sprintf("   MAE:             %.6e", mae_theta))
-            message(sprintf("   RMSE:            %.6e", rmse_theta))
-            message(sprintf("   Relative Error:  %.6f\n", rel_error_theta))
-
-            # 4. Validate final beta coefficients
-            cor_beta_all <- stats::cor(as.vector(beta), as.vector(cpu_ground_truth$beta))
-            mae_beta <- mean(abs(beta - cpu_ground_truth$beta))
-            rmse_beta <- sqrt(mean((beta - cpu_ground_truth$beta)^2))
-
-            # Per-coefficient correlation
-            cor_beta_per_coef <- numeric(ncol(beta))
-            for (j in seq_len(ncol(beta))) {
-                cor_beta_per_coef[j] <- stats::cor(beta[, j], cpu_ground_truth$beta[, j])
-            }
-
-            message("4. FINAL BETA COEFFICIENTS")
-            message(sprintf("   Overall Correlation: %.6f", cor_beta_all))
-            message(sprintf("   MAE:                 %.6e", mae_beta))
-            message(sprintf("   RMSE:                %.6e", rmse_beta))
-            if (ncol(beta) > 1) {
-                message("   Per-coefficient correlations:")
-                for (j in seq_len(ncol(beta))) {
-                    message(sprintf("      Beta[,%d]: %.6f", j, cor_beta_per_coef[j]))
-                }
-            }
-            message("")
-
-            message("===============================================")
-            message("=== END VALIDATION ===")
-            message("===============================================\n")
-        }
 
         # Create fit_res structure to match CPU branch
         fit_res <- list(
@@ -388,14 +259,6 @@ fit_devil <- function(
             )
         )
 
-        # Add validation results if TEST mode
-        if (TEST && !is.null(cpu_ground_truth)) {
-            fit_res$test_results <- list(
-                gpu_k = gpu_k,
-                gpu_beta_init = gpu_beta_init,
-                cpu_ground_truth = cpu_ground_truth
-            )
-        }
     } else {
         ## - CPU branch ----
         fit_res <- cpu_fit(
@@ -408,11 +271,6 @@ fit_devil <- function(
             n.cores = n.cores, max_iter = max_iter,
             tolerance = tolerance, verbose = verbose
         )
-    }
-
-    if (profiling) {
-        end <- Sys.time()
-        message("[TIMING] Beta fit computing (CPU) : ", end - start)
     }
 
     return(list(

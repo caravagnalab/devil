@@ -17,9 +17,7 @@ fit_devil(
   tolerance = 0.001,
   CUDA = FALSE,
   batch_size = 1024L,
-  parallel.cores = 1,
-  profiling = FALSE,
-  TEST = FALSE
+  parallel.cores = 1
 )
 }
 \arguments{
@@ -73,15 +71,6 @@ Only relevant if \code{CUDA = TRUE}. Default: \code{1024}.}
 \item{parallel.cores}{Integer or \code{NULL}. Number of CPU cores for parallel
 processing with \code{parallel::mclapply}. If \code{NULL}, uses all available cores.
 Default: \code{1}.}
-
-\item{profiling}{Logical. If \code{TRUE}, prints timing information for major
-steps (size factors, offset computation, initial dispersion, beta fit, theta fit).
-Useful for performance profiling. Default: \code{FALSE}.}
-
-\item{TEST}{Logical. If \code{TRUE}, enables GPU validation mode. When CUDA is enabled,
-this will compute ground truth results on CPU and compare with GPU results, reporting
-correlations and differences for init_beta, k (dispersion), theta (overdispersion),
-and final beta coefficients. Default: \code{FALSE}.}
 }
 \value{
 A list containing:

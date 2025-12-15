@@ -1,8 +1,8 @@
 ---
-title: "quickSetup"
+title: "Quick Setup"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{quick Setup}
+  %\VignetteIndexEntry{Quick Setup}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -82,6 +82,7 @@ For additional help, please open an issue on the [GitHub repository](https://git
 ## Next Steps
 
 After successful installation, load the package:
+
 ```{r eval=FALSE}
 library(devil)
 ```

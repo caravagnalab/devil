@@ -1,3 +1,4 @@
+
 test_that("plot_volcano runs without error on simple input", {
     df <- dplyr::tibble(
         name = paste0("g", 1:10),
@@ -35,9 +36,9 @@ test_that("plot_volcano removes NA and prints message", {
         lfc = c(1, 0.5, -2)
     )
 
-    expect_message(
-        p <- plot_volcano(df),
-        "Warning: some of the reults are unrealiable"
+    expect_warning(
+      p <- plot_volcano(df),
+      "Some of the reults are unrealiable"
     )
 
     expect_equal(nrow(p$data), 2)

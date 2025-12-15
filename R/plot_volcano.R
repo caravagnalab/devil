@@ -54,10 +54,11 @@
 #' @examples
 #' set.seed(1)
 #' y <- t(as.matrix(rnbinom(1000, 1, .1)))
-#' fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T)
+#' fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000))
 #' de_results <- devil::test_de(devil.fit = fit, contrast = c(1))
 #'
 #' # Basic volcano plot
+#' de_results$name = paste0("Fake gene")
 #' plot_volcano(de_results)
 #'
 #' # Custom thresholds and colors
@@ -84,7 +85,7 @@ plot_volcano <- function(
     title = "Volcano plot"
 ) {
     if (sum(is.na(devil.res))) {
-        message("Warning: some of the reults are unrealiable (i.e. contains NaN)\n Those genes will not be displayed")
+        warning("Some of the reults are unrealiable (i.e. contains NaN)\n Those genes will not be displayed")
         devil.res <- stats::na.omit(devil.res)
     }
 

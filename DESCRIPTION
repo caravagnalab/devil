@@ -29,7 +29,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 URL: https://caravagnalab.github.io/devil/
 BugReports: https://github.com/caravagnalab/devil/issues
-biocViews: RNASeq, Software, SingleCell, DifferentialExpression
+biocViews: RNASeq, Software, SingleCell, DifferentialExpression, Sequencing, Normalization
 Config/Needs/website: rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr
