@@ -2,7 +2,7 @@ Package: devil
 Title: devil
 Version: 0.99.0
 Authors@R: c(person("Giovanni", "Santacatterina", role=c("aut", "cre"), email="santacatterinagiovanni@gmail.com"))
-Description: devil is an R package for fast and scalable single-cell differential expression analysis using sandwich covariance estimators to account for multi-patient variability, with optional GPU acceleration for efficient inference.
+Description: devil is an R package for fast, scalable differential expression analysis of single-cell and single-nucleus RNA-sequencing data. It is designed to operate directly at the cell level while accounting for complex experimental structure. It employs a statistical framework based on generalized linear models with cluster-robust (sandwich) covariance estimators, enabling valid inference in the presence of multi-patient, multi-sample, or repeated-measurement designs. To support analyses at atlas scale, devil combines efficient variational inference with optional GPU acceleration, delivering substantial gains in runtime and memory efficiency while retaining accurate and well-calibrated statistical tests.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports: 

@@ -89,7 +89,7 @@ test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10
         n.cores <- max.cores
     } else {
         if (parallel.cores > max.cores) {
-            message(paste0("Requested ", parallel.cores, " cores, but only ", max.cores, " available."))
+            message("Requested ", parallel.cores, " cores, but only ", max.cores, " available.")
         }
         n.cores <- min(max.cores, parallel.cores)
     }
