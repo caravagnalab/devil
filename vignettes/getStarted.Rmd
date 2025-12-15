@@ -1,16 +1,16 @@
 ---
-title: "getStarted"
+title: "Get started"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{getStarted}
+  %\VignetteIndexEntry{Get started}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-    collapse = TRUE,
-    comment = "#>"
+  collapse = TRUE,
+  comment = "#>"
 )
 ```
 
@@ -188,8 +188,8 @@ Quick peek at the top hits:
 
 ```{r}
 test %>%
-    arrange(adj_pval, desc(abs(lfc))) %>%
-    select(name, lfc, pval, adj_pval) %>%
+    dplyr::arrange(adj_pval, desc(abs(lfc))) %>%
+    dplyr::select(name, lfc, pval, adj_pval) %>%
     head(10)
 ```
 

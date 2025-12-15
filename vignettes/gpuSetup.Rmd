@@ -1,9 +1,8 @@
-
 ---
-title: "gpuSetup"
-output: html_document
+title: "GPU and CUDA Setup"
+output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{gpu Setup}
+  %\VignetteIndexEntry{GPU and CUDA Setup}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

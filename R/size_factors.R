@@ -77,7 +77,7 @@ normed_sum_sf <- function(Y) {
     all_zero_cols <- (sf == 0) # Check for all-zero columns
 
     if (any(all_zero_cols)) {
-        stop("Error: At least one column (sample) contains all zeros, unable to compute size factor. ",
+        stop("At least one column (sample) contains all zeros, unable to compute size factor. ",
             "Please filter out empty samples from input matrix.",
             call. = FALSE
         )

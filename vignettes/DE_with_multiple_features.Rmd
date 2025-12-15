@@ -1,0 +1,349 @@
+---
+title: "Using devil for complex designs with multiple covariates"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using devil for complex designs with multiple covariates}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>",
+    fig.width = 7,
+    fig.height = 5
+)
+```
+
+```{r message=FALSE}
+library(devil)
+library(scRNAseq)
+library(SingleCellExperiment)
+library(Matrix)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+In this vignette we illustrate how to use **devil** with a **non-trivial design matrix** including multiple covariates and interactions, using the `RichardTCellData()` dataset from the **scRNAseq** package. We'll show how to:
+
+1. Fit a model with multiple covariates
+2. Extract and interpret coefficients
+3. Perform differential expression testing
+4. Visualize results
+
+## Loading the dataset
+```{r}
+sce <- scRNAseq::RichardTCellData()
+sce
+colnames(colData(sce))
+head(as.data.frame(colData(sce))[, c("individual", "age", "stimulus", "time", "single.cell.quality")])
+```
+
+## Basic filtering
+
+We keep only cells flagged as high quality and do light gene filtering for speed.
+
+```{r}
+# Keep only good-quality cells
+sce <- sce[, sce$`single cell quality` == "OK"]
+
+# Make sure key covariates are factors
+sce$individual <- factor(sce$individual)
+sce$age <- factor(sce$age) # e.g. "young"/"old"
+sce$stimulus <- droplevels(factor(sce$stimulus))
+sce$time <- as.numeric(sce$time)
+sce$time_factor <- factor(sce$time, levels = sort(unique(sce$time)))
+
+# Quick summary
+table(sce$stimulus, sce$time_factor)
+table(sce$age)
+length(unique(sce$individual))
+```
+
+Filter genes with very low counts (optional):
+
+```{r}
+counts <- assay(sce, "counts")
+keep_genes <- Matrix::rowMeans(counts) > .1 & rowSums(counts > 0) > 100
+sce <- sce[keep_genes, ]
+sce <- sce[, sce$stimulus != "unstimulated"]
+dim(sce)
+```
+
+For this vignette, we subsample further so that `devil` runs very quickly:
+
+```{r}
+set.seed(123)
+n_genes <- min(2000, nrow(sce))
+n_cells <- min(3000, ncol(sce))
+gene_idx <- sample(seq_len(nrow(sce)), n_genes)
+cell_idx <- sample(seq_len(ncol(sce)), n_cells)
+sce_sub <- sce[gene_idx, cell_idx]
+sce_sub
+```
+
+From now on we'll work with `sce_sub`.
+
+## Building a complex design matrix
+
+We consider a model with:
+
+- **Main effects**: `stimulus` (different T cell stimulation conditions), `age` (as continuous variable)
+- **Reference levels**: The first level of each factor will be the baseline
+
+```{r}
+meta_df <- as.data.frame(colData(sce_sub))
+meta_df$stimulus <- droplevels(factor(meta_df$stimulus))
+meta_df$time_factor <- factor(meta_df$time_factor)
+meta_df$age <- meta_df$age
+meta_df$individual <- factor(meta_df$individual)
+
+design <- model.matrix(
+    ~ stimulus + age,
+    data = meta_df
+)
+head(design)
+colnames(design)
+```
+
+The design matrix includes:
+
+- `(Intercept)`: Baseline expression level
+- `stimulus*`: Effects of different stimulation conditions relative to the reference
+- `age*`: Effect of age group
+
+## Fitting the devil model
+
+Now, `fit_devil()` takes a count matrix and a design matrix and returns coefficients and overdispersions.
+
+```{r}
+Y <- as.matrix(assay(sce_sub, "counts"))
+devil_fit <- devil::fit_devil(
+    input_matrix = Y,
+    design_matrix = design,
+    verbose = TRUE,
+    init_beta_rough = FALSE,
+    size_factors = "normed_sum", 
+    overdispersion = "MOM"
+)
+```
+
+## Interpreting the model coefficients
+
+The fitted model contains coefficient estimates (log-scale) for each gene and each term in the design matrix.
+```{r}
+# Extract coefficient matrix (genes x coefficients)
+beta_matrix <- devil_fit$beta
+dim(beta_matrix)
+colnames(beta_matrix) = colnames(design)
+
+# Look at coefficient distributions for a few terms
+coef_df <- as.data.frame(beta_matrix) %>%
+    mutate(gene = rownames(beta_matrix))
+
+# Visualize coefficient distributions
+coef_long <- coef_df %>%
+    pivot_longer(cols = -gene, names_to = "coefficient", values_to = "value")
+
+ggplot(coef_long %>% dplyr::filter(coefficient != "(Intercept)"), 
+       aes(x = value, fill = coefficient)) +
+    geom_density(alpha = 0.5) +
+    facet_wrap(~coefficient, scales = "free") +
+    theme_bw() +
+    labs(title = "Distribution of coefficient estimates across genes",
+         x = "Coefficient value (log scale)",
+         y = "Density") +
+    theme(legend.position = "none")
+```
+
+**Interpretation**: 
+
+- Coefficients represent log-fold changes relative to the baseline (intercept)
+- Large positive coefficients indicate upregulation
+- Large negative coefficients indicate downregulation
+- Coefficients near zero suggest little effect
+
+```{r}
+# Extract overdispersion parameters
+theta_vec <- devil_fit$overdispersion
+names(theta_vec) = rownames(Y)
+summary(theta_vec)
+
+# Visualize overdispersion distribution
+data.frame(theta = theta_vec, gene = names(theta_vec)) %>%
+    ggplot(aes(x = theta)) +
+    geom_histogram(bins = 50, fill = "steelblue", alpha = 0.7) +
+    theme_bw() +
+    labs(title = "Distribution of gene-wise overdispersion parameters",
+         x = "Theta (dispersion parameter)",
+         y = "Number of genes") +
+    geom_vline(xintercept = median(theta_vec), linetype = "dashed", color = "red")
+```
+
+**Interpretation**: Higher theta values indicate less overdispersion (more Poisson-like), while lower values indicate more overdispersion (more variability than expected).
+
+## Differential expression testing
+
+Now let's test for differential expression. We'll test specific hypotheses using Wald tests.
+
+### Testing stimulus effects
+
+Let's identify genes differentially expressed in response to different stimuli:
+
+```{r}
+# For demonstration, we'll create a simplified test
+stimulus_coefs <- grep("^stimulus", colnames(beta_matrix), value = TRUE)
+
+# Test each stimulus coefficient
+de_results_list <- lapply(stimulus_coefs, function(coef) {
+    contrast_vector = as.numeric(colnames(beta_matrix) == coef)
+  
+    # Simple approach: test if coefficient significantly different from 0
+    de_res = devil::test_de(devil_fit, contrast = contrast_vector, clusters = meta_df$individual, max_lfc = 100)
+    de_res %>% dplyr::mutate(coefficient = coef)
+})
+
+de_results <- bind_rows(de_results_list)
+
+# Summary of DE genes per stimulus
+de_summary <- de_results %>%
+    group_by(coefficient) %>%
+    summarise(
+        n_de = sum(adj_pval < 0.05),
+        n_up = sum(adj_pval < 0.05 & lfc > 0),
+        n_down = sum(adj_pval < 0.05 & lfc < 0),
+        .groups = "drop"
+    )
+
+print(de_summary)
+```
+
+### Volcano plots
+
+Visualize the differential expression results:
+```{r fig.width=10, fig.height=6}
+# Create volcano plot for each stimulus
+de_results %>%
+    mutate(
+        de_status = case_when(
+            adj_pval < 0.05 & lfc > 0.5 ~ "Up",
+            adj_pval < 0.05 & lfc < -0.5 ~ "Down",
+            TRUE ~ "Not DE"
+        )
+    ) %>%
+    ggplot(aes(x = lfc, y = -log10(adj_pval), color = de_status)) +
+    geom_point(alpha = 0.6, size = 1.5) +
+    facet_wrap(~coefficient, scales = "free") +
+    scale_color_manual(values = c("Up" = "red", "Down" = "blue", "Not DE" = "gray")) +
+    theme_bw() +
+    labs(title = "Volcano plots for stimulus effects",
+         x = "Log fold change",
+         y = "-log10(p-value)",
+         color = "DE status") +
+    geom_hline(yintercept = -log10(0.05), linetype = "dashed", alpha = 0.5) +
+    geom_vline(xintercept = c(-0.5, 0.5), linetype = "dashed", alpha = 0.5)
+```
+
+### Top differentially expressed genes
+```{r}
+# Extract top DE genes for each stimulus
+top_genes <- de_results %>%
+    dplyr::filter(adj_pval < 0.05) %>%
+    dplyr::group_by(coefficient) %>%
+    dplyr::arrange(adj_pval) %>%
+    dplyr::slice_head(n = 10) %>%
+    dplyr::select(coefficient, name, lfc, adj_pval)
+
+print(top_genes)
+```
+
+### Heatmap of top DE genes
+```{r fig.width=8, fig.height=6}
+# Get top 20 most variable DE genes
+top_de_genes <- de_results %>%
+    dplyr::filter(adj_pval < 0.05) %>%
+    dplyr::group_by(name) %>%
+    dplyr::summarise(max_abs_lfc = max(abs(lfc)), .groups = "drop") %>%
+    dplyr::arrange(desc(max_abs_lfc)) %>%
+    dplyr::slice_head(n = 20) %>%
+    dplyr::pull(name)
+
+if (length(top_de_genes) > 0) {
+    # Extract coefficients for top genes
+    top_coef_matrix <- beta_matrix[top_de_genes, stimulus_coefs, drop = FALSE]
+    
+    # Create heatmap
+    pheatmap::pheatmap(
+        top_coef_matrix,
+        scale = "row",
+        cluster_cols = FALSE,
+        main = "Top DE genes across stimuli",
+        fontsize = 8
+    )
+}
+```
+
+## Testing age effects
+```{r}
+# Test for age effect if present in model
+age_coefs <- grep("^age", colnames(beta_matrix), value = TRUE)
+
+if (length(age_coefs) > 0) {
+    contrast_vector = as.numeric(colnames(beta_matrix) == age_coefs)
+    age_de <- devil::test_de(devil_fit, contrast = contrast_vector, clusters = meta_df$individual)
+    
+    print(paste("Number of age-associated DE genes (FDR < 0.05):", sum(age_de$adj_pval < 0.05)))
+    
+    # Show top age-associated genes
+    print(head(age_de))
+}
+```
+
+## Mean-variance relationship
+
+Let's also plot the mean-variance relationship, to see how far is the model from a simple Poisson
+
+```{r}
+# Mean-variance relationship
+gene_means <- rowMeans(Y)
+gene_vars <- apply(Y, 1, var)
+
+plot_df <- data.frame(
+    mean = gene_means,
+    variance = gene_vars,
+    theta = theta_vec
+)
+
+ggplot(plot_df, aes(x = log10(mean + 1), y = log10(variance + 1))) +
+    geom_point(aes(color = log10(theta)), alpha = 0.5) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+    scale_color_viridis_c() +
+    theme_bw() +
+    labs(title = "Mean-variance relationship",
+         x = "log10(mean count + 1)",
+         y = "log10(variance + 1)",
+         color = "log10(theta)") +
+    annotate("text", x = Inf, y = -Inf, 
+             label = "Dashed line = Poisson expectation",
+             hjust = 1.1, vjust = -0.5, size = 3, color = "red")
+```
+
+## Summary
+
+In this vignette we demonstrated:
+
+1. **Model fitting** with complex designs including multiple factors
+2. **Coefficient interpretation** showing how to extract and visualize effect sizes
+3. **Differential expression testing** using Wald tests on model coefficients
+4. **Result visualization** through volcano plots and heatmaps
+5. **Model diagnostics** to assess fit quality
+
+The devil package provides a flexible framework for modeling single-cell count data with complex experimental designs, enabling rigorous differential expression analysis while accounting for overdispersion.
+
+## Session Info
+
+```{r}
+sessionInfo()
+```
