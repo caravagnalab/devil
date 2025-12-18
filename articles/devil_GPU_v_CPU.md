@@ -230,7 +230,7 @@ system.time({
 #> Fitting beta coefficients
 #> Fit overdispersion (mode = MOM)
 #>    user  system elapsed 
-#>   0.075   0.007   0.080
+#>   0.119   0.195   0.098
 
 system.time({
     fit_cpu_new <- fit_devil(
@@ -251,7 +251,7 @@ system.time({
 #> Fitting beta coefficients
 #> Fit overdispersion (mode = MLE)
 #>    user  system elapsed 
-#>   0.303   0.432   0.237
+#>   0.314   0.638   0.253
 ```
 
 #### Examining Iteration Counts
@@ -399,9 +399,9 @@ time_proper <- system.time({
 })
 
 print(paste("Rough init:", round(time_rough["elapsed"], 2), "sec"))
-#> [1] "Rough init: 0.06 sec"
+#> [1] "Rough init: 0.05 sec"
 print(paste("Proper init:", round(time_proper["elapsed"], 2), "sec"))
-#> [1] "Proper init: 0.07 sec"
+#> [1] "Proper init: 0.09 sec"
 
 # Check if results are similar
 cor(fit_rough$beta[, 2], fit_proper$beta[, 2])
