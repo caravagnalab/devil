@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">devil</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.99.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,11 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/getStarted.html">Get started</a></li>
+<li><a class="dropdown-item" href="../articles/DE_with_multiple_features.html">Using devil for complex designs with multiple covariates</a></li>
+    <li><a class="dropdown-item" href="../articles/devil_GPU_v_CPU.html">devil statistical model, CPU and GPU implementation</a></li>
+    <li><a class="dropdown-item" href="../articles/getStarted.html">Get started</a></li>
+    <li><a class="dropdown-item" href="../articles/gpuSetup.html">GPU and CUDA Setup</a></li>
+    <li><a class="dropdown-item" href="../articles/quickSetup.html">Quick Setup</a></li>
   </ul>
 </li>
       </ul>
@@ -62,14 +66,32 @@
       <img src="../logo.svg" class="logo" alt=""><h1>Get started</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/caravagnalab/devil/vignettes/articles/getStarted.Rmd" class="external-link"><code>vignettes/articles/getStarted.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/caravagnalab/devil/vignettes/getStarted.Rmd" class="external-link"><code>vignettes/getStarted.Rmd</code></a></small>
       <div class="d-none name"><code>getStarted.Rmd</code></div>
     </div>
 
     
     
+<p><code>devil</code> is an R package for differential expression
+analysis in single-cell RNA sequencing (scRNA-seq) data. It supports
+both single- and multi-patient experimental designs, implementing robust
+statistical methods to identify differentially expressed genes while
+accounting for technical and biological variability.</p>
+<p>Key features are:</p>
+<ol style="list-style-type: decimal">
+<li>Flexible experimental design support (single/multiple patients)</li>
+<li>Robust statistical testing framework</li>
+<li>Efficient implementation for large-scale datasets</li>
+</ol>
+<div class="section level3">
+<h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h3>
+<p>You can install the current version of <code>devil</code> from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"caravagnalab/devil"</span><span class="op">)</span></span></code></pre></div>
+</div>
 <div class="section level2">
-<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+<h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
 <p>This tutorial walks through a minimal, end-to-end workflow for
 differential expression (DE) with <strong><code>devil</code></strong> on
@@ -79,28 +101,135 @@ contrasts, and (6) visualize results.</p>
 <p>If your study has multiple patients/donors, <code>devil</code> can
 compute <strong>clustered (patient-aware) standard errors</strong> via a
 <code>cluster</code> argument.</p>
-</div>
-<div class="section level2">
-<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
-</h2>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="section level3">
+<h3 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
+</h3>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># If needed:</span></span>
 <span><span class="co"># install.packages("BiocManager")</span></span>
 <span><span class="co"># BiocManager::install(c("scRNAseq","SingleCellExperiment"))</span></span>
 <span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://caravagnalab.github.io/devil/">devil</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">scRNAseq</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Loading required package: SingleCellExperiment</span></span>
+<span><span class="co">#&gt; Loading required package: SummarizedExperiment</span></span>
+<span><span class="co">#&gt; Loading required package: MatrixGenerics</span></span>
+<span><span class="co">#&gt; Loading required package: matrixStats</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'MatrixGenerics'</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:matrixStats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     colAlls, colAnyNAs, colAnys, colAvgsPerRowSet, colCollapse,</span></span>
+<span><span class="co">#&gt;     colCounts, colCummaxs, colCummins, colCumprods, colCumsums,</span></span>
+<span><span class="co">#&gt;     colDiffs, colIQRDiffs, colIQRs, colLogSumExps, colMadDiffs,</span></span>
+<span><span class="co">#&gt;     colMads, colMaxs, colMeans2, colMedians, colMins, colOrderStats,</span></span>
+<span><span class="co">#&gt;     colProds, colQuantiles, colRanges, colRanks, colSdDiffs, colSds,</span></span>
+<span><span class="co">#&gt;     colSums2, colTabulates, colVarDiffs, colVars, colWeightedMads,</span></span>
+<span><span class="co">#&gt;     colWeightedMeans, colWeightedMedians, colWeightedSds,</span></span>
+<span><span class="co">#&gt;     colWeightedVars, rowAlls, rowAnyNAs, rowAnys, rowAvgsPerColSet,</span></span>
+<span><span class="co">#&gt;     rowCollapse, rowCounts, rowCummaxs, rowCummins, rowCumprods,</span></span>
+<span><span class="co">#&gt;     rowCumsums, rowDiffs, rowIQRDiffs, rowIQRs, rowLogSumExps,</span></span>
+<span><span class="co">#&gt;     rowMadDiffs, rowMads, rowMaxs, rowMeans2, rowMedians, rowMins,</span></span>
+<span><span class="co">#&gt;     rowOrderStats, rowProds, rowQuantiles, rowRanges, rowRanks,</span></span>
+<span><span class="co">#&gt;     rowSdDiffs, rowSds, rowSums2, rowTabulates, rowVarDiffs, rowVars,</span></span>
+<span><span class="co">#&gt;     rowWeightedMads, rowWeightedMeans, rowWeightedMedians,</span></span>
+<span><span class="co">#&gt;     rowWeightedSds, rowWeightedVars</span></span>
+<span><span class="co">#&gt; Loading required package: GenomicRanges</span></span>
+<span><span class="co">#&gt; Loading required package: stats4</span></span>
+<span><span class="co">#&gt; Loading required package: BiocGenerics</span></span>
+<span><span class="co">#&gt; Loading required package: generics</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'generics'</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     as.difftime, as.factor, as.ordered, intersect, is.element, setdiff,</span></span>
+<span><span class="co">#&gt;     setequal, union</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'BiocGenerics'</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     IQR, mad, sd, var, xtabs</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     anyDuplicated, aperm, append, as.data.frame, basename, cbind,</span></span>
+<span><span class="co">#&gt;     colnames, dirname, do.call, duplicated, eval, evalq, Filter, Find,</span></span>
+<span><span class="co">#&gt;     get, grep, grepl, is.unsorted, lapply, Map, mapply, match, mget,</span></span>
+<span><span class="co">#&gt;     order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,</span></span>
+<span><span class="co">#&gt;     rbind, Reduce, rownames, sapply, saveRDS, table, tapply, unique,</span></span>
+<span><span class="co">#&gt;     unsplit, which.max, which.min</span></span>
+<span><span class="co">#&gt; Loading required package: S4Vectors</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'S4Vectors'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:utils':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     findMatches</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     expand.grid, I, unname</span></span>
+<span><span class="co">#&gt; Loading required package: IRanges</span></span>
+<span><span class="co">#&gt; Loading required package: Seqinfo</span></span>
+<span><span class="co">#&gt; Loading required package: Biobase</span></span>
+<span><span class="co">#&gt; Welcome to Bioconductor</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     Vignettes contain introductory material; view with</span></span>
+<span><span class="co">#&gt;     'browseVignettes()'. To cite Bioconductor, see</span></span>
+<span><span class="co">#&gt;     'citation("Biobase")', and for packages 'citation("pkgname")'.</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'Biobase'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:MatrixGenerics':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     rowMedians</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:matrixStats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     anyMissing, rowMedians</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">SingleCellExperiment</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bioconductor.org/packages/SummarizedExperiment" class="external-link">SummarizedExperiment</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://Matrix.R-forge.R-project.org" class="external-link">Matrix</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></code></pre></div>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'Matrix'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:S4Vectors':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     expand</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'dplyr'</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:Biobase':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     combine</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:GenomicRanges':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     intersect, setdiff, union</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:Seqinfo':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     intersect</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:IRanges':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     collapse, desc, intersect, setdiff, slice, union</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:S4Vectors':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     first, intersect, rename, setdiff, setequal, union</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:BiocGenerics':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     combine, intersect, setdiff, setequal, union</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:generics':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     explain</span></span>
+<span><span class="co">#&gt; The following object is masked from 'package:matrixStats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     count</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     filter, lag</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     intersect, setdiff, setequal, union</span></span></code></pre></div>
 </div>
-<div class="section level2">
-<h2 id="load-and-inspect-data">Load and inspect data<a class="anchor" aria-label="anchor" href="#load-and-inspect-data"></a>
-</h2>
+<div class="section level3">
+<h3 id="load-and-inspect-data">Load and inspect data<a class="anchor" aria-label="anchor" href="#load-and-inspect-data"></a>
+</h3>
 <p>We’ll use the Baron pancreas dataset from <code>scRNAseq</code>.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sce</span> <span class="op">&lt;-</span> <span class="fu">scRNAseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/scRNAseq/man/BaronPancreasData.html" class="external-link">BaronPancreasData</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># SingleCellExperiment</span></span>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sce</span> <span class="op">&lt;-</span> <span class="fu">scRNAseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/scRNAseq/man/BaronPancreasData.html" class="external-link">BaronPancreasData</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># SingleCellExperiment</span></span>
 <span><span class="va">sce</span></span>
 <span><span class="co">#&gt; class: SingleCellExperiment </span></span>
 <span><span class="co">#&gt; dim: 20125 8569 </span></span>
@@ -115,9 +244,9 @@ compute <strong>clustered (patient-aware) standard errors</strong> via a
 <span><span class="co">#&gt; mainExpName: NULL</span></span>
 <span><span class="co">#&gt; altExpNames(0):</span></span></code></pre></div>
 <p>Extract counts and metadata using accessors:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="fu">SummarizedExperiment</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html" class="external-link">assay</a></span><span class="op">(</span><span class="va">sce</span>, <span class="st">"counts"</span><span class="op">)</span></span>
-<span><span class="va">meta</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu">SummarizedExperiment</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html" class="external-link">colData</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu">SummarizedExperiment</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html" class="external-link">colData</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Genes:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, <span class="st">"\nCells:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Genes: 20125 </span></span>
@@ -129,17 +258,17 @@ compute <strong>clustered (patient-aware) standard errors</strong> via a
 <code>donor</code> or <code>patient</code>), keep it, we’ll optionally
 pass it to <code>cluste=</code> later.</p>
 </div>
-<div class="section level2">
-<h2 id="light-filtering">Light filtering<a class="anchor" aria-label="anchor" href="#light-filtering"></a>
-</h2>
+<div class="section level3">
+<h3 id="light-filtering">Light filtering<a class="anchor" aria-label="anchor" href="#light-filtering"></a>
+</h3>
 <p>Keep the three most abundant cell types; filter lowly expressed
 genes.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># keep 3 largest cell types</span></span>
 <span><span class="va">top3</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">meta</span><span class="op">$</span><span class="va">label</span><span class="op">)</span>, decreasing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span></span>
 <span><span class="va">keep_cells</span> <span class="op">&lt;-</span> <span class="va">meta</span><span class="op">$</span><span class="va">label</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">top3</span></span>
 <span><span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">counts</span><span class="op">[</span>, <span class="va">keep_cells</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
-<span><span class="va">meta</span>   <span class="op">&lt;-</span> <span class="va">meta</span><span class="op">[</span> <span class="va">keep_cells</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
+<span><span class="va">meta</span> <span class="op">&lt;-</span> <span class="va">meta</span><span class="op">[</span><span class="va">keep_cells</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
 <span></span>
 <span><span class="co"># gene filter: expressed (&gt;=1 UMI) in &gt;= 1% of kept cells</span></span>
 <span><span class="va">min_cells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">floor</a></span><span class="op">(</span><span class="fl">0.01</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
@@ -154,19 +283,19 @@ genes.</p>
 <span><span class="co">#&gt;   2326   2525   1077</span></span></code></pre></div>
 <p>Optionally restrict to highly expressed genes for a faster demo (skip
 for real analyses):</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># demo mode: top 3000 genes by total counts</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">3000</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">ord</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="fu">Matrix</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/colSums-methods.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, decreasing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">counts</span><span class="op">[</span><span class="va">ord</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">3000</span><span class="op">)</span><span class="op">]</span>, <span class="op">]</span></span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># demo mode: top 500 genes by total counts</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">500</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">ord</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="fu">Matrix</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/colSums-methods.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>, decreasing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>    <span class="va">counts</span> <span class="op">&lt;-</span> <span class="va">counts</span><span class="op">[</span><span class="va">ord</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">500</span><span class="op">)</span><span class="op">]</span>, <span class="op">]</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 </div>
-<div class="section level2">
-<h2 id="design-matrix">Design matrix<a class="anchor" aria-label="anchor" href="#design-matrix"></a>
-</h2>
+<div class="section level3">
+<h3 id="design-matrix">Design matrix<a class="anchor" aria-label="anchor" href="#design-matrix"></a>
+</h3>
 <p>Build a <strong>no-intercept</strong> design so each coefficient
 corresponds to a cell type.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">meta</span><span class="op">$</span><span class="va">label</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/droplevels.html" class="external-link">droplevels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">meta</span><span class="op">$</span><span class="va">label</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix</a></span><span class="op">(</span><span class="op">~</span> <span class="fl">0</span> <span class="op">+</span> <span class="va">label</span>, data <span class="op">=</span> <span class="va">meta</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">gsub</a></span><span class="op">(</span><span class="st">"^label"</span>, <span class="st">""</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span><span class="op">)</span></span>
@@ -174,43 +303,55 @@ corresponds to a cell type.</p>
 <span><span class="co">#&gt; [1] "alpha"  "beta"   "ductal"</span></span></code></pre></div>
 <p><em>(Optional) Cluster variable for patient-aware SEs, if
 available:</em></p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cluster</span> <span class="op">&lt;-</span> <span class="cn">NULL</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="st">"donor"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">meta</span><span class="op">)</span><span class="op">)</span>   <span class="va">cluster</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">meta</span><span class="op">$</span><span class="va">donor</span><span class="op">)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="st">"donor"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">meta</span><span class="op">)</span><span class="op">)</span> <span class="va">cluster</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">meta</span><span class="op">$</span><span class="va">donor</span><span class="op">)</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">cluster</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="st">"patient"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">meta</span><span class="op">)</span><span class="op">)</span> <span class="va">cluster</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">meta</span><span class="op">$</span><span class="va">patient</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level2">
-<h2 id="fit-the-model">Fit the model<a class="anchor" aria-label="anchor" href="#fit-the-model"></a>
-</h2>
+<div class="section level3">
+<h3 id="fit-the-model">Fit the model<a class="anchor" aria-label="anchor" href="#fit-the-model"></a>
+</h3>
 <p><code><a href="../reference/fit_devil.html">fit_devil()</a></code> expects a counts matrix (genes × cells), a
 design (cells × covariates). The parameters
-<code>size_factors=TRUE</code> computes internally a size factor that
-will scale expression based on the library size of each cell.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code>size_factors="normed_sum"</code> computes internally a size factor
+that will scale expression based on the library size of each cell.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/fit_devil.html">fit_devil</a></span><span class="op">(</span></span>
-<span>  input_matrix        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>,</span>
-<span>  design_matrix       <span class="op">=</span> <span class="va">design</span>,</span>
-<span>  overdispersion      <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  offset              <span class="op">=</span> <span class="fl">1e-6</span>,</span>
-<span>  size_factors        <span class="op">=</span> <span class="st">"normed_sum"</span>,</span>
-<span>  parallel.cores      <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  verbose             <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span>    input_matrix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span>,</span>
+<span>    design_matrix <span class="op">=</span> <span class="va">design</span>,</span>
+<span>    overdispersion <span class="op">=</span> <span class="st">"MOM"</span>,</span>
+<span>    offset <span class="op">=</span> <span class="fl">1e-6</span>,</span>
+<span>    init_overdispersion <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    size_factors <span class="op">=</span> <span class="st">"normed_sum"</span>,</span>
+<span>    parallel.cores <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>    verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    max_iter <span class="op">=</span> <span class="fl">200</span>,</span>
+<span>    tolerance <span class="op">=</span> <span class="fl">1e-4</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; Compute size factors</span></span>
+<span><span class="co">#&gt; Calculating size factors using method: normed_sum</span></span>
+<span><span class="co">#&gt; Size factors calculated successfully.</span></span>
+<span><span class="co">#&gt; Range: [0.1036, 8.0148]</span></span>
+<span><span class="co">#&gt; Initialize theta</span></span>
+<span><span class="co">#&gt; Initialize beta</span></span>
+<span><span class="co">#&gt; Fitting beta coefficients</span></span>
+<span><span class="co">#&gt; Fit overdispersion (mode = MOM)</span></span></code></pre></div>
 </div>
-<div class="section level2">
-<h2 id="specify-contrasts">Specify contrasts<a class="anchor" aria-label="anchor" href="#specify-contrasts"></a>
-</h2>
+<div class="section level3">
+<h3 id="specify-contrasts">Specify contrasts<a class="anchor" aria-label="anchor" href="#specify-contrasts"></a>
+</h3>
 <p>With a no-intercept design, each column is a cell-type mean on the
 log scale.<br>
 To test “beta vs ductal”, define the contrast
 <code>(+1 * beta) + (-1 * ductal)</code> and zero elsewhere.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">make_contrast</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">design</span>, <span class="va">from</span>, <span class="va">to</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">from</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span>, <span class="va">to</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="va">c</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span><span class="op">)</span>; <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">c</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
-<span>  <span class="va">c</span><span class="op">[</span><span class="va">from</span><span class="op">]</span> <span class="op">&lt;-</span>  <span class="fl">1</span></span>
-<span>  <span class="va">c</span><span class="op">[</span><span class="va">to</span><span class="op">]</span>   <span class="op">&lt;-</span> <span class="op">-</span><span class="fl">1</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">c</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">from</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span>, <span class="va">to</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">c</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">c</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
+<span>    <span class="va">c</span><span class="op">[</span><span class="va">from</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
+<span>    <span class="va">c</span><span class="op">[</span><span class="va">to</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="fl">1</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">c</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">contrast</span> <span class="op">&lt;-</span> <span class="fu">make_contrast</span><span class="op">(</span><span class="va">design</span>, from <span class="op">=</span> <span class="st">"beta"</span>, to <span class="op">=</span> <span class="st">"ductal"</span><span class="op">)</span></span>
@@ -220,92 +361,72 @@ To test “beta vs ductal”, define the contrast
 accordingly—use <code>colnames(design)</code> to see available
 levels.</p>
 </div>
-<div class="section level2">
-<h2 id="test-for-differential-expression">Test for differential expression<a class="anchor" aria-label="anchor" href="#test-for-differential-expression"></a>
-</h2>
+<div class="section level3">
+<h3 id="test-for-differential-expression">Test for differential expression<a class="anchor" aria-label="anchor" href="#test-for-differential-expression"></a>
+</h3>
 <p>Run a Wald test with optional <strong>clustered SEs</strong> if
 <code>cluster</code> exists.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">test</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/test_de.html">test_de</a></span><span class="op">(</span></span>
-<span>  <span class="va">fit</span>,</span>
-<span>  contrast <span class="op">=</span> <span class="va">contrast</span>,</span>
-<span>  max_lfc  <span class="op">=</span> <span class="fl">20</span>,      <span class="co"># Cap extreme fold changes</span></span>
-<span>  cluster  <span class="op">=</span> <span class="va">cluster</span>  <span class="co"># NULL if not present; enables patient-aware SE if provided</span></span>
+<span>    <span class="va">fit</span>,</span>
+<span>    contrast <span class="op">=</span> <span class="va">contrast</span>,</span>
+<span>    max_lfc  <span class="op">=</span> <span class="fl">20</span>, <span class="co"># Cap extreme fold changes</span></span>
+<span>    cluster  <span class="op">=</span> <span class="va">cluster</span> <span class="co"># NULL if not present; enables patient-aware SE if provided</span></span>
 <span><span class="op">)</span></span>
+<span><span class="co">#&gt; Converting clusters to numeric factors</span></span>
 <span></span>
 <span><span class="co"># Add gene names if missing</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">"name"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">test</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">test</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="va">test</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="va">test</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">counts</span><span class="op">)</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>        <span class="va">test</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">test</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 <p>Quick peek at the top hits:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">test</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="va">adj_pval</span>, <span class="fu"><a href="https://dplyr.tidyverse.org/reference/desc.html" class="external-link">desc</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">lfc</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">name</span>, <span class="va">lfc</span>, <span class="va">pval</span>, <span class="va">adj_pval</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 10 × 4</span></span></span>
-<span><span class="co">#&gt;    name     lfc      pval  adj_pval</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> CCL2   -<span style="color: #BB0000;">9.47</span> 0   <span style="color: #949494;"> </span>     0   <span style="color: #949494;"> </span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> TFPI2  -<span style="color: #BB0000;">7.66</span> 0   <span style="color: #949494;"> </span>     0   <span style="color: #949494;"> </span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> G6PC2   5.94 0   <span style="color: #949494;"> </span>     0   <span style="color: #949494;"> </span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> CPE     4.59 0   <span style="color: #949494;"> </span>     0   <span style="color: #949494;"> </span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> RBM47  -<span style="color: #BB0000;">1.44</span> 0   <span style="color: #949494;"> </span>     0   <span style="color: #949494;"> </span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> PGLS   -<span style="color: #BB0000;">1.34</span> 0   <span style="color: #949494;"> </span>     0   <span style="color: #949494;"> </span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> SSNA1  -<span style="color: #BB0000;">1.11</span> 0   <span style="color: #949494;"> </span>     0   <span style="color: #949494;"> </span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> DAZAP2 -<span style="color: #BB0000;">1.32</span> 1.98<span style="color: #949494;">e</span><span style="color: #BB0000;">-323</span> 7.41<span style="color: #949494;">e</span><span style="color: #BB0000;">-321</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> SPINT1 -<span style="color: #BB0000;">3.12</span> 3.13<span style="color: #949494;">e</span><span style="color: #BB0000;">-314</span> 1.04<span style="color: #949494;">e</span><span style="color: #BB0000;">-311</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> GJD2    6.10 1.24<span style="color: #949494;">e</span><span style="color: #BB0000;">-307</span> 3.72<span style="color: #949494;">e</span><span style="color: #BB0000;">-305</span></span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="visualize-results">Visualize results<a class="anchor" aria-label="anchor" href="#visualize-results"></a>
-</h2>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">test</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>    <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="va">adj_pval</span>, <span class="fu"><a href="https://dplyr.tidyverse.org/reference/desc.html" class="external-link">desc</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">lfc</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>    <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">name</span>, <span class="va">lfc</span>, <span class="va">pval</span>, <span class="va">adj_pval</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 10 × 4</span></span></span>
+<span><span class="co">#&gt;    name      lfc      pval  adj_pval</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> KRT7    -<span style="color: #BB0000;">9.35</span> 5.43<span style="color: #949494;">e</span><span style="color: #BB0000;">-212</span> 2.72<span style="color: #949494;">e</span><span style="color: #BB0000;">-209</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> CPE      4.40 7.38<span style="color: #949494;">e</span><span style="color: #BB0000;">-171</span> 1.85<span style="color: #949494;">e</span><span style="color: #BB0000;">-168</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> HADH     3.32 6.30<span style="color: #949494;">e</span><span style="color: #BB0000;">-150</span> 1.05<span style="color: #949494;">e</span><span style="color: #BB0000;">-147</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> CD24    -<span style="color: #BB0000;">3.77</span> 6.80<span style="color: #949494;">e</span><span style="color: #BB0000;">-136</span> 8.50<span style="color: #949494;">e</span><span style="color: #BB0000;">-134</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> PEMT     3.95 1.37<span style="color: #949494;">e</span><span style="color: #BB0000;">-126</span> 1.37<span style="color: #949494;">e</span><span style="color: #BB0000;">-124</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> PMEPA1  -<span style="color: #BB0000;">7.03</span> 1.63<span style="color: #949494;">e</span><span style="color: #BB0000;">-124</span> 1.36<span style="color: #949494;">e</span><span style="color: #BB0000;">-122</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> TACSTD2 -<span style="color: #BB0000;">8.83</span> 2.52<span style="color: #949494;">e</span><span style="color: #BB0000;">-117</span> 1.80<span style="color: #949494;">e</span><span style="color: #BB0000;">-115</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> S100A10 -<span style="color: #BB0000;">6.08</span> 5.73<span style="color: #949494;">e</span><span style="color: #BB0000;">-111</span> 3.58<span style="color: #949494;">e</span><span style="color: #BB0000;">-109</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> UCHL1    4.63 1.39<span style="color: #949494;">e</span><span style="color: #BB0000;">-107</span> 7.72<span style="color: #949494;">e</span><span style="color: #BB0000;">-106</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> TMOD1    4.67 5.65<span style="color: #949494;">e</span><span style="color: #BB0000;">-103</span> 2.82<span style="color: #949494;">e</span><span style="color: #BB0000;">-101</span></span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="visualize-results">Visualize results<a class="anchor" aria-label="anchor" href="#visualize-results"></a>
+</h3>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_volcano.html">plot_volcano</a></span><span class="op">(</span></span>
-<span>  <span class="va">test</span>,</span>
-<span>  lfc_cut    <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  pval_cut   <span class="op">=</span> <span class="fl">0.05</span>,</span>
-<span>  labels     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  point_size <span class="op">=</span> <span class="fl">1.8</span>, </span>
-<span>  title <span class="op">=</span> <span class="st">"beta vs ductal"</span></span>
+<span>    <span class="va">test</span>,</span>
+<span>    lfc_cut <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>    pval_cut <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>    labels <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    point_size <span class="op">=</span> <span class="fl">1.8</span>,</span>
+<span>    title <span class="op">=</span> <span class="st">"beta vs ductal"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="figure">
-<img src="getStarted_files/figure-html/unnamed-chunk-13-1.png" alt="Volcano plot of DE genes" width="700"><p class="caption">
+<img src="getStarted_files/figure-html/unnamed-chunk-13-1.png" class="r-plt" alt="Volcano plot of DE genes" width="700"><p class="caption">
 Volcano plot of DE genes
 </p>
 </div>
 </div>
-<div class="section level2">
-<h2 id="notes-tips">Notes &amp; tips<a class="anchor" aria-label="anchor" href="#notes-tips"></a>
-</h2>
-<ul>
-<li>
-<strong>Designs with covariates.</strong> No-intercept designs (~ 0
-+ label) make contrasts more intuitive but aren’t always necessary. You
-can obviously add more covariates (e.g., age, sex). Keep
-<code>cluster = donor</code> for valid patient-level uncertainty.</li>
-<li>
-<strong>Multiple testing</strong> Use adj_pval (FDR-corrected)
-rather than raw p-values for significance calls.</li>
-<li>
-<strong>Speed.</strong> For large datasets, run on GPU if
-available.<br>
-</li>
-<li>
-<strong>Interpretation.</strong> <code>lfc</code> is on the log2
-scale. <code>lfc = 1</code> means 2-fold higher expression.</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="session-info">Session info<a class="anchor" aria-label="anchor" href="#session-info"></a>
-</h2>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="section level3">
+<h3 id="session-info">Session info<a class="anchor" aria-label="anchor" href="#session-info"></a>
+</h3>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; R version 4.5.1 (2025-06-13)</span></span>
+<span><span class="co">#&gt; R version 4.5.2 (2025-10-31)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
 <span><span class="co">#&gt; Running under: Ubuntu 24.04.3 LTS</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -327,68 +448,70 @@ scale. <code>lfc = 1</code> means 2-fold higher expression.</li>
 <span><span class="co">#&gt; [8] base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt;  [1] dplyr_1.1.4                 Matrix_1.7-3               </span></span>
-<span><span class="co">#&gt;  [3] scRNAseq_2.22.0             SingleCellExperiment_1.30.1</span></span>
-<span><span class="co">#&gt;  [5] SummarizedExperiment_1.38.1 Biobase_2.68.0             </span></span>
-<span><span class="co">#&gt;  [7] GenomicRanges_1.60.0        GenomeInfoDb_1.44.3        </span></span>
-<span><span class="co">#&gt;  [9] IRanges_2.42.0              S4Vectors_0.46.0           </span></span>
-<span><span class="co">#&gt; [11] BiocGenerics_0.54.0         generics_0.1.4             </span></span>
-<span><span class="co">#&gt; [13] MatrixGenerics_1.20.0       matrixStats_1.5.0          </span></span>
-<span><span class="co">#&gt; [15] devil_0.1.0                </span></span>
+<span><span class="co">#&gt;  [1] dplyr_1.1.4                 Matrix_1.7-4               </span></span>
+<span><span class="co">#&gt;  [3] scRNAseq_2.24.0             SingleCellExperiment_1.32.0</span></span>
+<span><span class="co">#&gt;  [5] SummarizedExperiment_1.40.0 Biobase_2.70.0             </span></span>
+<span><span class="co">#&gt;  [7] GenomicRanges_1.62.1        Seqinfo_1.0.0              </span></span>
+<span><span class="co">#&gt;  [9] IRanges_2.44.0              S4Vectors_0.48.0           </span></span>
+<span><span class="co">#&gt; [11] BiocGenerics_0.56.0         generics_0.1.4             </span></span>
+<span><span class="co">#&gt; [13] MatrixGenerics_1.22.0       matrixStats_1.5.0          </span></span>
+<span><span class="co">#&gt; [15] devil_0.99.0               </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;   [1] DBI_1.2.3                 bitops_1.0-9             </span></span>
-<span><span class="co">#&gt;   [3] httr2_1.2.1               rlang_1.1.6              </span></span>
-<span><span class="co">#&gt;   [5] magrittr_2.0.4            gypsum_1.4.0             </span></span>
-<span><span class="co">#&gt;   [7] compiler_4.5.1            RSQLite_2.4.3            </span></span>
-<span><span class="co">#&gt;   [9] DelayedMatrixStats_1.30.0 GenomicFeatures_1.60.0   </span></span>
+<span><span class="co">#&gt;   [3] httr2_1.2.2               rlang_1.1.6              </span></span>
+<span><span class="co">#&gt;   [5] magrittr_2.0.4            gypsum_1.6.0             </span></span>
+<span><span class="co">#&gt;   [7] compiler_4.5.2            RSQLite_2.4.5            </span></span>
+<span><span class="co">#&gt;   [9] DelayedMatrixStats_1.32.0 GenomicFeatures_1.62.0   </span></span>
 <span><span class="co">#&gt;  [11] png_0.1-8                 systemfonts_1.3.1        </span></span>
-<span><span class="co">#&gt;  [13] vctrs_0.6.5               ProtGenerics_1.40.0      </span></span>
+<span><span class="co">#&gt;  [13] vctrs_0.6.5               ProtGenerics_1.42.0      </span></span>
 <span><span class="co">#&gt;  [15] pkgconfig_2.0.3           crayon_1.5.3             </span></span>
 <span><span class="co">#&gt;  [17] fastmap_1.2.0             dbplyr_2.5.1             </span></span>
-<span><span class="co">#&gt;  [19] XVector_0.48.0            labeling_0.4.3           </span></span>
-<span><span class="co">#&gt;  [21] utf8_1.2.6                Rsamtools_2.24.1         </span></span>
-<span><span class="co">#&gt;  [23] rmarkdown_2.30            UCSC.utils_1.4.0         </span></span>
+<span><span class="co">#&gt;  [19] XVector_0.50.0            labeling_0.4.3           </span></span>
+<span><span class="co">#&gt;  [21] utf8_1.2.6                Rsamtools_2.26.0         </span></span>
+<span><span class="co">#&gt;  [23] rmarkdown_2.30            UCSC.utils_1.6.1         </span></span>
 <span><span class="co">#&gt;  [25] ragg_1.5.0                bit_4.6.0                </span></span>
-<span><span class="co">#&gt;  [27] xfun_0.53                 cachem_1.1.0             </span></span>
-<span><span class="co">#&gt;  [29] jsonlite_2.0.0            blob_1.2.4               </span></span>
-<span><span class="co">#&gt;  [31] rhdf5filters_1.20.0       DelayedArray_0.34.1      </span></span>
-<span><span class="co">#&gt;  [33] Rhdf5lib_1.30.0           BiocParallel_1.42.2      </span></span>
-<span><span class="co">#&gt;  [35] parallel_4.5.1            R6_2.6.1                 </span></span>
-<span><span class="co">#&gt;  [37] RColorBrewer_1.1-3        bslib_0.9.0              </span></span>
-<span><span class="co">#&gt;  [39] rtracklayer_1.68.0        jquerylib_0.1.4          </span></span>
-<span><span class="co">#&gt;  [41] Rcpp_1.1.0                knitr_1.50               </span></span>
-<span><span class="co">#&gt;  [43] tidyselect_1.2.1          abind_1.4-8              </span></span>
-<span><span class="co">#&gt;  [45] yaml_2.3.10               codetools_0.2-20         </span></span>
-<span><span class="co">#&gt;  [47] curl_7.0.0                lattice_0.22-7           </span></span>
-<span><span class="co">#&gt;  [49] alabaster.sce_1.8.0       tibble_3.3.0             </span></span>
-<span><span class="co">#&gt;  [51] S7_0.2.0                  withr_3.0.2              </span></span>
-<span><span class="co">#&gt;  [53] KEGGREST_1.48.1           evaluate_1.0.5           </span></span>
-<span><span class="co">#&gt;  [55] desc_1.4.3                BiocFileCache_2.16.2     </span></span>
-<span><span class="co">#&gt;  [57] alabaster.schemas_1.8.0   ExperimentHub_2.16.1     </span></span>
-<span><span class="co">#&gt;  [59] Biostrings_2.76.0         pillar_1.11.1            </span></span>
-<span><span class="co">#&gt;  [61] BiocManager_1.30.26       filelock_1.0.3           </span></span>
-<span><span class="co">#&gt;  [63] RCurl_1.98-1.17           ggplot2_4.0.0            </span></span>
-<span><span class="co">#&gt;  [65] BiocVersion_3.21.1        ensembldb_2.32.0         </span></span>
-<span><span class="co">#&gt;  [67] scales_1.4.0              sparseMatrixStats_1.20.0 </span></span>
-<span><span class="co">#&gt;  [69] alabaster.base_1.8.1      alabaster.ranges_1.8.0   </span></span>
-<span><span class="co">#&gt;  [71] glue_1.8.0                alabaster.matrix_1.8.0   </span></span>
-<span><span class="co">#&gt;  [73] lazyeval_0.2.2            tools_4.5.1              </span></span>
-<span><span class="co">#&gt;  [75] AnnotationHub_3.16.1      BiocIO_1.18.0            </span></span>
-<span><span class="co">#&gt;  [77] GenomicAlignments_1.44.0  fs_1.6.6                 </span></span>
-<span><span class="co">#&gt;  [79] XML_3.99-0.19             rhdf5_2.52.1             </span></span>
-<span><span class="co">#&gt;  [81] grid_4.5.1                AnnotationDbi_1.70.0     </span></span>
-<span><span class="co">#&gt;  [83] GenomeInfoDbData_1.2.14   HDF5Array_1.36.0         </span></span>
-<span><span class="co">#&gt;  [85] restfulr_0.0.16           cli_3.6.5                </span></span>
-<span><span class="co">#&gt;  [87] rappdirs_0.3.3            textshaping_1.0.3        </span></span>
-<span><span class="co">#&gt;  [89] S4Arrays_1.8.1            AnnotationFilter_1.32.0  </span></span>
-<span><span class="co">#&gt;  [91] gtable_0.3.6              alabaster.se_1.8.0       </span></span>
-<span><span class="co">#&gt;  [93] sass_0.4.10               digest_0.6.37            </span></span>
-<span><span class="co">#&gt;  [95] SparseArray_1.8.1         farver_2.1.2             </span></span>
-<span><span class="co">#&gt;  [97] rjson_0.2.23              memoise_2.0.1            </span></span>
-<span><span class="co">#&gt;  [99] htmltools_0.5.8.1         pkgdown_2.1.3            </span></span>
-<span><span class="co">#&gt; [101] lifecycle_1.0.4           h5mread_1.0.1            </span></span>
-<span><span class="co">#&gt; [103] httr_1.4.7                bit64_4.6.0-1</span></span></code></pre></div>
+<span><span class="co">#&gt;  [27] xfun_0.55                 cachem_1.1.0             </span></span>
+<span><span class="co">#&gt;  [29] cigarillo_1.0.0           GenomeInfoDb_1.46.2      </span></span>
+<span><span class="co">#&gt;  [31] jsonlite_2.0.0            blob_1.2.4               </span></span>
+<span><span class="co">#&gt;  [33] rhdf5filters_1.22.0       DelayedArray_0.36.0      </span></span>
+<span><span class="co">#&gt;  [35] Rhdf5lib_1.32.0           BiocParallel_1.44.0      </span></span>
+<span><span class="co">#&gt;  [37] parallel_4.5.2            R6_2.6.1                 </span></span>
+<span><span class="co">#&gt;  [39] RColorBrewer_1.1-3        bslib_0.9.0              </span></span>
+<span><span class="co">#&gt;  [41] rtracklayer_1.70.0        jquerylib_0.1.4          </span></span>
+<span><span class="co">#&gt;  [43] Rcpp_1.1.0                knitr_1.50               </span></span>
+<span><span class="co">#&gt;  [45] tidyselect_1.2.1          abind_1.4-8              </span></span>
+<span><span class="co">#&gt;  [47] yaml_2.3.12               codetools_0.2-20         </span></span>
+<span><span class="co">#&gt;  [49] curl_7.0.0                lattice_0.22-7           </span></span>
+<span><span class="co">#&gt;  [51] alabaster.sce_1.10.0      tibble_3.3.0             </span></span>
+<span><span class="co">#&gt;  [53] S7_0.2.1                  withr_3.0.2              </span></span>
+<span><span class="co">#&gt;  [55] KEGGREST_1.50.0           evaluate_1.0.5           </span></span>
+<span><span class="co">#&gt;  [57] desc_1.4.3                BiocFileCache_3.0.0      </span></span>
+<span><span class="co">#&gt;  [59] alabaster.schemas_1.10.0  ExperimentHub_3.0.0      </span></span>
+<span><span class="co">#&gt;  [61] Biostrings_2.78.0         pillar_1.11.1            </span></span>
+<span><span class="co">#&gt;  [63] BiocManager_1.30.27       filelock_1.0.3           </span></span>
+<span><span class="co">#&gt;  [65] RCurl_1.98-1.17           ggplot2_4.0.1            </span></span>
+<span><span class="co">#&gt;  [67] BiocVersion_3.22.0        ensembldb_2.34.0         </span></span>
+<span><span class="co">#&gt;  [69] scales_1.4.0              sparseMatrixStats_1.22.0 </span></span>
+<span><span class="co">#&gt;  [71] alabaster.base_1.10.0     glue_1.8.0               </span></span>
+<span><span class="co">#&gt;  [73] alabaster.ranges_1.10.0   alabaster.matrix_1.10.0  </span></span>
+<span><span class="co">#&gt;  [75] lazyeval_0.2.2            tools_4.5.2              </span></span>
+<span><span class="co">#&gt;  [77] AnnotationHub_4.0.0       BiocIO_1.20.0            </span></span>
+<span><span class="co">#&gt;  [79] GenomicAlignments_1.46.0  fs_1.6.6                 </span></span>
+<span><span class="co">#&gt;  [81] XML_3.99-0.20             rhdf5_2.54.1             </span></span>
+<span><span class="co">#&gt;  [83] grid_4.5.2                AnnotationDbi_1.72.0     </span></span>
+<span><span class="co">#&gt;  [85] HDF5Array_1.38.0          restfulr_0.0.16          </span></span>
+<span><span class="co">#&gt;  [87] cli_3.6.5                 rappdirs_0.3.3           </span></span>
+<span><span class="co">#&gt;  [89] textshaping_1.0.4         S4Arrays_1.10.1          </span></span>
+<span><span class="co">#&gt;  [91] AnnotationFilter_1.34.0   gtable_0.3.6             </span></span>
+<span><span class="co">#&gt;  [93] alabaster.se_1.10.0       sass_0.4.10              </span></span>
+<span><span class="co">#&gt;  [95] digest_0.6.39             SparseArray_1.10.7       </span></span>
+<span><span class="co">#&gt;  [97] farver_2.1.2              rjson_0.2.23             </span></span>
+<span><span class="co">#&gt;  [99] memoise_2.0.1             htmltools_0.5.9          </span></span>
+<span><span class="co">#&gt; [101] pkgdown_2.2.0             lifecycle_1.0.4          </span></span>
+<span><span class="co">#&gt; [103] h5mread_1.2.1             httr_1.4.7               </span></span>
+<span><span class="co">#&gt; [105] bit64_4.6.0-1</span></span></code></pre></div>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -401,7 +524,7 @@ scale. <code>lfc = 1</code> means 2-fold higher expression.</li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

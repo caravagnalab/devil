@@ -13,7 +13,7 @@ and gene labeling."><meta property="og:image" content="https://caravagnalab.gith
 
     <a class="navbar-brand me-2" href="../index.html">devil</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.99.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -24,7 +24,11 @@ and gene labeling."><meta property="og:image" content="https://caravagnalab.gith
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getStarted.html">Get started</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/DE_with_multiple_features.html">Using devil for complex designs with multiple covariates</a></li>
+    <li><a class="dropdown-item" href="../articles/devil_GPU_v_CPU.html">devil statistical model, CPU and GPU implementation</a></li>
+    <li><a class="dropdown-item" href="../articles/getStarted.html">Get started</a></li>
+    <li><a class="dropdown-item" href="../articles/gpuSetup.html">GPU and CUDA Setup</a></li>
+    <li><a class="dropdown-item" href="../articles/quickSetup.html">Quick Setup</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -144,19 +148,34 @@ labels genes meeting both significance criteria.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/NegBinomial.html" class="external-link">rnbinom</a></span><span class="op">(</span><span class="fl">1000</span>, <span class="fl">1</span>, <span class="fl">.1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="fit_devil.html">fit_devil</a></span><span class="op">(</span>input_matrix <span class="op">=</span> <span class="va">y</span>, design_matrix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">1</span>, ncol <span class="op">=</span> <span class="fl">1</span>, nrow <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">de_results</span> <span class="op">&lt;-</span> <span class="fu">devil</span><span class="fu">::</span><span class="fu"><a href="test_de.html">test_de</a></span><span class="op">(</span>devil.fit <span class="op">=</span> <span class="va">fit</span>, contrast <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Basic volcano plot</span></span></span>
+<span class="r-in"><span><span class="va">de_results</span><span class="op">$</span><span class="va">name</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Fake gene"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">plot_volcano</span><span class="op">(</span><span class="va">de_results</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>no non-missing arguments to min; returning Inf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 genes have adjusted p-value equal to 0, will be set to Inf</span>
+<span class="r-plt img"><img src="plot_volcano-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Custom thresholds and colors</span></span></span>
 <span class="r-in"><span><span class="fu">plot_volcano</span><span class="op">(</span><span class="va">de_results</span>,</span></span>
-<span class="r-in"><span>            lfc_cut <span class="op">=</span> <span class="fl">2</span>,</span></span>
-<span class="r-in"><span>            pval_cut <span class="op">=</span> <span class="fl">0.01</span>,</span></span>
-<span class="r-in"><span>            colors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grey80"</span>, <span class="st">"blue"</span>, <span class="st">"green"</span>, <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    lfc_cut <span class="op">=</span> <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>    pval_cut <span class="op">=</span> <span class="fl">0.01</span>,</span></span>
+<span class="r-in"><span>    colors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grey80"</span>, <span class="st">"blue"</span>, <span class="st">"green"</span>, <span class="st">"red"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>no non-missing arguments to min; returning Inf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 genes have adjusted p-value equal to 0, will be set to Inf</span>
+<span class="r-plt img"><img src="plot_volcano-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Without gene labels</span></span></span>
+<span class="r-in"><span><span class="va">de_results</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="st">"fake gene"</span></span></span>
 <span class="r-in"><span><span class="fu">plot_volcano</span><span class="op">(</span><span class="va">de_results</span>, labels <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>no non-missing arguments to min; returning Inf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 genes have adjusted p-value equal to 0, will be set to Inf</span>
+<span class="r-plt img"><img src="plot_volcano-3.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
@@ -169,7 +188,7 @@ labels genes meeting both significance criteria.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>
