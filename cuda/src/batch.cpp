@@ -342,9 +342,10 @@ beta_fit_gpu_external(
 				    genesBatch * features * sizeof(float),
 				    cudaMemcpyDeviceToHost));
 	    }
-	    
-	    // Calculate dispersion (k) on GPU for this batch
-	    // Compute row means of Y (recompute since d_means was used for beta init)
+
+            // Calculate dispersion (k) on GPU for this batch
+            // Compute row means of Y
+            // TODO: check if this is necessary, this should be computed above !!!! However is not expensive..
 	    compute_row_means<<<blocks1D_genes, threads1D>>>(Y[me], d_means[me], genesBatch, cells);
 	    
 	    // Compute row variances of Y
