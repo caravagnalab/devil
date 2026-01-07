@@ -336,7 +336,7 @@ cores.</p>
 <span><span class="co">#&gt; Fitting beta coefficients</span></span>
 <span><span class="co">#&gt; Fit overdispersion (mode = MOM)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   0.130   0.180   0.095</span></span>
+<span><span class="co">#&gt;   0.124   0.185   0.093</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">fit_cpu_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_devil.html">fit_devil</a></span><span class="op">(</span></span>
@@ -357,7 +357,7 @@ cores.</p>
 <span><span class="co">#&gt; Fitting beta coefficients</span></span>
 <span><span class="co">#&gt; Fit overdispersion (mode = MLE)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   0.340   0.570   0.244</span></span></code></pre></div>
+<span><span class="co">#&gt;   0.329   0.574   0.241</span></span></code></pre></div>
 <div class="section level4">
 <h4 id="examining-iteration-counts">Examining Iteration Counts<a class="anchor" aria-label="anchor" href="#examining-iteration-counts"></a>
 </h4>
@@ -502,7 +502,7 @@ may be less precise for genes with extreme overdispersion.</p>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Rough init:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">time_rough</span><span class="op">[</span><span class="st">"elapsed"</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"sec"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Rough init: 0.06 sec"</span></span>
+<span><span class="co">#&gt; [1] "Rough init: 0.05 sec"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Proper init:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">time_proper</span><span class="op">[</span><span class="st">"elapsed"</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"sec"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "Proper init: 0.09 sec"</span></span>
 <span></span>
