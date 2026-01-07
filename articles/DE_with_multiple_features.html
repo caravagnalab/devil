@@ -38,7 +38,8 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/DE_with_multiple_features.html">Using devil for complex designs with multiple covariates</a></li>
+<li><a class="dropdown-item" href="../articles/continuousCov.html">Using devil for continuous variables</a></li>
+    <li><a class="dropdown-item" href="../articles/DE_with_multiple_features.html">Using devil for complex designs with multiple covariates</a></li>
     <li><a class="dropdown-item" href="../articles/devil_GPU_v_CPU.html">devil statistical model, CPU and GPU implementation</a></li>
     <li><a class="dropdown-item" href="../articles/getStarted.html">Get started</a></li>
     <li><a class="dropdown-item" href="../articles/gpuSetup.html">GPU and CUDA Setup</a></li>
@@ -82,9 +83,8 @@
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyr.tidyverse.org" class="external-link">tidyr</a></span><span class="op">)</span></span></code></pre></div>
 <p>In this vignette we illustrate how to use <strong>devil</strong> with
 a <strong>non-trivial design matrix</strong> including multiple
-covariates and interactions, using the <code><a href="https://rdrr.io/pkg/scRNAseq/man/RichardTCellData.html" class="external-link">RichardTCellData()</a></code>
-dataset from the <strong>scRNAseq</strong> package. We’ll show how
-to:</p>
+covariates, using the <code><a href="https://rdrr.io/pkg/scRNAseq/man/RichardTCellData.html" class="external-link">RichardTCellData()</a></code> dataset from the
+<strong>scRNAseq</strong> package. We’ll show how to:</p>
 <ol style="list-style-type: decimal">
 <li>Fit a model with multiple covariates</li>
 <li>Extract and interpret coefficients</li>
@@ -209,8 +209,8 @@ runs very quickly:</p>
 <ul>
 <li>
 <strong>Main effects</strong>: <code>stimulus</code> (different T
-cell stimulation conditions), <code>age</code> (as continuous
-variable)</li>
+cell stimulation conditions), <code>age</code>
+</li>
 <li>
 <strong>Reference levels</strong>: The first level of each factor
 will be the baseline</li>
@@ -325,7 +325,7 @@ gene and each term in the design matrix.</p>
 <span>         x <span class="op">=</span> <span class="st">"Coefficient value (log scale)"</span>,</span>
 <span>         y <span class="op">=</span> <span class="st">"Density"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" width="672"></p>
+<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="" width="672"></p>
 <p><strong>Interpretation</strong>:</p>
 <ul>
 <li>Coefficients represent log-fold changes relative to the baseline
@@ -351,7 +351,7 @@ gene and each term in the design matrix.</p>
 <span>         x <span class="op">=</span> <span class="st">"Theta (dispersion parameter)"</span>,</span>
 <span>         y <span class="op">=</span> <span class="st">"Number of genes"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_vline</a></span><span class="op">(</span>xintercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="va">theta_vec</span><span class="op">)</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" width="672"></p>
+<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" alt="" width="672"></p>
 <p><strong>Interpretation</strong>: Higher theta values indicate less
 overdispersion (more Poisson-like), while lower values indicate more
 overdispersion (more variability than expected).</p>
@@ -427,7 +427,7 @@ different stimuli:</p>
 <span>         color <span class="op">=</span> <span class="st">"DE status"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="fl">0.05</span><span class="op">)</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, alpha <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_vline</a></span><span class="op">(</span>xintercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.5</span>, <span class="fl">0.5</span><span class="op">)</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span>, alpha <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></code></pre></div>
-<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-12-1.png" class="r-plt" width="960"></p>
+<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-12-1.png" class="r-plt" alt="" width="960"></p>
 </div>
 <div class="section level3">
 <h3 id="top-differentially-expressed-genes">Top differentially expressed genes<a class="anchor" aria-label="anchor" href="#top-differentially-expressed-genes"></a>
@@ -484,7 +484,7 @@ different stimuli:</p>
 <span>        fontsize <span class="op">=</span> <span class="fl">8</span></span>
 <span>    <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" width="768"></p>
+<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="" width="768"></p>
 </div>
 </div>
 <div class="section level2">
@@ -543,7 +543,7 @@ model from a simple Poisson</p>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"text"</span>, x <span class="op">=</span> <span class="cn">Inf</span>, y <span class="op">=</span> <span class="op">-</span><span class="cn">Inf</span>, </span>
 <span>             label <span class="op">=</span> <span class="st">"Dashed line = Poisson expectation"</span>,</span>
 <span>             hjust <span class="op">=</span> <span class="fl">1.1</span>, vjust <span class="op">=</span> <span class="op">-</span><span class="fl">0.5</span>, size <span class="op">=</span> <span class="fl">3</span>, color <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-16-1.png" class="r-plt" width="672"></p>
+<p><img src="DE_with_multiple_features_files/figure-html/unnamed-chunk-16-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
@@ -599,7 +599,7 @@ overdispersion.</p>
 <span><span class="co">#&gt; other attached packages:</span></span>
 <span><span class="co">#&gt;  [1] ensembldb_2.34.0            AnnotationFilter_1.34.0    </span></span>
 <span><span class="co">#&gt;  [3] GenomicFeatures_1.62.0      AnnotationDbi_1.72.0       </span></span>
-<span><span class="co">#&gt;  [5] tidyr_1.3.1                 ggplot2_4.0.1              </span></span>
+<span><span class="co">#&gt;  [5] tidyr_1.3.2                 ggplot2_4.0.1              </span></span>
 <span><span class="co">#&gt;  [7] dplyr_1.1.4                 Matrix_1.7-4               </span></span>
 <span><span class="co">#&gt;  [9] scRNAseq_2.24.0             SingleCellExperiment_1.32.0</span></span>
 <span><span class="co">#&gt; [11] SummarizedExperiment_1.40.0 Biobase_2.70.0             </span></span>
@@ -630,8 +630,8 @@ overdispersion.</p>
 <span><span class="co">#&gt;  [35] Rhdf5lib_1.32.0           BiocParallel_1.44.0      </span></span>
 <span><span class="co">#&gt;  [37] parallel_4.5.2            R6_2.6.1                 </span></span>
 <span><span class="co">#&gt;  [39] RColorBrewer_1.1-3        bslib_0.9.0              </span></span>
-<span><span class="co">#&gt;  [41] rtracklayer_1.70.0        jquerylib_0.1.4          </span></span>
-<span><span class="co">#&gt;  [43] Rcpp_1.1.0                knitr_1.50               </span></span>
+<span><span class="co">#&gt;  [41] rtracklayer_1.70.1        jquerylib_0.1.4          </span></span>
+<span><span class="co">#&gt;  [43] Rcpp_1.1.0                knitr_1.51               </span></span>
 <span><span class="co">#&gt;  [45] tidyselect_1.2.1          abind_1.4-8              </span></span>
 <span><span class="co">#&gt;  [47] yaml_2.3.12               codetools_0.2-20         </span></span>
 <span><span class="co">#&gt;  [49] curl_7.0.0                lattice_0.22-7           </span></span>
@@ -656,7 +656,7 @@ overdispersion.</p>
 <span><span class="co">#&gt;  [87] textshaping_1.0.4         viridisLite_0.4.2        </span></span>
 <span><span class="co">#&gt;  [89] S4Arrays_1.10.1           gtable_0.3.6             </span></span>
 <span><span class="co">#&gt;  [91] alabaster.se_1.10.0       sass_0.4.10              </span></span>
-<span><span class="co">#&gt;  [93] digest_0.6.39             SparseArray_1.10.7       </span></span>
+<span><span class="co">#&gt;  [93] digest_0.6.39             SparseArray_1.10.8       </span></span>
 <span><span class="co">#&gt;  [95] farver_2.1.2              rjson_0.2.23             </span></span>
 <span><span class="co">#&gt;  [97] memoise_2.0.1             htmltools_0.5.9          </span></span>
 <span><span class="co">#&gt;  [99] pkgdown_2.2.0             lifecycle_1.0.4          </span></span>

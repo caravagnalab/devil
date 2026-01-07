@@ -424,8 +424,8 @@ sessionInfo()
 #>  [35] Rhdf5lib_1.32.0           BiocParallel_1.44.0      
 #>  [37] parallel_4.5.2            R6_2.6.1                 
 #>  [39] RColorBrewer_1.1-3        bslib_0.9.0              
-#>  [41] rtracklayer_1.70.0        jquerylib_0.1.4          
-#>  [43] Rcpp_1.1.0                knitr_1.50               
+#>  [41] rtracklayer_1.70.1        jquerylib_0.1.4          
+#>  [43] Rcpp_1.1.0                knitr_1.51               
 #>  [45] tidyselect_1.2.1          abind_1.4-8              
 #>  [47] yaml_2.3.12               codetools_0.2-20         
 #>  [49] curl_7.0.0                lattice_0.22-7           
@@ -451,7 +451,7 @@ sessionInfo()
 #>  [89] textshaping_1.0.4         S4Arrays_1.10.1          
 #>  [91] AnnotationFilter_1.34.0   gtable_0.3.6             
 #>  [93] alabaster.se_1.10.0       sass_0.4.10              
-#>  [95] digest_0.6.39             SparseArray_1.10.7       
+#>  [95] digest_0.6.39             SparseArray_1.10.8       
 #>  [97] farver_2.1.2              rjson_0.2.23             
 #>  [99] memoise_2.0.1             htmltools_0.5.9          
 #> [101] pkgdown_2.2.0             lifecycle_1.0.4          

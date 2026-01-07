@@ -1,4 +1,4 @@
 # License
 
-    YEAR: 2024
-    COPYRIGHT HOLDER: anRpackage authors
+    YEAR: 2025
+    COPYRIGHT HOLDER: devil authors

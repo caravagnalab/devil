@@ -11,8 +11,7 @@ library(tidyr)
 ```
 
 In this vignette we illustrate how to use **devil** with a **non-trivial
-design matrix** including multiple covariates and interactions, using
-the
+design matrix** including multiple covariates, using the
 [`RichardTCellData()`](https://rdrr.io/pkg/scRNAseq/man/RichardTCellData.html)
 dataset from the **scRNAseq** package. We’ll show how to:
 
@@ -145,7 +144,7 @@ From now on we’ll work with `sce_sub`.
 We consider a model with:
 
 - **Main effects**: `stimulus` (different T cell stimulation
-  conditions), `age` (as continuous variable)
+  conditions), `age`
 - **Reference levels**: The first level of each factor will be the
   baseline
 
@@ -535,7 +534,7 @@ sessionInfo()
 #> other attached packages:
 #>  [1] ensembldb_2.34.0            AnnotationFilter_1.34.0    
 #>  [3] GenomicFeatures_1.62.0      AnnotationDbi_1.72.0       
-#>  [5] tidyr_1.3.1                 ggplot2_4.0.1              
+#>  [5] tidyr_1.3.2                 ggplot2_4.0.1              
 #>  [7] dplyr_1.1.4                 Matrix_1.7-4               
 #>  [9] scRNAseq_2.24.0             SingleCellExperiment_1.32.0
 #> [11] SummarizedExperiment_1.40.0 Biobase_2.70.0             
@@ -566,8 +565,8 @@ sessionInfo()
 #>  [35] Rhdf5lib_1.32.0           BiocParallel_1.44.0      
 #>  [37] parallel_4.5.2            R6_2.6.1                 
 #>  [39] RColorBrewer_1.1-3        bslib_0.9.0              
-#>  [41] rtracklayer_1.70.0        jquerylib_0.1.4          
-#>  [43] Rcpp_1.1.0                knitr_1.50               
+#>  [41] rtracklayer_1.70.1        jquerylib_0.1.4          
+#>  [43] Rcpp_1.1.0                knitr_1.51               
 #>  [45] tidyselect_1.2.1          abind_1.4-8              
 #>  [47] yaml_2.3.12               codetools_0.2-20         
 #>  [49] curl_7.0.0                lattice_0.22-7           
@@ -592,7 +591,7 @@ sessionInfo()
 #>  [87] textshaping_1.0.4         viridisLite_0.4.2        
 #>  [89] S4Arrays_1.10.1           gtable_0.3.6             
 #>  [91] alabaster.se_1.10.0       sass_0.4.10              
-#>  [93] digest_0.6.39             SparseArray_1.10.7       
+#>  [93] digest_0.6.39             SparseArray_1.10.8       
 #>  [95] farver_2.1.2              rjson_0.2.23             
 #>  [97] memoise_2.0.1             htmltools_0.5.9          
 #>  [99] pkgdown_2.2.0             lifecycle_1.0.4          

@@ -38,7 +38,8 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/DE_with_multiple_features.html">Using devil for complex designs with multiple covariates</a></li>
+<li><a class="dropdown-item" href="../articles/continuousCov.html">Using devil for continuous variables</a></li>
+    <li><a class="dropdown-item" href="../articles/DE_with_multiple_features.html">Using devil for complex designs with multiple covariates</a></li>
     <li><a class="dropdown-item" href="../articles/devil_GPU_v_CPU.html">devil statistical model, CPU and GPU implementation</a></li>
     <li><a class="dropdown-item" href="../articles/getStarted.html">Get started</a></li>
     <li><a class="dropdown-item" href="../articles/gpuSetup.html">GPU and CUDA Setup</a></li>
@@ -210,7 +211,7 @@ cells.</p>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Size factors across normalization methods"</span>,</span>
 <span>         x <span class="op">=</span> <span class="st">"Cell index"</span>, y <span class="op">=</span> <span class="st">"Size factor"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="devil_GPU_v_CPU_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" width="672"></p>
+<p><img src="devil_GPU_v_CPU_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="" width="672"></p>
 <p><strong>Interpretation</strong>:</p>
 <ul>
 <li>
@@ -244,7 +245,7 @@ variable</li>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Relationship between size factors and offsets"</span>,</span>
 <span>         x <span class="op">=</span> <span class="st">"Size factor"</span>, y <span class="op">=</span> <span class="st">"Offset (log scale)"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `geom_smooth()` using formula = 'y ~ x'</span></span></code></pre></div>
-<p><img src="devil_GPU_v_CPU_files/figure-html/unnamed-chunk-5-1.png" class="r-plt" width="672"></p>
+<p><img src="devil_GPU_v_CPU_files/figure-html/unnamed-chunk-5-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 </div>
 <div class="section level2">
@@ -335,7 +336,7 @@ cores.</p>
 <span><span class="co">#&gt; Fitting beta coefficients</span></span>
 <span><span class="co">#&gt; Fit overdispersion (mode = MOM)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   0.119   0.195   0.098</span></span>
+<span><span class="co">#&gt;   0.129   0.184   0.096</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">fit_cpu_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_devil.html">fit_devil</a></span><span class="op">(</span></span>
@@ -356,7 +357,7 @@ cores.</p>
 <span><span class="co">#&gt; Fitting beta coefficients</span></span>
 <span><span class="co">#&gt; Fit overdispersion (mode = MLE)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   0.314   0.638   0.253</span></span></code></pre></div>
+<span><span class="co">#&gt;   0.324   0.580   0.243</span></span></code></pre></div>
 <div class="section level4">
 <h4 id="examining-iteration-counts">Examining Iteration Counts<a class="anchor" aria-label="anchor" href="#examining-iteration-counts"></a>
 </h4>
@@ -371,7 +372,7 @@ cores.</p>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Beta coefficient fitting: iterations per gene"</span>,</span>
 <span>         x <span class="op">=</span> <span class="st">"Number of iterations"</span>, y <span class="op">=</span> <span class="st">"Number of genes"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="devil_GPU_v_CPU_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" width="672"></p>
+<p><img src="devil_GPU_v_CPU_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Theta fitting iterations (per gene)</span></span>
@@ -464,7 +465,7 @@ Cox-Reid adjustment.</p>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_bw</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Overdispersion estimates across methods"</span>,</span>
 <span>         x <span class="op">=</span> <span class="st">"log10(θ MOM)"</span>, y <span class="op">=</span> <span class="st">"log10(θ MLE)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="devil_GPU_v_CPU_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" width="672"></p>
+<p><img src="devil_GPU_v_CPU_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Correlation between methods</span></span>
@@ -501,7 +502,7 @@ may be less precise for genes with extreme overdispersion.</p>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Rough init:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">time_rough</span><span class="op">[</span><span class="st">"elapsed"</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"sec"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Rough init: 0.05 sec"</span></span>
+<span><span class="co">#&gt; [1] "Rough init: 0.06 sec"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Proper init:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">time_proper</span><span class="op">[</span><span class="st">"elapsed"</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span>, <span class="st">"sec"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "Proper init: 0.09 sec"</span></span>
 <span></span>
