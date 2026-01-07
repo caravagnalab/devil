@@ -30,6 +30,7 @@ library(Matrix)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(ggpubr)
 
 # Load axolotl tail regeneration data
 # This dataset contains scRNA-seq from regenerating tail tissue at different timepoints
