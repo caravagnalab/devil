@@ -147,7 +147,8 @@ compute_offset_matrix <- function(off, Y, size_factors) {
     offset_matrix <- matrix(off, nrow = n_genes, ncol = n_samples)
 
     if (!(is.null(size_factors))) {
-        lsf <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, 1))) + log(size_factors)
+        # lsf <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, 1))) + log(size_factors)
+        lsf <- DelayedArray::DelayedArray(matrix(log(size_factors), ncol = 1))
         offset_matrix <- DelayedArray::sweep(offset_matrix, 2, lsf, "+")
     }
 
