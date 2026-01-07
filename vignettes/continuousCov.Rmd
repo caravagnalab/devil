@@ -1,0 +1,349 @@
+---
+title: "Using devil for continuous variables"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using devil for continuous variables}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 6
+)
+```
+
+# Introduction
+
+This vignette demonstrates how to use the `devil` package to perform differential expression (DE) analysis with **continuous covariates**. Specifically, we'll analyze how gene expression changes over time in an experiment where the continuous variable is days post-amputation.
+
+# Setup and Data Loading
+
+```{r setup, message=FALSE, warning=FALSE}
+library(devil)
+library(scRNAseq)
+library(SingleCellExperiment)
+library(Matrix)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+# Load axolotl tail regeneration data
+# This dataset contains scRNA-seq from regenerating tail tissue at different timepoints
+sce <- scRNAseq::AztekinTailData()
+```
+
+# Data Preprocessing
+
+## Quality Filtering
+
+We first filter out genes with very low expression to remove noise and improve computational efficiency:
+
+```{r filter_genes}
+counts <- assay(sce, "counts")
+
+# Keep genes with:
+# 1. Mean expression > 0.1 counts per cell
+# 2. Detected in at least 100 cells
+keep_genes <- rowMeans(counts) > 0.1 & rowSums(counts > 0) > 100
+sce <- sce[keep_genes, ]
+
+cat("After filtering:", nrow(sce), "genes and", ncol(sce), "cells\n")
+```
+
+## Subsampling for Quick Demonstration
+
+For this vignette, we subsample the data so computations run quickly. In practice, you would use the full filtered dataset:
+
+```{r subsample}
+set.seed(123)
+n_genes <- min(2000, nrow(sce))
+n_cells <- min(5000, ncol(sce))
+
+gene_idx <- sample(seq_len(nrow(sce)), n_genes)
+cell_idx <- sample(seq_len(ncol(sce)), n_cells)
+sce_sub <- sce[gene_idx, cell_idx]
+
+cat("Working with:", nrow(sce_sub), "genes and", ncol(sce_sub), "cells\n")
+```
+
+# Building the Design Matrix
+
+## Understanding the Covariate
+
+Our main variable of interest is `DaysPostAmputation`, a continuous variable representing time since amputation. Let's examine its distribution:
+
+```{r examine_covariate}
+meta_df <- as.data.frame(colData(sce_sub))
+
+# Check the range and distribution of DaysPostAmputation
+cat("DaysPostAmputation range:", 
+    min(meta_df$DaysPostAmputation), "to", 
+    max(meta_df$DaysPostAmputation), "days\n")
+
+table(meta_df$DaysPostAmputation)
+```
+
+## Creating the Design Matrix
+
+For a continuous covariate, the design matrix includes:
+1. An **intercept** term representing baseline expression
+2. A **slope** term for `DaysPostAmputation` representing the rate of change per day
+
+```{r design_matrix}
+design <- model.matrix(
+  ~ DaysPostAmputation,
+  data = meta_df
+)
+
+head(design, n = 10)
+cat("\nDesign matrix columns:", colnames(design), "\n")
+cat("Design matrix dimensions:", nrow(design), "cells ×", ncol(design), "coefficients\n")
+```
+
+**Interpretation**: 
+- `(Intercept)`: Expected log-expression at day 0
+- `DaysPostAmputation`: Change in log-expression per additional day (i.e., the slope)
+
+# Fitting the devil model
+
+Now, `fit_devil()` takes a count matrix and a design matrix and returns coefficients and overdispersions.
+
+```{r fit_model}
+Y <- as.matrix(assay(sce_sub, "counts"))
+
+devil_fit <- devil::fit_devil(
+  input_matrix = Y,
+  design_matrix = design,
+  verbose = TRUE,
+  init_beta_rough = FALSE,
+  size_factors = "normed_sum", 
+  overdispersion = "MOM"
+)
+```
+
+# Interpreting Model Coefficients
+
+## Coefficient Matrix Structure
+
+The fitted model contains coefficient estimates (on the log scale) for each gene and each term in the design matrix:
+
+```{r coef_structure}
+beta_matrix <- devil_fit$beta
+dim(beta_matrix)
+colnames(beta_matrix) <- colnames(design)
+
+cat("\nCoefficient matrix: ", nrow(beta_matrix), "genes ×", 
+    ncol(beta_matrix), "coefficients\n")
+```
+
+## Visualizing Coefficient Distributions
+
+Let's examine the distribution of the `DaysPostAmputation` coefficient across all genes:
+
+```{r visualize_coefficients, fig.height=4}
+coef_df <- as.data.frame(beta_matrix) %>%
+  dplyr::mutate(gene = rownames(beta_matrix))
+
+# Reshape for plotting
+coef_long <- coef_df %>%
+  tidyr::pivot_longer(cols = -gene, names_to = "coefficient", values_to = "value")
+
+# Plot distribution of DaysPostAmputation coefficient
+ggplot(coef_long %>% dplyr::filter(coefficient == "DaysPostAmputation"), aes(x = value)) +
+  geom_histogram(bins = 50, fill = "steelblue", alpha = 0.7) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red", linewidth = 1) +
+  theme_bw() +
+  labs(
+    title = "Distribution of DaysPostAmputation coefficients across genes",
+    subtitle = "Positive values = upregulated over time, Negative = downregulated",
+    x = "Coefficient value (log fold-change per day)",
+    y = "Number of genes"
+  )
+```
+
+**Interpretation**: 
+
+- Genes with positive coefficients increase expression over time
+- Genes with negative coefficients decrease expression over time
+- The magnitude indicates the rate of change per day
+
+# Differential Expression Testing
+
+## Testing for Time-Dependent Expression
+
+We use a Wald test to identify genes whose expression significantly changes with days post-amputation. The contrast vector `c(0, 1)` tests the `DaysPostAmputation` coefficient (second column in design matrix):
+
+```{r de_test}
+# Contrast vector: test the DaysPostAmputation coefficient
+# c(Intercept, DaysPostAmputation)
+contrast_vector <- c(0, 1)
+
+de_res <- devil::test_de(
+  devil_fit, 
+  contrast = contrast_vector, 
+  clusters = meta_df$sample,  # Account for sample-level correlation
+  max_lfc = 100
+)
+
+# Add gene names
+de_res$name <- rownames(beta_matrix)
+
+head(de_res)
+```
+
+## Summary of DE Results
+
+```{r de_summary}
+# Count significant genes at FDR < 0.05
+de_summary <- de_res %>%
+  summarise(
+    total_genes = n(),
+    n_de = sum(adj_pval < 0.05),
+    n_upregulated = sum(adj_pval < 0.05 & lfc > 0),
+    n_downregulated = sum(adj_pval < 0.05 & lfc < 0),
+    pct_de = round(100 * n_de / total_genes, 1)
+  )
+
+print(de_summary)
+
+cat("\n", de_summary$n_upregulated, "genes increase expression over time\n")
+cat(de_summary$n_downregulated, "genes decrease expression over time\n")
+```
+
+## Volcano Plot
+
+Visualize the relationship between effect size (log fold-change per day) and significance:
+
+```{r volcano_plot}
+devil:::plot_volcano(devil.res = de_res) + 
+  labs(
+    title = "Volcano plot: Time-dependent gene expression",
+    x = "Log fold-change per day",
+    y = "-log10(Adjusted p-value)"
+  )
+```
+
+# Visualizing Top DE Genes
+
+## Identify Top Genes
+
+Select the 10 genes with the strongest time-dependent effects:
+
+```{r top_genes}
+top_genes <- de_res %>%
+  dplyr::filter(adj_pval <= 0.05) %>%
+  dplyr::arrange(desc(abs(lfc))) %>%
+  dplyr::slice_head(n = 10) %>%
+  dplyr::pull(name)
+
+cat("Top 10 time-responsive genes:\n")
+print(top_genes)
+
+# Show their statistics
+de_res %>%
+  dplyr::filter(name %in% top_genes) %>%
+  dplyr::select(name, lfc, pval, adj_pval) %>%
+  dplyr::arrange(desc(abs(lfc))) %>%
+  print()
+```
+
+## Expression Trajectories Over Time
+
+Create scatter plots showing how expression changes with days post-amputation for top genes:
+
+```{r plot_function}
+counts <- assay(sce_sub, "counts")
+
+# Function to plot gene expression vs. DaysPostAmputation
+plot_gene_trajectory <- function(gene_name) {
+  stopifnot(gene_name %in% rownames(counts))
+  
+  # Get gene info
+  gene_info <- de_res %>% dplyr::filter(name == gene_name)
+  
+  df <- tibble(
+    DaysPostAmputation = as.numeric(as.character(sce_sub$DaysPostAmputation)),
+    expr = as.numeric(counts[gene_name, ])
+  )
+  
+  # Create plot
+  p <- ggplot(df, aes(x = DaysPostAmputation, y = log1p(expr))) +
+    geom_point(
+      alpha = 0.3, 
+      size = 1.5, 
+      position = position_jitter(width = 0.08, height = 0),
+      color = "gray40"
+    ) +
+    stat_summary(
+      fun = mean,
+      geom = "point",
+      size = 2.8,
+      color = "red"
+    ) +
+    theme_bw() +
+    labs(
+      title = gene_name,
+      subtitle = sprintf(
+        "LFC/day = %.3f, adj. p = %.2e",
+        gene_info$lfc,
+        gene_info$adj_pval
+      ),
+      x = "Days post amputation",
+      y = "log1p(Counts)"
+    ) +
+    theme(plot.subtitle = element_text(size = 9))
+  
+  return(p)
+}
+```
+
+## Plot Top Upregulated and Downregulated Genes
+
+```{r plot_trajectories}
+# Get top upregulated and downregulated genes
+top_up <- de_res %>%
+  dplyr::filter(adj_pval < 0.05, lfc > 0) %>%
+  dplyr::arrange(desc(lfc)) %>%
+  dplyr::slice_head(n = 2) %>%
+  dplyr::pull(name)
+
+top_down <- de_res %>%
+  dplyr::filter(adj_pval < 0.05, lfc < 0) %>%
+  dplyr::arrange(lfc) %>%
+  dplyr::slice_head(n = 2) %>%
+  dplyr::pull(name)
+
+# Create plots
+plots <- lapply(c(top_up, top_down), plot_gene_trajectory)
+
+# Arrange plots
+ggpubr::ggarrange(
+  plotlist = plots,
+  ncol = 2,
+  nrow = 2,
+  align = "hv"
+)
+```
+
+**Interpretation**:
+
+- Each point represents a single cell
+- The red point indicates the mean expression for a given day
+
+# Summary
+
+This vignette demonstrated:
+
+1. **Data preparation**: Filtering and structuring single-cell RNA-seq data
+2. **Design matrix**: Creating a model with continuous covariates
+3. **Model fitting**: Using `fit_devil()` to estimate gene-specific parameters
+4. **Hypothesis testing**: Identifying genes with significant time-dependent expression
+5. **Visualization**: Interpreting results through volcano plots and expression trajectories
+
+```{r session_info}
+sessionInfo()
+```

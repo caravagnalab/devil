@@ -35,8 +35,6 @@ You can install the current version of `devil` from [GitHub](https://github.com/
 devtools::install_github("caravagnalab/devil")
 ```
 
-The CUDA implementation is, as today, in the devel branch.
-
 ## Example
 
 This is a basic example which shows you how to fit the expression for a single gene observed in 1000 cells.
@@ -44,8 +42,8 @@ This is a basic example which shows you how to fit the expression for a single g
 ```{r example}
 library(devil)
 y <- t(as.matrix(rnbinom(1000, 1, .1)))
-fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = T, overdispersion = T)
-test <- devil::test_de(fit, c(1))
+fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = NULL, overdispersion = "MOM")
+test <- devil::test_de(fit, contrast = c(1))
 ```
 
 -----
