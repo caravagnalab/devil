@@ -30,9 +30,6 @@ You can install the current version of `devil` from
 devtools::install_github("caravagnalab/devil")
 ```
 
-The CUDA implementation is, as today, in the devel branch.
-Similary, a Python implementation (with GPU support), is in the python branch.
-
 ## Example
 
 This is a basic example which shows you how to fit the expression for a
@@ -41,12 +38,12 @@ single gene observed in 1000 cells.
 ``` r
 library(devil)
 y <- t(as.matrix(rnbinom(1000, 1, .1)))
-fit <- devil::fit_devil(input_matrix=y, design_matrix=matrix(1, ncol = 1, nrow = 1000), verbose=T, size_factors=T, overdispersion = T)
-#> Compute size factors
-#> Initialize beta estimate
-#> Fit beta coefficients
-#> Fit overdispersion
-test <- devil::test_de(fit, c(1))
+fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = NULL, overdispersion = "MOM")
+#> Initialize theta
+#> Initialize beta
+#> Fitting beta coefficients
+#> Fit overdispersion (mode = MOM)
+test <- devil::test_de(fit, contrast = c(1))
 ```
 
 ------------------------------------------------------------------------

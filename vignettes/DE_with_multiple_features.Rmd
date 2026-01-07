@@ -26,7 +26,7 @@ library(ggplot2)
 library(tidyr)
 ```
 
-In this vignette we illustrate how to use **devil** with a **non-trivial design matrix** including multiple covariates and interactions, using the `RichardTCellData()` dataset from the **scRNAseq** package. We'll show how to:
+In this vignette we illustrate how to use **devil** with a **non-trivial design matrix** including multiple covariates, using the `RichardTCellData()` dataset from the **scRNAseq** package. We'll show how to:
 
 1. Fit a model with multiple covariates
 2. Extract and interpret coefficients
@@ -90,7 +90,7 @@ From now on we'll work with `sce_sub`.
 
 We consider a model with:
 
-- **Main effects**: `stimulus` (different T cell stimulation conditions), `age` (as continuous variable)
+- **Main effects**: `stimulus` (different T cell stimulation conditions), `age`
 - **Reference levels**: The first level of each factor will be the baseline
 
 ```{r}
