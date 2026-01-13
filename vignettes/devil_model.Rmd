@@ -3,6 +3,8 @@ title: "devil model explained"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{devil model explained}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}

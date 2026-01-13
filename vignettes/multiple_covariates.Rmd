@@ -3,6 +3,8 @@ title: "Differential expression with multiple covariates"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Differential expression with multiple covariates}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}

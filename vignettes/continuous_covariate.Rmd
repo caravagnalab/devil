@@ -3,6 +3,8 @@ title: "Differential expression with a continuous covariate"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Differential expression with a continuous covariate}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
