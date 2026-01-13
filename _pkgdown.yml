@@ -31,3 +31,19 @@ reference:
   desc:  Functions to plot differential expression analysis
   contents:
   - plot_volcano
+
+articles:
+  - title: "Setup"
+    contents:
+      - quick_setup
+      - gpu_setup
+
+  - title: "Model"
+    contents:
+      - devil_model
+
+  - title: "Tutorials"
+    contents:
+      - get_started
+      - continuous_covariate
+      - multiple_covariates

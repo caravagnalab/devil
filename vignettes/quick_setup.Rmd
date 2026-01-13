@@ -1,10 +1,8 @@
 ---
-title: "Quick Setup"
+title: "Quick setup (CPU & GPU)"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Quick Setup}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Quick setup (CPU & GPU)}
 ---
 
 ```{r, include = FALSE}
@@ -21,12 +19,14 @@ This guide provides streamlined installation instructions for the `devil` packag
 ## Standard Installation
 
 For most users, the standard CPU-based installation is recommended:
+
 ```{r eval=FALSE}
 # Install from GitHub
 devtools::install_github("caravagnalab/devil")
 ```
 
 If you don't have `devtools` installed:
+
 ```{r eval=FALSE}
 install.packages("devtools")
 devtools::install_github("caravagnalab/devil")
@@ -49,6 +49,7 @@ Before installing the GPU-accelerated version, ensure you have:
 ### Verifying Your Environment
 
 Check if your environment variables are set correctly:
+
 ```{r eval=FALSE}
 # Check CUDA_HOME
 Sys.getenv("CUDA_HOME")

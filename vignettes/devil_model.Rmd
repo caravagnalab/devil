@@ -1,10 +1,8 @@
 ---
-title: "devil statistical model, CPU and GPU implementation"
+title: "devil model explained"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{devil statistical model, CPU and GPU implementation}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{devil model explained}
 ---
 
 ```{r, include = FALSE}
