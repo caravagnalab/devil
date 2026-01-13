@@ -2,13 +2,13 @@ pandoc: 3.1.11
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
-  continuousCov: continuousCov.html
-  DE_with_multiple_features: DE_with_multiple_features.html
-  devil_GPU_v_CPU: devil_GPU_v_CPU.html
-  getStarted: getStarted.html
-  gpuSetup: gpuSetup.html
-  quickSetup: quickSetup.html
-last_built: 2026-01-07T14:00Z
+  continuous_covariate: continuous_covariate.html
+  devil_model: devil_model.html
+  get_started: get_started.html
+  gpu_setup: gpu_setup.html
+  multiple_covariates: multiple_covariates.html
+  quick_setup: quick_setup.html
+last_built: 2026-01-13T14:36Z
 urls:
   reference: https://caravagnalab.github.io/devil/reference
   article: https://caravagnalab.github.io/devil/articles

@@ -72,17 +72,23 @@ Functions to plot differential expression analysis
 
 # Articles
 
-### All vignettes
+### Setup
 
-- [Using devil for continuous
-  variables](https://caravagnalab.github.io/devil/articles/continuousCov.md):
-- [Using devil for complex designs with multiple
-  covariates](https://caravagnalab.github.io/devil/articles/DE_with_multiple_features.md):
-- [devil statistical model, CPU and GPU
-  implementation](https://caravagnalab.github.io/devil/articles/devil_GPU_v_CPU.md):
-- [Get
-  started](https://caravagnalab.github.io/devil/articles/getStarted.md):
-- [GPU and CUDA
-  Setup](https://caravagnalab.github.io/devil/articles/gpuSetup.md):
-- [Quick
-  Setup](https://caravagnalab.github.io/devil/articles/quickSetup.md):
+- [Quick setup (CPU &
+  GPU)](https://caravagnalab.github.io/devil/articles/quick_setup.md):
+- [GPU setup
+  (detailed)](https://caravagnalab.github.io/devil/articles/gpu_setup.md):
+
+### Model
+
+- [devil model
+  explained](https://caravagnalab.github.io/devil/articles/devil_model.md):
+
+### Tutorials
+
+- [Get started: differential
+  expression](https://caravagnalab.github.io/devil/articles/get_started.md):
+- [Differential expression with a continuous
+  covariate](https://caravagnalab.github.io/devil/articles/continuous_covariate.md):
+- [Differential expression with multiple
+  covariates](https://caravagnalab.github.io/devil/articles/multiple_covariates.md):
