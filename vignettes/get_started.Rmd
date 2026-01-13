@@ -3,6 +3,8 @@ title: "Get started: differential expression"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Get started: differential expression}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}

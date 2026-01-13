@@ -3,6 +3,8 @@ title: "Quick setup (CPU & GPU)"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Quick setup (CPU & GPU)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
