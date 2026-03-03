@@ -148,14 +148,16 @@ fit_devil <- function(
   gene_names <- rownames(input_matrix)
   ngenes <- nrow(input_matrix)
   nfeatures <- ncol(design_matrix)
-  
+
   # Check input clusters
   if (!is.null(clusters)) {
     clusters = as.numeric(factor(clusters, levels = unique(clusters)))
     if (is.unsorted(clusters)) stop("Input data should be grouped in block of patients. Use the `group_data` function to group them")
     cluster_blocks_indexes <- cumsum(rle(clusters)$lengths)
+  } else {
+    cluster_blocks_indexes = NULL
   }
-  
+
   # Detect cores to use
   max.cores <- parallel::detectCores()
   if (is.null(parallel.cores)) {
@@ -166,7 +168,7 @@ fit_devil <- function(
     }
     n.cores <- min(max.cores, parallel.cores)
   }
-  
+
   # Check if CUDA is available
   CUDA_is_available <- FALSE
   if (CUDA) {
@@ -185,7 +187,7 @@ fit_devil <- function(
       CUDA_is_available <- TRUE
     }
   }
-  
+
   # - CPU and GPU common part (i.e. size_factors and offset_vectors) ----
   ## - Compute size factors ----
   if (!is.null(size_factors)) {
@@ -196,18 +198,18 @@ fit_devil <- function(
   } else {
     sf <- rep(1, nrow(design_matrix))
   }
-  
+
   ## - Compute offset vector ----
   offset_vector <- devil:::compute_offset_vector(offset, input_matrix, sf)
-  
+
   # - Start GPU vs CPU branch ----
   if (CUDA & CUDA_is_available) {
-    
+
     ## - GPU branch ----
     remainder <- ngenes %% batch_size
     extra_genes <- remainder
     genes_batch <- ngenes - extra_genes
-    
+
     message("Fit beta, using CUDA acceleration")
     start_time <- Sys.time()
     res_beta_fit <- beta_fit_gpu(
@@ -219,7 +221,7 @@ fit_devil <- function(
       batch_size = batch_size,
       TEST = FALSE
     )
-    
+
     if (remainder > 0) {
       res_beta_fit_extra <- beta_fit_gpu(
         input_matrix[(genes_batch + 1):ngenes, ],
@@ -231,17 +233,17 @@ fit_devil <- function(
         TEST = FALSE
       )
     }
-    
+
     end_time <- Sys.time()
     message("[TIMING] Beta fit computing (GPU):", difftime(end_time, start_time, units = "secs"))
-    
+
     # Extract beta and theta from GPU results
     beta <- res_beta_fit$mu_beta
     theta <- res_beta_fit$theta
-    
+
     # gpu_k <- NULL
     # gpu_beta_init <- NULL
-    
+
     if (remainder > 0) {
       beta_extra <- res_beta_fit_extra$mu_beta
       theta_extra <- res_beta_fit_extra$theta
@@ -251,13 +253,13 @@ fit_devil <- function(
     } else {
       beta_iters <- c(res_beta_fit$iter)
     }
-    
+
     if (is.null(dim(beta))) {
       beta <- matrix(beta, ncol = 1)
     }
-    
+
     rownames(beta) <- gene_names
-    
+
     # Create fit_res structure to match CPU branch
     fit_res <- list(
       beta = beta,
@@ -267,7 +269,7 @@ fit_devil <- function(
         theta_iters = 0L # GPU uses MOM, no iterative fitting
       )
     )
-    
+
   } else {
     ## - CPU branch ----
     fit_res <- cpu_fit(
@@ -283,7 +285,7 @@ fit_devil <- function(
       tolerance = tolerance, verbose = verbose
     )
   }
-  
+
   return(list(
     beta = fit_res$beta,
     beta_sandwiches_null = fit_res$beta_sandwiches_null,
@@ -312,14 +314,14 @@ cpu_fit <- function(
     max_iter,
     tolerance,
     verbose) {
-  
+
   ngenes <- nrow(input_matrix)
   nsamples <- ncol(input_matrix)
   exp_offset <- exp(offset_vector)
-  
+
   # 1. Initialization Logic
   if (verbose) message("==> Initializing parameters")
-  
+
   # - Initialize dispersion ---
   if (verbose) message("Initialize theta")
   if (is.null(init_overdispersion)) {
@@ -327,7 +329,7 @@ cpu_fit <- function(
   } else {
     dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
   }
-  
+
   # - Initialize beta ---
   if (verbose) message("Initialize beta")
   if (isTRUE(init_beta_rough)) {
@@ -336,15 +338,15 @@ cpu_fit <- function(
   } else {
     beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
   }
-  
+
   # 2. The Fused Workhorse Loop
   if (verbose) message("Fitting expression coefficients and overdispersion")
-  
+
   results_list <- parallel::mclapply(
     X = seq_len(ngenes),
     mc.cores = n.cores,
     FUN = function(i) {
-      
+
       # --- Step A: Fit Beta ---
       fit <- devil:::beta_fit(
         y = input_matrix[i, ],
@@ -356,7 +358,7 @@ cpu_fit <- function(
         eps = tolerance
       )
       curr_beta <- fit$mu_beta
-      
+
       # --- Step B: Fit Theta (if not MOM) ---
       curr_theta <- dispersion_init[i]
       if (overdispersion %in% c("old", "MLE")) {
@@ -379,11 +381,11 @@ cpu_fit <- function(
         #   max_iter = max_iter,
         #   eps_theta = tolerance
         # )
-        theta_fit <- devil:::estimate_mom_dispersion_cpp( 
-          count_matrix = matrix(input_matrix[i, ], nrow = 1), 
+        theta_fit <- devil:::estimate_mom_dispersion_cpp(
+          count_matrix = matrix(input_matrix[i, ], nrow = 1),
           design_matrix = design_matrix,
-          beta_matrix = matrix(curr_beta, nrow = 1), 
-          sf = offset_vector
+          beta_matrix = matrix(curr_beta, nrow = 1),
+          sf = exp_offset
         )
         curr_theta <- theta_fit
       } else if (isFALSE(overdispersion)) {
@@ -391,7 +393,7 @@ cpu_fit <- function(
       } else {
         stop("Unknown overdispersion mode: ", overdispersion)
       }
-      
+
       # --- Step C: Compute Bread (Inverse Hessian) ---
       # Use the optimized version to avoid redundant memory allocations
       bread <- devil:::compute_hessian(
@@ -401,7 +403,7 @@ cpu_fit <- function(
         design_matrix = design_matrix,
         size_factors = exp_offset
       )
-      
+
       # --- Step D: Compute Meat and Sandwich ---
       s_clust <- NULL
       if (!is.null(cluster_blocks_indexes)) {
@@ -414,21 +416,21 @@ cpu_fit <- function(
         #   size_factors = exp_offset,
         #   clusters = as.integer(clusters)
         # )
-        
+
         meat_clust <- devil:::compute_clustered_meat_fast(
           design_matrix = design_matrix,
           y = input_matrix[i, ],
           beta = curr_beta,
           overdispersion = curr_theta,
-          size_factors = exp_offset, 
+          size_factors = exp_offset,
           cluster_blocks_indexes = cluster_blocks_indexes
         )
-        
+
         # Sandwich: V = B * M * B
         # Scale by nsamples to match standard sandwich asymptotics if required
         s_clust <- (bread %*% meat_clust %*% bread) * nsamples
       }
-      
+
       # Return results as a compact list
       return(list(
         beta = curr_beta,
@@ -439,20 +441,20 @@ cpu_fit <- function(
       ))
     }
   )
-  
+
   # 3. Aggregate Results
   if (verbose) message("Variance estimation")
-  
+
   final_beta <- do.call(rbind, lapply(results_list, `[[`, "beta"))
   final_theta <- vapply(results_list, `[[`, numeric(1), "theta")
   final_iters <- vapply(results_list, `[[`, integer(1), "iter")
-  
+
   # Separate out the variance matrices
   s_null_list  <- lapply(results_list, `[[`, "s_null")
   s_clust_list <- lapply(results_list, `[[`, "s_clust")
-  
+
   rownames(final_beta) <- rownames(input_matrix)
-  
+
   return(list(
     beta = final_beta,
     theta = final_theta,
