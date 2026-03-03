@@ -73,3 +73,7 @@ compute_meat <- function(design_matrix, y, beta, overdispersion, size_factors) {
     .Call('_devil_compute_meat', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors)
 }
 
+compute_clustered_meat_fast <- function(design_matrix, y, beta, overdispersion, size_factors, cluster_blocks_indexes) {
+    .Call('_devil_compute_clustered_meat_fast', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors, cluster_blocks_indexes)
+}
+

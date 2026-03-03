@@ -284,6 +284,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// compute_clustered_meat_fast
+Eigen::MatrixXd compute_clustered_meat_fast(const Eigen::MatrixXd& design_matrix, const Eigen::VectorXd& y, const Eigen::VectorXd& beta, const double overdispersion, const Eigen::VectorXd& size_factors, const Eigen::VectorXi& cluster_blocks_indexes);
+RcppExport SEXP _devil_compute_clustered_meat_fast(SEXP design_matrixSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP overdispersionSEXP, SEXP size_factorsSEXP, SEXP cluster_blocks_indexesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type design_matrix(design_matrixSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const double >::type overdispersion(overdispersionSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type size_factors(size_factorsSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXi& >::type cluster_blocks_indexes(cluster_blocks_indexesSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_clustered_meat_fast(design_matrix, y, beta, overdispersion, size_factors, cluster_blocks_indexes));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_devil_init_beta", (DL_FUNC) &_devil_init_beta, 2},
@@ -304,6 +320,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_compute_scores", (DL_FUNC) &_devil_compute_scores, 5},
     {"_devil_compute_clustered_meat", (DL_FUNC) &_devil_compute_clustered_meat, 6},
     {"_devil_compute_meat", (DL_FUNC) &_devil_compute_meat, 5},
+    {"_devil_compute_clustered_meat_fast", (DL_FUNC) &_devil_compute_clustered_meat_fast, 6},
     {NULL, NULL, 0}
 };
 

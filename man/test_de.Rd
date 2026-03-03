@@ -9,7 +9,6 @@ test_de(
   contrast,
   pval_adjust_method = "BH",
   max_lfc = 10,
-  clusters = NULL,
   parallel.cores = 1
 )
 }
@@ -32,11 +31,11 @@ Passed to stats::p.adjust(). Common choices:
 \item{max_lfc}{Numeric. Maximum absolute log2 fold change to report.
 Larger values are capped at ±max_lfc. Default: 10}
 
-\item{clusters}{Numeric vector or factor. Sample cluster assignments for robust
-variance estimation. Length must match number of samples. Default: NULL}
-
 \item{parallel.cores}{Integer or NULL. Number of CPU cores for parallel processing.
 If NULL, uses all available cores. Default: 1}
+
+\item{clusters}{Numeric vector or factor. Sample cluster assignments for robust
+variance estimation. Length must match number of samples. Default: NULL}
 }
 \value{
 A tibble with columns:
