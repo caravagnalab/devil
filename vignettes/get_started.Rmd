@@ -130,6 +130,7 @@ if (is.null(cluster) && "patient" %in% names(meta)) cluster <- factor(meta$patie
 fit <- devil::fit_devil(
     input_matrix = as.matrix(counts),
     design_matrix = design,
+    clusters = as.factor(clusters),
     overdispersion = "MOM",
     offset = 1e-6,
     init_overdispersion = NULL,
@@ -170,8 +171,7 @@ Run a Wald test with optional **clustered SEs** if `cluster` exists.
 test <- devil::test_de(
     fit,
     contrast = contrast,
-    max_lfc  = 20, # Cap extreme fold changes
-    cluster  = cluster # NULL if not present; enables patient-aware SE if provided
+    max_lfc  = 10 # Cap extreme fold changes
 )
 
 # Add gene names if missing

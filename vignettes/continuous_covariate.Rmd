@@ -119,6 +119,7 @@ Y <- as.matrix(assay(sce_sub, "counts"))
 devil_fit <- devil::fit_devil(
   input_matrix = Y,
   design_matrix = design,
+  clusters = as.factor(meta_df$sample),  # Account for sample-level correlation
   verbose = TRUE,
   init_beta_rough = FALSE,
   size_factors = "normed_sum", 
@@ -186,7 +187,6 @@ contrast_vector <- c(0, 1)
 de_res <- devil::test_de(
   devil_fit, 
   contrast = contrast_vector, 
-  clusters = meta_df$sample,  # Account for sample-level correlation
   max_lfc = 100
 )
 

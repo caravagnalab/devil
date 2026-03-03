@@ -7,6 +7,7 @@
 fit_devil(
   input_matrix,
   design_matrix,
+  clusters = NULL,
   overdispersion = "MOM",
   init_overdispersion = NULL,
   init_beta_rough = FALSE,

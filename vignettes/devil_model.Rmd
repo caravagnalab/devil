@@ -86,6 +86,7 @@ design <- model.matrix(~ group)
 fit_normed <- fit_devil(
     input_matrix = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = "normed_sum",
     verbose = FALSE
 )
@@ -94,6 +95,7 @@ fit_normed <- fit_devil(
 fit_psi <- fit_devil(
     input_matrix = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = "psinorm",
     verbose = FALSE
 )
@@ -102,6 +104,7 @@ fit_psi <- fit_devil(
 fit_no_norm <- fit_devil(
     input_matrix = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = NULL,
     verbose = FALSE
 )
@@ -221,6 +224,7 @@ system.time({
     fit_cpu_mom <- fit_devil(
         input_matrix = counts_small,
         design_matrix = design_small,
+        clusters = NULL,
         size_factors = "normed_sum",
         overdispersion = "MOM",
         parallel.cores = 1,
@@ -232,6 +236,7 @@ system.time({
     fit_cpu_new <- fit_devil(
         input_matrix = counts_small,
         design_matrix = design_small,
+        clusters = NULL,
         size_factors = "normed_sum",
         overdispersion = "MLE",
         parallel.cores = 1,
@@ -244,7 +249,7 @@ system.time({
 ```{r}
 # Beta fitting iterations (per gene)
 beta_iter_summary <- data.frame(
-    iterations = fit_cpu_new$iterations$beta_iters
+    iterations = fit_cpu_new$iterations
 )
 
 ggplot(beta_iter_summary, aes(x = iterations)) +
@@ -252,19 +257,6 @@ ggplot(beta_iter_summary, aes(x = iterations)) +
     theme_bw() +
     labs(title = "Beta coefficient fitting: iterations per gene",
          x = "Number of iterations", y = "Number of genes")
-
-# Theta fitting iterations (per gene)
-if (!is.na(fit_cpu_new$iterations$theta_iters[1])) {
-    theta_iter_summary <- data.frame(
-        iterations = fit_cpu_new$iterations$theta_iters
-    )
-    
-    ggplot(theta_iter_summary, aes(x = iterations)) +
-        geom_histogram(bins = 20, fill = "coral", alpha = 0.7) +
-        theme_bw() +
-        labs(title = "Overdispersion fitting: iterations per gene",
-             x = "Number of iterations", y = "Number of genes")
-}
 ```
 
 ## Overdispersion Estimation Strategies
@@ -281,7 +273,6 @@ fit_mom <- fit_devil(
 )
 
 # MOM is non-iterative (0 iterations)
-print(paste("Theta iterations (MOM):", unique(fit_mom$iterations$theta_iters)))
 ```
 
 **When to use**:  

@@ -24,7 +24,7 @@ Eigen::MatrixXd compute_hessian(const Eigen::VectorXd& beta,
                                     const Eigen::VectorXd& y,
                                     const Eigen::MatrixXd& design_matrix,
                                     const Eigen::VectorXd& size_factors) {
-  const double alpha = 1.0 / overdispersion;
+  const double alpha = overdispersion;
 
   // n x 1
   Eigen::VectorXd eta = design_matrix * beta;
@@ -175,4 +175,54 @@ Eigen::MatrixXd compute_meat(const Eigen::MatrixXd& design_matrix,
 
   // Scale by 1/n to match asymptotic normalization
   return (1.0 / n) * rval;
+}
+
+
+/**
+ * Computes clustered "meat" matrix patient-by-patient
+ * This version avoids creating the large N x K intermediate score matrix.
+ */
+// [[Rcpp::export]]
+Eigen::MatrixXd compute_clustered_meat_fast(const Eigen::MatrixXd& design_matrix,
+                                            const Eigen::VectorXd& y,
+                                            const Eigen::VectorXd& beta,
+                                            const double overdispersion,
+                                            const Eigen::VectorXd& size_factors,
+                                            const Eigen::VectorXi& cluster_blocks_indexes) {
+  const int n  = design_matrix.rows();
+  const int k  = design_matrix.cols();
+  const int ng = cluster_blocks_indexes.size();
+  // const double alpha = 1.0 / overdispersion;
+  
+  // We only store the aggregated sums (G x K), not the cell-level scores (N x K)
+  Eigen::MatrixXd cluster_sums = Eigen::MatrixXd::Zero(ng, k);
+  
+  int start_row = 0;
+  for (int g = 0; g < ng; ++g) {
+    int end_row = cluster_blocks_indexes(g);
+    int block_size = end_row - start_row;
+    
+    if (block_size > 0) {
+      // 1. Extract blocks for the current patient
+      auto X_block = design_matrix.block(start_row, 0, block_size, k);
+      auto y_block = y.segment(start_row, block_size).array();
+      auto sf_block = size_factors.segment(start_row, block_size).array();
+      
+      // 2. Compute mu and weights for this block only
+      Eigen::VectorXd eta = X_block * beta;
+      Eigen::ArrayXd mu   = sf_block * eta.array().exp();
+      Eigen::VectorXd wr  = ((y_block - mu) / (1.0 + mu * overdispersion)).matrix();
+      
+      // 3. The sum of scores for this cluster is X_block^T * wr
+      // This mathematically replaces: (X_block.array().colwise() * wr).colwise().sum()
+      cluster_sums.row(g) = X_block.transpose() * wr;
+    }
+    start_row = end_row;
+  }
+  
+  // Finite-sample correction and final "meat" calculation
+  const double adj = (ng > 1) ? double(ng) / (ng - 1.0) : 1.0;
+  Eigen::MatrixXd rval = cluster_sums.transpose() * cluster_sums;
+  
+  return (adj / n) * rval;
 }
