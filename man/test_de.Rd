@@ -7,6 +7,7 @@
 test_de(
   devil.fit,
   contrast,
+  clusters = NULL,
   pval_adjust_method = "BH",
   max_lfc = 10,
   parallel.cores = 1
@@ -19,6 +20,9 @@ Must contain beta coefficients, design matrix, and overdispersion parameters.}
 \item{contrast}{Numeric vector or matrix specifying the comparison of interest.
 Length must match number of coefficients in the model.
 For example, c(0, 1, -1) tests difference between second and third coefficient.}
+
+\item{clusters}{Numeric vector or factor. Sample cluster assignments for robust
+variance estimation. Length must match number of samples. Default: NULL}
 
 \item{pval_adjust_method}{Character. Method for p-value adjustment.
 Passed to stats::p.adjust(). Common choices:
@@ -33,9 +37,6 @@ Larger values are capped at ±max_lfc. Default: 10}
 
 \item{parallel.cores}{Integer or NULL. Number of CPU cores for parallel processing.
 If NULL, uses all available cores. Default: 1}
-
-\item{clusters}{Numeric vector or factor. Sample cluster assignments for robust
-variance estimation. Length must match number of samples. Default: NULL}
 }
 \value{
 A tibble with columns:

@@ -116,14 +116,21 @@ The design matrix includes:
 
 ## Fitting the devil model
 
-Now, `fit_devil()` takes a count matrix and a design matrix and returns coefficients and overdispersions.
+Let's first group the data by patients
 
 ```{r}
 Y <- as.matrix(assay(sce_sub, "counts"))
+grouped_data = devil::group_data(Y, design, meta_df$individual)
+```
+
+Now, `fit_devil()` takes a count matrix and a design matrix and returns coefficients and overdispersions.
+
+```{r}
+
 devil_fit <- devil::fit_devil(
-    input_matrix = Y,
-    design_matrix = design,
-    clusters = as.factor(meta_df$individual),
+    input_matrix = grouped_data$input_matrix,
+    design_matrix = grouped_data$design_matrix,
+    clusters = grouped_data$clusters,
     verbose = TRUE,
     init_beta_rough = FALSE,
     size_factors = "normed_sum", 
