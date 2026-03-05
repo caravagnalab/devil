@@ -170,29 +170,38 @@ deprecated_test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", m
   # Calculate p-values in parallel
   p_values <- parallel::mclapply(seq_len(nrow(devil.fit$input_matrix)), function(gene_idx) {
     mu_test <- lfcs[gene_idx]
+    n = dim(devil.fit$input_matrix)[2]
 
-    H <- compute_sandwich(
+    b = devil:::compute_hessian(devil.fit$beta[gene_idx,],
+                                devil.fit$overdispersion[gene_idx],
+                                devil.fit$input_matrix[gene_idx,],
+                                devil.fit$design_matrix,
+                                devil.fit$size_factors)
+
+    msimple = devil:::compute_meat(
       devil.fit$design_matrix,
-      devil.fit$input_matrix[gene_idx, ],
-      devil.fit$beta[gene_idx, ], devil.fit$overdispersion[gene_idx],
-      devil.fit$size_factors,
-      clusters
+      devil.fit$input_matrix[gene_idx,],
+      devil.fit$beta[gene_idx,],
+      devil.fit$overdispersion[gene_idx],
+      devil.fit$size_factors
     )
+
+    H = (b %*% msimple %*% b) * n
     total_variance <- t(contrast) %*% H %*% contrast
     p <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
 
     if (!is.null(clusters)) {
-      Hnull <- compute_sandwich(
-        devil.fit$design_matrix,
-        devil.fit$input_matrix[gene_idx, ],
-        devil.fit$beta[gene_idx, ], devil.fit$overdispersion[gene_idx],
-        devil.fit$size_factors,
-        NULL
-      )
-      total_variance <- t(contrast) %*% Hnull %*% contrast
+      m = devil:::compute_clustered_meat(devil.fit$design_matrix,
+                                         devil.fit$input_matrix[gene_idx,],
+                                         devil.fit$beta[gene_idx,],
+                                         devil.fit$overdispersion[gene_idx],
+                                         devil.fit$size_factors,
+                                         clusters)
+      S = (b %*% m %*% b) * n
+      total_variance <- t(contrast) %*% S %*% contrast
       pnull <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
     } else {
-      pnull <- p
+      pnull <- 0
     }
 
     max(p, pnull)
