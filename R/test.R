@@ -82,49 +82,131 @@
 #'
 #' @export
 #' @rawNamespace useDynLib(devil);
-test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10, parallel.cores = 1) {
+test_de <- function(devil.fit, contrast, clusters = NULL, pval_adjust_method = "BH", max_lfc = 10, parallel.cores = 1) {
+  if (!("beta_sandwiches_null" %in% names(devil.fit))) {
+    warning("You're using an old devil fit object. From next version, this functionality will be removed.")
+    result_df = deprecated_test_de(devil.fit = devil.fit, contrast = contrast, pval_adjust_method = pval_adjust_method, max_lfc = max_lfc, clusters = clusters, parallel.cores = parallel.cores)
+    return(result_df)
+  } else {
+    # Detect cores to use
+    max.cores <- parallel::detectCores()
+    if (is.null(parallel.cores)) {
+      n.cores <- max.cores
+    } else {
+      if (parallel.cores > max.cores) {
+        message("Requested ", parallel.cores, " cores, but only ",
+                max.cores, " available.")
+      }
+      n.cores <- min(max.cores, parallel.cores)
+    }
+
+    ngenes <- nrow(devil.fit$input_matrix)
+    nsamples <- nrow(devil.fit$design_matrix)
+    contrast <- as.array(contrast)
+    lfcs <- (devil.fit$beta %*% contrast) %>% unlist() %>% unname() %>% c()
+
+    p_values = lapply(seq_len(nrow(devil.fit$input_matrix)), function(gene_idx) {
+      mu_test <- lfcs[gene_idx]
+
+      H = devil.fit$beta_sandwiches[[gene_idx]]
+      if (is.null(H)) {
+        H = devil.fit$beta_sandwiches_null[[gene_idx]]
+        total_variance <- t(contrast) %*% H %*% contrast
+        p <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+      } else {
+        total_variance <- t(contrast) %*% H %*% contrast
+        p_null <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+
+        H = devil.fit$beta_sandwiches_null[[gene_idx]]
+        total_variance <- t(contrast) %*% H %*% contrast
+        p <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+        p = max(p, p_null)
+      }
+      p
+    }) %>% unlist()
+
+    result_df <- dplyr::tibble(name = rownames(devil.fit$beta),
+                               pval = p_values,
+                               adj_pval = stats::p.adjust(p_values, method = pval_adjust_method),
+                               lfc = lfcs/log(2))
+
+    result_df <- result_df %>%
+      dplyr::mutate(lfc = ifelse(.data$lfc >= max_lfc, max_lfc, .data$lfc)) %>%
+      dplyr::mutate(lfc = ifelse(.data$lfc <= -max_lfc, -max_lfc, .data$lfc))
+
+    return(result_df)
+  }
+}
+
+
+deprecated_test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10, clusters = NULL, parallel.cores = 1) {
   # Detect cores to use
   max.cores <- parallel::detectCores()
   if (is.null(parallel.cores)) {
     n.cores <- max.cores
   } else {
     if (parallel.cores > max.cores) {
-      message("Requested ", parallel.cores, " cores, but only ",
-              max.cores, " available.")
+      message("Requested ", parallel.cores, " cores, but only ", max.cores, " available.")
     }
     n.cores <- min(max.cores, parallel.cores)
   }
 
+  # Extract necessary information
   ngenes <- nrow(devil.fit$input_matrix)
   nsamples <- nrow(devil.fit$design_matrix)
   contrast <- as.array(contrast)
-  lfcs <- (devil.fit$beta %*% contrast) %>% unlist() %>% unname() %>% c()
 
-  p_values = lapply(seq_len(nrow(devil.fit$input_matrix)), function(gene_idx) {
+  # Calculate log fold changes
+  lfcs <- (devil.fit$beta %*% contrast) %>%
+    unlist() %>%
+    unname() %>%
+    c()
+
+  if (!is.null(clusters) & !is.numeric(clusters)) {
+    message("Converting clusters to numeric factors")
+    clusters <- as.numeric(as.factor(clusters))
+  }
+
+  # Calculate p-values in parallel
+  p_values <- parallel::mclapply(seq_len(nrow(devil.fit$input_matrix)), function(gene_idx) {
     mu_test <- lfcs[gene_idx]
 
-    H = devil.fit$beta_sandwiches[[gene_idx]]
-    if (is.null(H)) {
-      H = devil.fit$beta_sandwiches_null[[gene_idx]]
-      total_variance <- t(contrast) %*% H %*% contrast
-      p <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+    H <- compute_sandwich(
+      devil.fit$design_matrix,
+      devil.fit$input_matrix[gene_idx, ],
+      devil.fit$beta[gene_idx, ], devil.fit$overdispersion[gene_idx],
+      devil.fit$size_factors,
+      clusters
+    )
+    total_variance <- t(contrast) %*% H %*% contrast
+    p <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+
+    if (!is.null(clusters)) {
+      Hnull <- compute_sandwich(
+        devil.fit$design_matrix,
+        devil.fit$input_matrix[gene_idx, ],
+        devil.fit$beta[gene_idx, ], devil.fit$overdispersion[gene_idx],
+        devil.fit$size_factors,
+        NULL
+      )
+      total_variance <- t(contrast) %*% Hnull %*% contrast
+      pnull <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
     } else {
-      total_variance <- t(contrast) %*% H %*% contrast
-      p_null <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
-
-      H = devil.fit$beta_sandwiches_null[[gene_idx]]
-      total_variance <- t(contrast) %*% H %*% contrast
-      p <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
-      p = max(p, p_null)
+      pnull <- p
     }
-    p
-  }) %>% unlist()
 
-  result_df <- dplyr::tibble(name = rownames(devil.fit$beta),
-                             pval = p_values,
-                             adj_pval = stats::p.adjust(p_values, method = pval_adjust_method),
-                             lfc = lfcs/log(2))
+    max(p, pnull)
+  }, mc.cores = n.cores) %>% unlist()
 
+  # Create tibble with results
+  result_df <- dplyr::tibble(
+    name = rownames(devil.fit$beta),
+    pval = p_values,
+    adj_pval = stats::p.adjust(p_values, method = pval_adjust_method),
+    lfc = lfcs / log(2)
+  )
+
+  # Filter results based on max_lfc
   result_df <- result_df %>%
     dplyr::mutate(lfc = ifelse(.data$lfc >= max_lfc, max_lfc, .data$lfc)) %>%
     dplyr::mutate(lfc = ifelse(.data$lfc <= -max_lfc, -max_lfc, .data$lfc))

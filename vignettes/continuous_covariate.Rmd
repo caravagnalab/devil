@@ -111,15 +111,20 @@ cat("Design matrix dimensions:", nrow(design), "cells ×", ncol(design), "coeffi
 
 # Fitting the devil model
 
+First, let's group the data based on the sample ids. 
+
+```{r group data}
+Y <- as.matrix(assay(sce_sub, "counts"))
+grouped_data = devil::group_data(Y, design, meta_df$sample)
+```
+
 Now, `fit_devil()` takes a count matrix and a design matrix and returns coefficients and overdispersions.
 
 ```{r fit_model}
-Y <- as.matrix(assay(sce_sub, "counts"))
-
 devil_fit <- devil::fit_devil(
-  input_matrix = Y,
-  design_matrix = design,
-  clusters = as.factor(meta_df$sample),  # Account for sample-level correlation
+  input_matrix = grouped_data$input_matrix,
+  design_matrix = grouped_data$design_matrix,
+  clusters = grouped_data$clusters,  # Account for sample-level correlation
   verbose = TRUE,
   init_beta_rough = FALSE,
   size_factors = "normed_sum", 

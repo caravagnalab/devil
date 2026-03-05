@@ -20,6 +20,7 @@ reference:
 - title: Fit data
   desc:  Functions to fit scRNA data
   contents:
+  - group_data
   - fit_devil
 
 - title: Test data
