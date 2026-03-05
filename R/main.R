@@ -403,6 +403,14 @@ cpu_fit <- function(
         design_matrix = design_matrix,
         size_factors = exp_offset
       )
+      
+      meat <- devil:::compute_meat(design_matrix = design_matrix, 
+                                   y = input_matrix[i,], 
+                                   beta = curr_beta, 
+                                   overdispersion = curr_theta, 
+                                   size_factors = exp_offset)
+      
+      s_null <- (bread %*% meat %*% bread) * nsamples
 
       # --- Step D: Compute Meat and Sandwich ---
       s_clust <- NULL
@@ -436,7 +444,7 @@ cpu_fit <- function(
         beta = curr_beta,
         theta = curr_theta,
         iter = fit$iter,
-        s_null = bread,   # Standard variance
+        s_null = s_null,   # Standard variance
         s_clust = s_clust # Cluster-robust variance
       ))
     }
