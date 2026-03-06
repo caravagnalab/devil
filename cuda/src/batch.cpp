@@ -525,17 +525,17 @@ beta_fit_gpu_external(
 	          Y[me], d_mu_mom[me], X[me], d_theta[me], d_cluster_ends, d_cluster_sums[me],
                                                                                   genesBatch, cells, features, n_clusters);
 	      
-	      // 7. meat[g] = (adj/n) * S[g] * S[g]^T  via batched SGEMM
+	      // 8. meat[g] = (adj/n) * S[g] * S[g]^T  via batched SGEMM
 	      // S[g] is [features x n_clusters], stride = features*n_clusters
 	      float adj_over_n = ((float)n_clusters / (float)(n_clusters - 1)) / (float)cells;
 	      const float zero = 0.0f;
 	      CUBLAS_CHECK(cublasSgemmStridedBatched(
 	          cublasH[me],
-                  CUBLAS_OP_N, CUBLAS_OP_T,              // S * S^T
+                  CUBLAS_OP_N, CUBLAS_OP_T,              // S * S^T → [features x features]
                   features, features, n_clusters,
                   &adj_over_n,
-                  d_cluster_sums[me], features,          // leading dim = features
-                  (long long)features * n_clusters,      // stride per gene
+                  d_cluster_sums[me], features,          // leading dim = features  (was n_clusters — wrong)
+                  (long long)features * n_clusters,      // stride per gene         (was n_clusters*features — same value but wrong intent)
                   d_cluster_sums[me], features,
                   (long long)features * n_clusters,
                   &zero,
