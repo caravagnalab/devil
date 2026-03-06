@@ -153,11 +153,13 @@ __global__ void compute_hessian_weights(
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= genesBatch * cells) return;
-    int g       = idx % genesBatch;    // col-major: gene is fast axis
-    float alpha = theta[g];            // theta IS overdispersion directly
-    float mu    = mu_g[idx];           // mu_g is col-major [genesBatch x cells]
+    int g       = idx / cells;         // row-major: gene is slow axis
+    int c       = idx % cells;         // row-major: cell is fast axis
+    float alpha = theta[g];
+    float mu    = mu_g[g * cells + c]; // row-major: [genesBatch x cells]
+    float y     = Y   [g * cells + c]; // row-major: [genesBatch x cells]
     float denom = 1.0f + alpha * mu;
-    hess_w[idx] = (Y[idx] * alpha + 1.0f) * mu / (denom * denom);
+    hess_w[idx] = (y * alpha + 1.0f) * mu / (denom * denom);
 }
 
 __global__ void compute_cluster_sums_and_scores(
@@ -180,10 +182,10 @@ __global__ void compute_cluster_sums_and_scores(
     float sum  = 0.0f;
 
     for (int c = start; c < end; ++c) {
-        float mu_gc    = mu[g + c * genesBatch];   // col-major
-        float y_gc     = Y [g + c * genesBatch];   // col-major
+        float mu_gc    = mu[g * cells + c];        // row-major: [genesBatch x cells]
+        float y_gc     = Y [g * cells + c];        // row-major: [genesBatch x cells]
         float score_gc = (y_gc - mu_gc) / (1.0f + mu_gc * th);
-        sum += score_gc * X[f + c * features];     // col-major
+        sum += score_gc * X[f + c * features];     // col-major: [features x cells] — unchanged
     }
 
     // Output: [features x n_clusters x genesBatch] col-major
