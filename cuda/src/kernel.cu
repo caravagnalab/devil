@@ -148,26 +148,26 @@ __global__ void init_beta_rough_kernel(const float* means, float* beta,
 }
 
 __global__ void compute_hessian_weights(
-    const float* k, const float* Y, const float* mu_g,
+    const float* theta, const float* Y, const float* mu_g,
     float* hess_w, int genesBatch, int cells)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= genesBatch * cells) return;
-    int g = idx % genesBatch;          // gene is fast axis (col-major)
-    float alpha = 1.0f / k[g];
+    int g = idx % genesBatch;
+    float alpha = theta[g];            // theta IS alpha directly (overdispersion = phi)
     float mu    = mu_g[idx];
     float denom = 1.0f + alpha * mu;
     hess_w[idx] = (Y[idx] * alpha + 1.0f) * mu / (denom * denom);
 }
 
 __global__ void compute_score_residuals(
-    const float* k, const float* Y, const float* mu_g,
+    const float* theta, const float* Y, const float* mu_g,
     float* score_r, int genesBatch, int cells)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= genesBatch * cells) return;
     int g = idx % genesBatch;
-    float denom = 1.0f + mu_g[idx] / k[g];
+    float denom = 1.0f + mu_g[idx] * theta[g];  // 1 + mu * theta  (was 1 + mu/k = 1 + mu*theta)
     score_r[idx] = (Y[idx] - mu_g[idx]) / denom;
 }
 

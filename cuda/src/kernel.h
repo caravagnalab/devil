@@ -30,15 +30,12 @@ __global__ void compute_theta_from_num_den(const float* num, const float* den,
 __global__ void init_beta_rough_kernel(const float* means, float* beta, 
                                         int genes, int features);
 
-// Hessian weight: s_gi = (y*alpha + 1)*mu / (1 + alpha*mu)^2
-// k[g] = 1/alpha, mu_g already = sf*exp(eta) from IRLS
 __global__ void compute_hessian_weights(
-    const float* k, const float* Y, const float* mu_g,
+    const float* theta, const float* Y, const float* mu_g,
     float* hess_w, int genesBatch, int cells);
 
-// Score residual: r_gi = (y_gi - mu_gi) / (1 + mu_gi/k[g])
 __global__ void compute_score_residuals(
-    const float* k, const float* Y, const float* mu_g,
+    const float* theta, const float* Y, const float* mu_g,
     float* score_r, int genesBatch, int cells);
 
 // Cluster sum: S[g, cl, f] = sum_{c in cluster cl} score_r[g,c] * X[f,c]
