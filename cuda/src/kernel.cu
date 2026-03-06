@@ -146,3 +146,55 @@ __global__ void init_beta_rough_kernel(const float* means, float* beta,
         }
     }
 }
+
+__global__ void compute_hessian_weights(
+    const float* k, const float* Y, const float* mu_g,
+    float* hess_w, int genesBatch, int cells)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= genesBatch * cells) return;
+    int g = idx % genesBatch;          // gene is fast axis (col-major)
+    float alpha = 1.0f / k[g];
+    float mu    = mu_g[idx];
+    float denom = 1.0f + alpha * mu;
+    hess_w[idx] = (Y[idx] * alpha + 1.0f) * mu / (denom * denom);
+}
+
+__global__ void compute_score_residuals(
+    const float* k, const float* Y, const float* mu_g,
+    float* score_r, int genesBatch, int cells)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= genesBatch * cells) return;
+    int g = idx % genesBatch;
+    float denom = 1.0f + mu_g[idx] / k[g];
+    score_r[idx] = (Y[idx] - mu_g[idx]) / denom;
+}
+
+__global__ void compute_cluster_sums(
+    const float* score_r, const float* X,
+    const int* cluster_ends,
+    float* out,
+    int genesBatch, int cells, int features, int n_clusters)
+{
+    int f  = blockIdx.x * blockDim.x + threadIdx.x;
+    int cl = blockIdx.y * blockDim.y + threadIdx.y;
+    int g  = blockIdx.z;
+    if (f >= features || cl >= n_clusters || g >= genesBatch) return;
+
+    int start = (cl == 0) ? 0 : cluster_ends[cl - 1];
+    int end   = cluster_ends[cl];
+    float sum = 0.0f;
+    for (int c = start; c < end; ++c) {
+        // score_r[g, c]: col-major → g + c*genesBatch
+        // X[f, c]:       col-major → f + c*features
+        sum += score_r[g + c * genesBatch] * X[f + c * features];
+    }
+    // out[g, cl, f]: col-major → g + cl*genesBatch + f*genesBatch*n_clusters
+    out[g + cl * genesBatch + f * genesBatch * n_clusters] = sum;
+}
+
+__global__ void negate_kernel(float* x, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) x[i] = -x[i];
+}
