@@ -170,7 +170,7 @@ beta_fit_gpu_external(
     
     // NEW: for Hessian and meat
     std::vector<float*> d_hess_w(deviceCount);
-    std::vector<float*> d_score_r(deviceCount);
+    // std::vector<float*> d_score_r(deviceCount);
     std::vector<float*> d_meat(deviceCount);
     std::vector<float*> d_cluster_sums(deviceCount);
     // Upload cluster_ends once (same for all batches and all devices)
@@ -215,9 +215,9 @@ beta_fit_gpu_external(
       CUDA_CHECK( cudaMalloc((void**)&w_q[me], genesBatch*cells*sizeof(float)) );
       CUDA_CHECK( cudaMalloc((void**)&mu_g[me], genesBatch*cells*sizeof(float)) );
       CUDA_CHECK(cudaMalloc(&d_hess_w[me],      genesBatch * cells              * sizeof(float)));
-      CUDA_CHECK(cudaMalloc(&d_score_r[me],     genesBatch * cells              * sizeof(float)));
+      // CUDA_CHECK(cudaMalloc(&d_score_r[me],     genesBatch * cells              * sizeof(float)));
       CUDA_CHECK(cudaMalloc(&d_meat[me],        genesBatch * features * features * sizeof(float)));
-      CUDA_CHECK(cudaMalloc(&d_cluster_sums[me],genesBatch * n_clusters * features * sizeof(float)));
+      // CUDA_CHECK(cudaMalloc(&d_cluster_sums[me],genesBatch * n_clusters * features * sizeof(float)));
       
       // Allocate temporary buffers for dispersion calculation
       CUDA_CHECK( cudaMalloc((void**)&d_means[me], genesBatch*sizeof(float)) );
@@ -497,49 +497,47 @@ beta_fit_gpu_external(
 	      dim3 b1d((genesBatch * cells + 255) / 256);
 	      
 	      // ── Hessian ──────────────────────────────────────────────────────────
-	      // 1. Weights: s_gi = (y*alpha+1)*mu / (1+alpha*mu)^2
+	      // 1. Weights: s_gi = (y*theta+1)*mu / (1+theta*mu)^2  using MOM theta
 	      compute_hessian_weights<<<b1d, t1d>>>(d_theta[me], Y[me], d_mu_mom[me], d_hess_w[me], genesBatch, cells);
 	      
-	      // 2. A[me] = "cf,gc->cfg": X ⊗ hess_w  (reuse einsum_A — same shape as normal IRLS use)
+	      // 2. A[me] = "cf,gc->cfg": X ⊗ hess_w
 	      einsum_A[me].execute(cutensorH[me], X[me], d_hess_w[me], workspace[me]);
 	      
-	      // 3. B[me] = "cfg,ck->gkf": A^T X  → gives X^T diag(w) X per gene
+	      // 3. B[me] = "cfg,ck->gkf": gives X^T diag(w) X per gene
 	      einsum_B[me].execute(cutensorH[me], A[me], X[me], workspace[me]);
 	      
 	      // 4. Negate B in-place (H = -X^T W X)
 	      negate_kernel<<<(genesBatch*features*features+255)/256, 256>>>(B[me], genesBatch*features*features);
 	      
-	      // 5. Copy B → Bk, then invert: Zigma[me] = (-H)^{-1} = (X^T W X)^{-1}
+	      // 5. Copy B → Bk, invert: Zigma[me] = (X^T W X)^{-1}
 	      CUDA_CHECK(cudaMemcpy(Bk[me], B[me],
                              genesBatch * features * features * sizeof(float),
                              cudaMemcpyDeviceToDevice));
 	      inverseMatrix2(cublasH[me], Bk_pointer[me], Zigma_pointer[me],
                       features, genesBatch, pivot[me], info[me]);
-	      // Zigma[me] now holds the Hessian inverse, shape [genesBatch x features x features]
 	      
 	      // ── Meat ─────────────────────────────────────────────────────────────
-	      // 6. Score residuals: r_gi = (y-mu)/(1+mu/k)
-	      compute_score_residuals<<<b1d, t1d>>>(d_theta[me], Y[me], d_mu_mom[me], d_score_r[me], genesBatch, cells);
-	      
-	      // 7. Cluster sums: S[g, cl, f] = sum_{c in cl} r_gi * X[f,c]
+	      // 6. Cluster sums with inline score: S[f,cl,g] = sum_{c in cl} (y-mu)/(1+mu*theta) * X[f,c]
+	      // Output layout: [features x n_clusters x genesBatch] col-major
 	      dim3 t_meat(16, 4, 1);
 	      dim3 b_meat((features + 15)/16, (n_clusters + 3)/4, genesBatch);
-	      compute_cluster_sums<<<b_meat, t_meat>>>(
-	          d_score_r[me], X[me], d_cluster_ends, d_cluster_sums[me],
-                                                               genesBatch, cells, features, n_clusters);
+	      compute_cluster_sums_and_scores<<<b_meat, t_meat>>>(
+	          Y[me], d_mu_mom[me], X[me], d_theta[me], d_cluster_ends, d_cluster_sums[me],
+                                                                                  genesBatch, cells, features, n_clusters);
 	      
-	      // 8. meat[g] = (adj/n) * S[g]^T S[g]  via batched SGEMM
+	      // 7. meat[g] = (adj/n) * S[g] * S[g]^T  via batched SGEMM
+	      // S[g] is [features x n_clusters], stride = features*n_clusters
 	      float adj_over_n = ((float)n_clusters / (float)(n_clusters - 1)) / (float)cells;
 	      const float zero = 0.0f;
 	      CUBLAS_CHECK(cublasSgemmStridedBatched(
 	          cublasH[me],
-                  CUBLAS_OP_T, CUBLAS_OP_N,
+                  CUBLAS_OP_N, CUBLAS_OP_T,              // S * S^T
                   features, features, n_clusters,
                   &adj_over_n,
-                  d_cluster_sums[me], n_clusters,
-                  (long long)n_clusters * features,
-                  d_cluster_sums[me], n_clusters,
-                  (long long)n_clusters * features,
+                  d_cluster_sums[me], features,          // leading dim = features
+                  (long long)features * n_clusters,      // stride per gene
+                  d_cluster_sums[me], features,
+                  (long long)features * n_clusters,
                   &zero,
                   d_meat[me], features,
                   (long long)features * features,
@@ -625,7 +623,7 @@ beta_fit_gpu_external(
       CUDA_CHECK(cudaFree(k[me]));
       CUDA_CHECK(cudaFree(workspace[me]));
       CUDA_CHECK(cudaFree(d_hess_w[me]));
-      CUDA_CHECK(cudaFree(d_score_r[me]));
+      // CUDA_CHECK(cudaFree(d_score_r[me]));
       CUDA_CHECK(cudaFree(d_meat[me]));
       CUDA_CHECK(cudaFree(d_cluster_sums[me]));
       /*********************
