@@ -218,6 +218,7 @@ beta_fit_gpu_external(
       // CUDA_CHECK(cudaMalloc(&d_score_r[me],     genesBatch * cells              * sizeof(float)));
       CUDA_CHECK(cudaMalloc(&d_meat[me],        genesBatch * features * features * sizeof(float)));
       // CUDA_CHECK(cudaMalloc(&d_cluster_sums[me],genesBatch * n_clusters * features * sizeof(float)));
+      CUDA_CHECK(cudaMalloc(&d_cluster_sums[me], features * n_clusters * genesBatch * sizeof(float)));
       
       // Allocate temporary buffers for dispersion calculation
       CUDA_CHECK( cudaMalloc((void**)&d_means[me], genesBatch*sizeof(float)) );
