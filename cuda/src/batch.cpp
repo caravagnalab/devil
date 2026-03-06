@@ -63,7 +63,9 @@ beta_fit_gpu_external(
         &X_host,
     Eigen::VectorXf const  &offset_host,
     int max_iter, float eps, int batch_size,
-    std::vector<int>& iterations, bool TEST) {
+    std::vector<int>& iterations, bool TEST,
+    const std::vector<int>& cluster_ends,
+    int n_clusters) {
 
   /******************************
    * Shape definition
