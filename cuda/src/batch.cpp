@@ -95,6 +95,8 @@ beta_fit_gpu_external(
     k_final.resize(genes, 0.0);  // Store final k values only if TEST mode
   }
   std::vector<float> theta_final(genes, 0.0);  // Store final theta (MOM overdispersion) values
+  std::vector<float> hessian_final(genes * features * features, 0.0f);
+  std::vector<float> meat_final(genes * features * features, 0.0f);
   std::vector<float> beta_init_final;
   if (TEST) {
     beta_init_final.resize(genes*features, 0.0);  // Debug: store initial beta values only if TEST mode
@@ -164,6 +166,19 @@ beta_fit_gpu_external(
     std::vector<float *>    delta(deviceCount);
     std::vector<float *>    last(deviceCount);
     
+    // NEW: for Hessian and meat
+    std::vector<float*> d_hess_w(deviceCount);
+    std::vector<float*> d_score_r(deviceCount);
+    std::vector<float*> d_meat(deviceCount);
+    std::vector<float*> d_cluster_sums(deviceCount);
+    // Upload cluster_ends once (same for all batches and all devices)
+    int* d_cluster_ends = nullptr;
+    if (n_clusters > 0) {
+      CUDA_CHECK(cudaMalloc(&d_cluster_ends, n_clusters * sizeof(int)));
+      CUDA_CHECK(cudaMemcpy(d_cluster_ends, cluster_ends.data(),
+                            n_clusters * sizeof(int), cudaMemcpyHostToDevice));
+    }
+    
 #pragma omp parallel default(shared)//shared(einsum_offsetT,einsum_cg_tmp2,einsum_w_qT,einsum_A,einsum_B,einsum_Bk,einsum_C,einsum_last,einsum_delta,cublasH,cutensorH,Zigma_pointer,Bk_pointer,Zigma,w_qT,offsetT,cg_tmp2,A,B,C,Bk,delta,last,X,Y,offset,k,w_q,mu_g)
     {
       std::size_t BatchCount{genes/genesBatch};
@@ -197,6 +212,10 @@ beta_fit_gpu_external(
       CUDA_CHECK( cudaMalloc((void**)&k[me], genesBatch*sizeof(float)) );
       CUDA_CHECK( cudaMalloc((void**)&w_q[me], genesBatch*cells*sizeof(float)) );
       CUDA_CHECK( cudaMalloc((void**)&mu_g[me], genesBatch*cells*sizeof(float)) );
+      CUDA_CHECK(cudaMalloc(&d_hess_w[me],      genesBatch * cells              * sizeof(float)));
+      CUDA_CHECK(cudaMalloc(&d_score_r[me],     genesBatch * cells              * sizeof(float)));
+      CUDA_CHECK(cudaMalloc(&d_meat[me],        genesBatch * features * features * sizeof(float)));
+      CUDA_CHECK(cudaMalloc(&d_cluster_sums[me],genesBatch * n_clusters * features * sizeof(float)));
       
       // Allocate temporary buffers for dispersion calculation
       CUDA_CHECK( cudaMalloc((void**)&d_means[me], genesBatch*sizeof(float)) );
@@ -468,6 +487,79 @@ beta_fit_gpu_external(
 	    CUDA_CHECK(cudaDeviceSynchronize());
 	    
 	    /***********************************
+	     * Hessian inverse and clustered meat
+	     * mu_g here still holds sf*exp(eta) from the last IRLS iteration
+	     **********************************/
+	    if (n_clusters > 0) {
+	      dim3 t1d(256);
+	      dim3 b1d((genesBatch * cells + 255) / 256);
+	      
+	      // ── Hessian ──────────────────────────────────────────────────────────
+	      // 1. Weights: s_gi = (y*alpha+1)*mu / (1+alpha*mu)^2
+	      compute_hessian_weights<<<b1d, t1d>>>(k[me], Y[me], d_mu_mom[me], d_hess_w[me], genesBatch, cells);
+	      
+	      // 2. A[me] = "cf,gc->cfg": X ⊗ hess_w  (reuse einsum_A — same shape as normal IRLS use)
+	      einsum_A[me].execute(cutensorH[me], X[me], d_hess_w[me], workspace[me]);
+	      
+	      // 3. B[me] = "cfg,ck->gkf": A^T X  → gives X^T diag(w) X per gene
+	      einsum_B[me].execute(cutensorH[me], A[me], X[me], workspace[me]);
+	      
+	      // 4. Negate B in-place (H = -X^T W X)
+	      negate_kernel<<<(genesBatch*features*features+255)/256, 256>>>(B[me], genesBatch*features*features);
+	      
+	      // 5. Copy B → Bk, then invert: Zigma[me] = (-H)^{-1} = (X^T W X)^{-1}
+	      CUDA_CHECK(cudaMemcpy(Bk[me], B[me],
+                             genesBatch * features * features * sizeof(float),
+                             cudaMemcpyDeviceToDevice));
+	      inverseMatrix2(cublasH[me], Bk_pointer[me], Zigma_pointer[me],
+                      features, genesBatch, pivot[me], info[me]);
+	      // Zigma[me] now holds the Hessian inverse, shape [genesBatch x features x features]
+	      
+	      // ── Meat ─────────────────────────────────────────────────────────────
+	      // 6. Score residuals: r_gi = (y-mu)/(1+mu/k)
+	      compute_score_residuals<<<b1d, t1d>>>(k[me], Y[me], d_mu_mom[me], d_score_r[me], genesBatch, cells);
+	      
+	      // 7. Cluster sums: S[g, cl, f] = sum_{c in cl} r_gi * X[f,c]
+	      dim3 t_meat(16, 4, 1);
+	      dim3 b_meat((features + 15)/16, (n_clusters + 3)/4, genesBatch);
+	      compute_cluster_sums<<<b_meat, t_meat>>>(
+	          d_score_r[me], X[me], d_cluster_ends, d_cluster_sums[me],
+                                                               genesBatch, cells, features, n_clusters);
+	      
+	      // 8. meat[g] = (adj/n) * S[g]^T S[g]  via batched SGEMM
+	      float adj_over_n = ((float)n_clusters / (float)(n_clusters - 1)) / (float)cells;
+	      const float zero = 0.0f;
+	      CUBLAS_CHECK(cublasSgemmStridedBatched(
+	          cublasH[me],
+                  CUBLAS_OP_T, CUBLAS_OP_N,
+                  features, features, n_clusters,
+                  &adj_over_n,
+                  d_cluster_sums[me], n_clusters,
+                  (long long)n_clusters * features,
+                  d_cluster_sums[me], n_clusters,
+                  (long long)n_clusters * features,
+                  &zero,
+                  d_meat[me], features,
+                  (long long)features * features,
+                  genesBatch));
+	      
+	      CUDA_CHECK(cudaDeviceSynchronize());
+	      
+	      // ── Copy to host ──────────────────────────────────────────────────────
+	      CUDA_CHECK(cudaMemcpy(
+	          hessian_final.data() + i * genesBatch * features * features,
+	          Zigma[me],
+                genesBatch * features * features * sizeof(float),
+                cudaMemcpyDeviceToHost));
+	      
+	      CUDA_CHECK(cudaMemcpy(
+	          meat_final.data() + i * genesBatch * features * features,
+	          d_meat[me],
+                 genesBatch * features * features * sizeof(float),
+                 cudaMemcpyDeviceToHost));
+	    }
+	    
+	    /***********************************
 	     * Copy beta, k, theta, and iterations to host
 	     **********************************/
 	    CUDA_CHECK(cudaMemcpy(mu_beta_final.data() + i * genesBatch * features,
@@ -530,19 +622,29 @@ beta_fit_gpu_external(
       CUDA_CHECK(cudaFree(mu_g[me]));
       CUDA_CHECK(cudaFree(k[me]));
       CUDA_CHECK(cudaFree(workspace[me]));
+      CUDA_CHECK(cudaFree(d_hess_w[me]));
+      CUDA_CHECK(cudaFree(d_score_r[me]));
+      CUDA_CHECK(cudaFree(d_meat[me]));
+      CUDA_CHECK(cudaFree(d_cluster_sums[me]));
       /*********************
        * Destroy handles
        ********************/
       CUBLAS_CHECK( cublasDestroy(cublasH[me]) );
       CUTENSOR_CHECK( cutensorDestroy(cutensorH[me]) );
     }
+    
+    if (d_cluster_ends != nullptr) CUDA_CHECK(cudaFree(d_cluster_ends));
 
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>> result_beta(mu_beta_final.data(), features, genes);
     Eigen::Map<Eigen::VectorXf> result_theta(theta_final.data(), genes);
+    Eigen::Map<Eigen::MatrixXf> r_hess(hessian_final.data(), features * features, genes);
+    Eigen::Map<Eigen::MatrixXf> r_meat(meat_final.data(),    features * features, genes);
     
     BatchResult result;
     result.beta = result_beta;
     result.theta = result_theta;
+    result.hessian_inv = r_hess;
+    result.meat        = r_meat;
     
     // Only populate k if TEST mode is enabled
     if (TEST) {

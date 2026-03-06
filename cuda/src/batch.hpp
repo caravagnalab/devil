@@ -10,13 +10,18 @@ struct BatchResult {
     Eigen::VectorXf k;
     Eigen::VectorXf theta;
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> beta_init;  // Debug: initial beta values
+    // NEW:
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> hessian_inv; // [features*features x genes]
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> meat;
 };
 
 BatchResult
 beta_fit_gpu_external(
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const &
-        Y_host,
-	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const &
-        X_host,
-    Eigen::VectorXf const & offset_host,
-    int max_iter, float eps,int batch_size,std::vector<int>& iter, bool TEST = false);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const& Y_host,
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const& X_host,
+  Eigen::VectorXf const& offset_host,
+  int max_iter, float eps, int batch_size,
+  std::vector<int>& iter,
+  bool TEST = false,
+  const std::vector<int>& cluster_ends = {},
+  int n_clusters = 0);
