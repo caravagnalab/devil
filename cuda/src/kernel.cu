@@ -153,28 +153,20 @@ __global__ void compute_hessian_weights(
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= genesBatch * cells) return;
-    int g = idx % genesBatch;
-    float alpha = theta[g];            // theta IS alpha directly (overdispersion = phi)
-    float mu    = mu_g[idx];
+    int g       = idx % genesBatch;    // col-major: gene is fast axis
+    float alpha = theta[g];            // theta IS overdispersion directly
+    float mu    = mu_g[idx];           // mu_g is col-major [genesBatch x cells]
     float denom = 1.0f + alpha * mu;
     hess_w[idx] = (Y[idx] * alpha + 1.0f) * mu / (denom * denom);
 }
 
-__global__ void compute_score_residuals(
-    const float* theta, const float* Y, const float* mu_g,
-    float* score_r, int genesBatch, int cells)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= genesBatch * cells) return;
-    int g = idx % genesBatch;
-    float denom = 1.0f + mu_g[idx] * theta[g];  // 1 + mu * theta  (was 1 + mu/k = 1 + mu*theta)
-    score_r[idx] = (Y[idx] - mu_g[idx]) / denom;
-}
-
-__global__ void compute_cluster_sums(
-    const float* score_r, const float* X,
-    const int* cluster_ends,
-    float* out,
+__global__ void compute_cluster_sums_and_scores(
+    const float* Y,            // [genesBatch x cells] col-major: Y[g,c] = g + c*genesBatch
+    const float* mu,           // [genesBatch x cells] col-major: same layout
+    const float* X,            // [features x cells]   col-major: X[f,c] = f + c*features
+    const float* theta,        // [genesBatch]
+    const int*   cluster_ends, // [n_clusters] cumulative end indices
+    float*       out,          // [features x n_clusters x genesBatch] col-major
     int genesBatch, int cells, int features, int n_clusters)
 {
     int f  = blockIdx.x * blockDim.x + threadIdx.x;
@@ -182,16 +174,21 @@ __global__ void compute_cluster_sums(
     int g  = blockIdx.z;
     if (f >= features || cl >= n_clusters || g >= genesBatch) return;
 
-    int start = (cl == 0) ? 0 : cluster_ends[cl - 1];
-    int end   = cluster_ends[cl];
-    float sum = 0.0f;
+    int start  = (cl == 0) ? 0 : cluster_ends[cl - 1];
+    int end    = cluster_ends[cl];
+    float th   = theta[g];
+    float sum  = 0.0f;
+
     for (int c = start; c < end; ++c) {
-        // score_r[g, c]: col-major → g + c*genesBatch
-        // X[f, c]:       col-major → f + c*features
-        sum += score_r[g + c * genesBatch] * X[f + c * features];
+        float mu_gc    = mu[g + c * genesBatch];   // col-major
+        float y_gc     = Y [g + c * genesBatch];   // col-major
+        float score_gc = (y_gc - mu_gc) / (1.0f + mu_gc * th);
+        sum += score_gc * X[f + c * features];     // col-major
     }
-    // out[g, cl, f]: col-major → g + cl*genesBatch + f*genesBatch*n_clusters
-    out[g + cl * genesBatch + f * genesBatch * n_clusters] = sum;
+
+    // Output: [features x n_clusters x genesBatch] col-major
+    // element [f, cl, g] = f + cl*features + g*features*n_clusters
+    out[f + cl * features + g * features * n_clusters] = sum;
 }
 
 __global__ void negate_kernel(float* x, int n) {

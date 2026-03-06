@@ -30,17 +30,18 @@ __global__ void compute_theta_from_num_den(const float* num, const float* den,
 __global__ void init_beta_rough_kernel(const float* means, float* beta, 
                                         int genes, int features);
 
+// Hessian weight: s_gi = (y*theta + 1)*mu / (1 + theta*mu)^2
+// theta[g] is overdispersion (phi), mu already = sf*exp(eta)
 __global__ void compute_hessian_weights(
     const float* theta, const float* Y, const float* mu_g,
     float* hess_w, int genesBatch, int cells);
 
-__global__ void compute_score_residuals(
-    const float* theta, const float* Y, const float* mu_g,
-    float* score_r, int genesBatch, int cells);
-
-// Cluster sum: S[g, cl, f] = sum_{c in cluster cl} score_r[g,c] * X[f,c]
-__global__ void compute_cluster_sums(
-    const float* score_r, const float* X,
+// Cluster sums and score residuals computed inline:
+// S[g, cl, f] = sum_{c in cl} [(y-mu)/(1+mu*theta)] * X[f,c]
+// Output layout: [features x n_clusters x genesBatch] col-major
+__global__ void compute_cluster_sums_and_scores(
+    const float* Y, const float* mu,
+    const float* X, const float* theta,
     const int* cluster_ends,
     float* out,
     int genesBatch, int cells, int features, int n_clusters);
