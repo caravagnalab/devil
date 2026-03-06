@@ -498,7 +498,7 @@ beta_fit_gpu_external(
 	      
 	      // ── Hessian ──────────────────────────────────────────────────────────
 	      // 1. Weights: s_gi = (y*alpha+1)*mu / (1+alpha*mu)^2
-	      compute_hessian_weights<<<b1d, t1d>>>(k[me], Y[me], d_mu_mom[me], d_hess_w[me], genesBatch, cells);
+	      compute_hessian_weights<<<b1d, t1d>>>(d_theta[me], Y[me], d_mu_mom[me], d_hess_w[me], genesBatch, cells);
 	      
 	      // 2. A[me] = "cf,gc->cfg": X ⊗ hess_w  (reuse einsum_A — same shape as normal IRLS use)
 	      einsum_A[me].execute(cutensorH[me], X[me], d_hess_w[me], workspace[me]);
@@ -519,7 +519,7 @@ beta_fit_gpu_external(
 	      
 	      // ── Meat ─────────────────────────────────────────────────────────────
 	      // 6. Score residuals: r_gi = (y-mu)/(1+mu/k)
-	      compute_score_residuals<<<b1d, t1d>>>(k[me], Y[me], d_mu_mom[me], d_score_r[me], genesBatch, cells);
+	      compute_score_residuals<<<b1d, t1d>>>(d_theta[me], Y[me], d_mu_mom[me], d_score_r[me], genesBatch, cells);
 	      
 	      // 7. Cluster sums: S[g, cl, f] = sum_{c in cl} r_gi * X[f,c]
 	      dim3 t_meat(16, 4, 1);
