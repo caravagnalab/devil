@@ -80,54 +80,86 @@ List beta_fit_group(Eigen::VectorXd y, float mu_beta, Eigen::VectorXd off, float
 
 #ifdef USE_CUDA
 // [[Rcpp::export]]
-List  beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::VectorXf off, int max_iter, float eps,int batch_size, bool TEST = false) {
+List beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::VectorXf off,
+                  int max_iter, float eps, int batch_size,
+                  bool TEST = false,
+                  Rcpp::IntegerVector cluster_ends = Rcpp::IntegerVector(),
+                  int n_clusters = 0) {
+
   auto t1 = std::chrono::high_resolution_clock::now();
   auto y_float = y.transpose().eval();
   auto X_float = X.transpose().eval();
-
   auto t2 = std::chrono::high_resolution_clock::now();
-  auto elapsed{t2-t1};
+  auto elapsed{t2 - t1};
+
   if (TEST) {
-    std::cout << "TIME Reorder cost " << std::chrono::duration<double, std::milli>(elapsed).count()
+    std::cout << "TIME Reorder cost "
+              << std::chrono::duration<double, std::milli>(elapsed).count()
               << " ms" << std::endl;
     std::cout << "Start GPU "
-              << "Iteration max:" << max_iter << ", EPS:" << eps << ", batch_size: " << batch_size
-              << std::endl;
+              << "Iteration max:" << max_iter << ", EPS:" << eps
+              << ", batch_size: " << batch_size << std::endl;
   }
+
+  // Convert Rcpp::IntegerVector to std::vector<int>
+  std::vector<int> cluster_ends_vec(cluster_ends.begin(), cluster_ends.end());
+
   std::vector<int> iterations(y.rows());
 
+  t1 = std::chrono::high_resolution_clock::now();
 
- t1 = std::chrono::high_resolution_clock::now();
- //create iteration vector, pass by reference.
- auto result= beta_fit_gpu_external(y_float, X_float, off, max_iter,
-				    eps,batch_size,iterations, TEST);
-  t2  =std::chrono::high_resolution_clock::now();
-  elapsed= t2-t1;
+  auto result = beta_fit_gpu_external(y_float, X_float, off,
+                                      max_iter, eps, batch_size,
+                                      iterations, TEST,
+                                      cluster_ends_vec, n_clusters);
+
+  t2      = std::chrono::high_resolution_clock::now();
+  elapsed = t2 - t1;
+
   if (TEST) {
-    std::cout << "TIME: Compute cost " << std::chrono::duration<double, std::milli>(elapsed).count() << " ms"
-              << std::endl;
-     std::cout<<"END GPU" << std::endl;
-
+    std::cout << "TIME: Compute cost "
+              << std::chrono::duration<double, std::milli>(elapsed).count()
+              << " ms" << std::endl;
+    std::cout << "END GPU" << std::endl;
   }
 
- //Eigen::Matrix<float, result.rows(), result.cols(), Eigen::RowMajor> resultr =result;
- //  Return both mu_beta and Zigma as a List
+  // Build return list depending on TEST mode and whether cluster info was provided
+  bool has_sandwich = (n_clusters > 0);
 
- if (TEST) {
-   return List::create(Named("mu_beta") = result.beta.cast<double>().transpose(), 
-                       Named("k") = result.k.cast<double>(),
-                       Named("theta") = result.theta.cast<double>(),
-                       Named("beta_init") = result.beta_init.cast<double>().transpose(),
-                       Named("iter") = iterations);
- } else {
-   return List::create(Named("mu_beta") = result.beta.cast<double>().transpose(), 
-                       Named("theta") = result.theta.cast<double>(),
-                       Named("iter") = iterations);
- }
+  if (TEST && has_sandwich) {
+    return List::create(
+      Named("mu_beta")     = result.beta.cast<double>().transpose(),
+      Named("k")           = result.k.cast<double>(),
+      Named("theta")       = result.theta.cast<double>(),
+      Named("beta_init")   = result.beta_init.cast<double>().transpose(),
+      Named("hessian_inv") = result.hessian_inv.cast<double>(),
+      Named("meat")        = result.meat.cast<double>(),
+      Named("iter")        = iterations);
 
+  } else if (TEST && !has_sandwich) {
+    return List::create(
+      Named("mu_beta")   = result.beta.cast<double>().transpose(),
+      Named("k")         = result.k.cast<double>(),
+      Named("theta")     = result.theta.cast<double>(),
+      Named("beta_init") = result.beta_init.cast<double>().transpose(),
+      Named("iter")      = iterations);
+
+  } else if (!TEST && has_sandwich) {
+    return List::create(
+      Named("mu_beta")     = result.beta.cast<double>().transpose(),
+      Named("theta")       = result.theta.cast<double>(),
+      Named("hessian_inv") = result.hessian_inv.cast<double>(),
+      Named("meat")        = result.meat.cast<double>(),
+      Named("iter")        = iterations);
+
+  } else {
+    return List::create(
+      Named("mu_beta") = result.beta.cast<double>().transpose(),
+      Named("theta")   = result.theta.cast<double>(),
+      Named("iter")    = iterations);
+  }
 }
 #endif // USE_CUDA
-
 
 /*
  *
