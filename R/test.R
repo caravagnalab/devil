@@ -108,19 +108,22 @@ test_de <- function(devil.fit, contrast, clusters = NULL, pval_adjust_method = "
     p_values = lapply(seq_len(nrow(devil.fit$input_matrix)), function(gene_idx) {
       mu_test <- lfcs[gene_idx]
 
-      H = devil.fit$beta_sandwiches[[gene_idx]]
-      if (is.null(H)) {
-        H = devil.fit$beta_sandwiches_null[[gene_idx]]
-        total_variance <- t(contrast) %*% H %*% contrast
+      H_clust <- devil.fit$beta_sandwiches[[gene_idx]]
+      H_null  <- devil.fit$beta_sandwiches_null[[gene_idx]]
+      
+      if (!is.null(H_clust) && !is.null(H_null)) {
+        total_variance <- t(contrast) %*% H_clust %*% contrast
+        p_clust <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+        
+        total_variance <- t(contrast) %*% H_null %*% contrast
+        p_null <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+        
+        p <- max(p_clust, p_null)
+      } else if (!is.null(H_null)) {
+        total_variance <- t(contrast) %*% H_null %*% contrast
         p <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
       } else {
-        total_variance <- t(contrast) %*% H %*% contrast
-        p_null <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
-
-        H = devil.fit$beta_sandwiches_null[[gene_idx]]
-        total_variance <- t(contrast) %*% H %*% contrast
-        p <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
-        p = max(p, p_null)
+        p <- NA_real_
       }
       p
     }) %>% unlist()
