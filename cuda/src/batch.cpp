@@ -508,7 +508,7 @@ beta_fit_gpu_external(
     einsum_B[me].execute(cutensorH[me], A[me], X[me], workspace[me]);
     
     // 4. Negate B in-place (H = -X^T W X)
-    negate_kernel<<<(genesBatch*features*features+255)/256, 256>>>(B[me], genesBatch*features*features);
+    // negate_kernel<<<(genesBatch*features*features+255)/256, 256>>>(B[me], genesBatch*features*features);
     
     // 5. Copy B → Bk, invert: Zigma[me] = (X^T W X)^{-1}
     CUDA_CHECK(cudaMemcpy(Bk[me], B[me],
