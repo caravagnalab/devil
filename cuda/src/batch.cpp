@@ -562,7 +562,6 @@ beta_fit_gpu_external(
                  genesBatch * features * features * sizeof(float),
                  cudaMemcpyDeviceToHost));
 	    }
-	  }
 	    
 	    /***********************************
 	     * Copy beta, k, theta, and iterations to host
