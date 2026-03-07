@@ -544,25 +544,25 @@ beta_fit_gpu_external(
                   d_meat[me], features,
                   (long long)features * features,
                   genesBatch));
-	      }
-	      
-	      CUDA_CHECK(cudaDeviceSynchronize());
-	      
-	      // ── Copy to host ──────────────────────────────────────────────────────
-	      CUDA_CHECK(cudaMemcpy(
-	          hessian_final.data() + i * genesBatch * features * features,
-	          Zigma[me],
-                genesBatch * features * features * sizeof(float),
-                cudaMemcpyDeviceToHost));
-	      
-	      if (n_clusters > 0) {
-	        CUDA_CHECK(cudaMemcpy(
-	            meat_final.data() + i * genesBatch * features * features,
-	            d_meat[me],
-                   genesBatch * features * features * sizeof(float),
-                   cudaMemcpyDeviceToHost));
-	      }
 	    }
+	    
+	    CUDA_CHECK(cudaDeviceSynchronize());
+	    
+	    // ── Copy to host ──────────────────────────────────────────────────────
+	    CUDA_CHECK(cudaMemcpy(
+	        hessian_final.data() + i * genesBatch * features * features,
+	        Zigma[me],
+              genesBatch * features * features * sizeof(float),
+              cudaMemcpyDeviceToHost));
+	    
+	    if (n_clusters > 0) {
+	      CUDA_CHECK(cudaMemcpy(
+	          meat_final.data() + i * genesBatch * features * features,
+	          d_meat[me],
+                 genesBatch * features * features * sizeof(float),
+                 cudaMemcpyDeviceToHost));
+	    }
+	  }
 	    
 	    /***********************************
 	     * Copy beta, k, theta, and iterations to host
@@ -588,7 +588,6 @@ beta_fit_gpu_external(
 	    std::fill(iterations.begin()  +  i *genesBatch , iterations.begin() +  +  (i+1) *genesBatch, iter);
       
 	  }
-	}
       }
       /*********************
        * Free Cuda Memory
