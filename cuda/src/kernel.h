@@ -98,5 +98,7 @@ __global__ void compute_cluster_sums_summary(
     float*       __restrict__ cluster_sums,
     int genesBatch, int M, int features, int n_clusters);
 
-__global__ void expGPU_neg(const float* eta, const float* off,
-                           float* w_q, int total, int M, int genesBatch);
+__global__ void expGPU_neg(const float* __restrict__ eta,
+                           const float* __restrict__ off,
+                           float*       __restrict__ w_q,
+                           int total, int M);
