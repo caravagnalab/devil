@@ -324,7 +324,8 @@ beta_fit_gpu_external(
 #pragma omp single
 { //here we will generate the work ! 
   for (int i = 0; i < BatchCount; ++i) {
-#pragma omp task default(shared)
+    int batch_idx = i;
+#pragma omp task firstprivate(batch_idx) default(shared)
 {
   int me=omp_get_thread_num();
   // Ensure we're using the correct device for this thread
@@ -335,13 +336,13 @@ beta_fit_gpu_external(
   /*
    CUDA_CHECK(cudaMemcpy(
    offset[me],
-   offset_host.data() + i  * genesBatch * cells,
+   offset_host.data() + batch_idx  * genesBatch * cells,
    genesBatch * cells * sizeof(float), cudaMemcpyHostToDevice)); //CORRETTO
    */
   
   // Copy Y data for this batch
   CUDA_CHECK(cudaMemcpy(
-      Y[me], Y_host.data() +  i * genesBatch * cells ,
+      Y[me], Y_host.data() +  batch_idx * genesBatch * cells ,
       genesBatch * cells * sizeof(float), cudaMemcpyHostToDevice));
   
   // Initialize beta with rough approximation on GPU
@@ -359,8 +360,7 @@ beta_fit_gpu_external(
   
   // Debug: Copy initialized beta back to host for consistency check (only if TEST mode)
   if (TEST) {
-    CUDA_CHECK(cudaMemcpy(beta_init_final.data() + i * genesBatch * features,
-                          mu_beta[me],
+      CUDA_CHECK(cudaMemcpy(beta_init_final.data() + batch_idx * genesBatch * features,
                                  genesBatch * features * sizeof(float),
                                  cudaMemcpyDeviceToHost));
   }
@@ -380,7 +380,7 @@ beta_fit_gpu_external(
   
   // Copy k back to host only if TEST mode enabled
   if (TEST) {
-    CUDA_CHECK(cudaMemcpy(k_final.data() + i * genesBatch,
+    CUDA_CHECK(cudaMemcpy(k_final.data() + batch_idx * genesBatch,
                           k[me],
                            genesBatch * sizeof(float),
                            cudaMemcpyDeviceToHost));
@@ -550,14 +550,14 @@ beta_fit_gpu_external(
     
     // ── Copy to host ──────────────────────────────────────────────────────
     CUDA_CHECK(cudaMemcpy(
-        hessian_final.data() + i * genesBatch * features * features,
+        hessian_final.data() + batch_idx * genesBatch * features * features,
         Zigma[me],
              genesBatch * features * features * sizeof(float),
              cudaMemcpyDeviceToHost));
     
     if (n_clusters > 0) {
       CUDA_CHECK(cudaMemcpy(
-          meat_final.data() + i * genesBatch * features * features,
+          meat_final.data() + batch_idx * genesBatch * features * features,
           d_meat[me],
                 genesBatch * features * features * sizeof(float),
                 cudaMemcpyDeviceToHost));
@@ -567,25 +567,25 @@ beta_fit_gpu_external(
   /***********************************
    * Copy beta, k, theta, and iterations to host
    **********************************/
-  CUDA_CHECK(cudaMemcpy(mu_beta_final.data() + i * genesBatch * features,
+  CUDA_CHECK(cudaMemcpy(mu_beta_final.data() + batch_idx * genesBatch * features,
                         mu_beta[me], 
                                genesBatch*features* sizeof(float),
                                cudaMemcpyDeviceToHost));
   
   // Copy k back to host only if TEST mode enabled
   if (TEST) {
-    CUDA_CHECK(cudaMemcpy(k_final.data() + i * genesBatch,
+    CUDA_CHECK(cudaMemcpy(k_final.data() + batch_idx * genesBatch,
                           k[me],
                            genesBatch * sizeof(float),
                            cudaMemcpyDeviceToHost));
   }
   
-  CUDA_CHECK(cudaMemcpy(theta_final.data() + i * genesBatch,
+  CUDA_CHECK(cudaMemcpy(theta_final.data() + batch_idx * genesBatch,
                         d_theta[me],
                                genesBatch * sizeof(float),
                                cudaMemcpyDeviceToHost));
   
-  std::fill(iterations.begin()  +  i *genesBatch , iterations.begin() +  +  (i+1) *genesBatch, iter);
+  std::fill(iterations.begin()  +  batch_idx *genesBatch , iterations.begin() +  +  (batch_idx+1) *genesBatch, iter);
   
 }
   }
@@ -952,7 +952,8 @@ beta_fit_gpu_external_summary(
 #pragma omp single
 {
   for (int i = 0; i < (int)BatchCount; ++i) {
-#pragma omp task default(shared)
+    int batch_idx = i;
+#pragma omp task firstprivate(batch_idx) default(shared)
 {
   int me = omp_get_thread_num();
   CUDA_CHECK(cudaSetDevice(me));
@@ -962,7 +963,7 @@ beta_fit_gpu_external_summary(
    ******************************/
   CUDA_CHECK(cudaMemcpy(
       Y_dev[me],
-           Y_host.data() + i * genesBatch * cells,
+           Y_host.data() + batch_idx * genesBatch * cells,
            genesBatch * cells * sizeof(float),
            cudaMemcpyHostToDevice));
   
@@ -1225,14 +1226,14 @@ beta_fit_gpu_external_summary(
     
     // Copy Hessian inverse and meat to host (unchanged offsets)
     CUDA_CHECK(cudaMemcpy(
-        hessian_final.data() + i * genesBatch * features * features,
+        hessian_final.data() + batch_idx * genesBatch * features * features,
         Zigma[me],
              genesBatch * features * features * sizeof(float),
              cudaMemcpyDeviceToHost));
     
     if (n_clusters > 0) {
       CUDA_CHECK(cudaMemcpy(
-          meat_final.data() + i * genesBatch * features * features,
+          meat_final.data() + batch_idx * genesBatch * features * features,
           d_meat[me],
                 genesBatch * features * features * sizeof(float),
                 cudaMemcpyDeviceToHost));
@@ -1243,13 +1244,13 @@ beta_fit_gpu_external_summary(
    * Copy beta and theta to host (unchanged)
    ******************************/
   CUDA_CHECK(cudaMemcpy(
-      mu_beta_final.data() + i * genesBatch * features,
+      mu_beta_final.data() + batch_idx * genesBatch * features,
       mu_beta[me],
              genesBatch * features * sizeof(float),
              cudaMemcpyDeviceToHost));
   
   CUDA_CHECK(cudaMemcpy(
-      theta_final.data() + i * genesBatch,
+      theta_final.data() + batch_idx * genesBatch,
       d_theta[me],
              genesBatch * sizeof(float),
              cudaMemcpyDeviceToHost));
