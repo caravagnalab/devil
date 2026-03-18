@@ -750,6 +750,7 @@ beta_fit_gpu_external_summary(
   std::vector<float*> X      (deviceCount);  // [features x M]
   std::vector<float*> d_off  (deviceCount);  // [M]  exp(off_unique)
   std::vector<float*> d_counts(deviceCount); // [M]
+  std::vector<float*> d_sf   (deviceCount);
   std::vector<int*>   d_mapping(deviceCount);// [N]  for aggregation
   std::vector<int*>   d_cluster_map(deviceCount); // [M]
   
@@ -818,8 +819,14 @@ beta_fit_gpu_external_summary(
   CUDA_CHECK(cudaMemcpy(X[me], X_unique_host.data(),
                         features * groups * sizeof(float), cudaMemcpyHostToDevice));
   
-  CUDA_CHECK(cudaMalloc((void**)&d_off[me],       groups * sizeof(float)));
-  CUDA_CHECK(cudaMemcpy(d_off[me], sf_unique_host.data(),
+  // d_off holds log(sf) — the raw off_unique values — for expGPU_neg in the IRLS
+  CUDA_CHECK(cudaMalloc((void**)&d_off[me], groups * sizeof(float)));
+  CUDA_CHECK(cudaMemcpy(d_off[me], off_unique_host.data(),
+                        groups * sizeof(float), cudaMemcpyHostToDevice));
+  
+  // d_sf holds exp(off_unique) = sf — for compute_mu_from_eta in the MOM step
+  CUDA_CHECK(cudaMalloc((void**)&d_sf[me],  groups * sizeof(float)));
+  CUDA_CHECK(cudaMemcpy(d_sf[me], sf_unique_host.data(),
                         groups * sizeof(float), cudaMemcpyHostToDevice));
   
   CUDA_CHECK(cudaMalloc((void**)&d_counts[me],    groups * sizeof(float)));
@@ -1044,8 +1051,8 @@ beta_fit_gpu_external_summary(
     // w_q = exp(eta + off_unique)  [genesBatch x M]
     dim3 t1(256);
     dim3 b1((genesBatch * groups + 255) / 256);
-    expGPU<<<b1, t1>>>(cg_tmp2[me], d_off[me], w_q[me],
-                       genesBatch * groups, groups);   // CHANGE: N -> M in last two args
+    expGPU_neg<<<b1, t1>>>(cg_tmp2[me], d_off[me], w_q[me],
+                           genesBatch * groups, groups);
     
     // weight = mu_g_sum * w_q, in M-space
     dim3 t2(16, 16);
@@ -1098,7 +1105,7 @@ beta_fit_gpu_external_summary(
     dim3 b2((groups     + t2.x - 1) / t2.x,
             (genesBatch + t2.y - 1) / t2.y);
     // CHANGE: pass groups (M) instead of cells (N)
-    compute_mu_from_eta<<<b2, t2>>>(cg_tmp2[me], d_off[me],
+    compute_mu_from_eta<<<b2, t2>>>(cg_tmp2[me], d_sf[me],
                                     d_mu_mom[me], genesBatch, groups);
   }
   
@@ -1259,6 +1266,7 @@ if (pivot[me])         CUDA_CHECK(cudaFree(pivot[me]));
 if (info[me])          CUDA_CHECK(cudaFree(info[me]));
 CUDA_CHECK(cudaFree(X[me]));
 CUDA_CHECK(cudaFree(d_off[me]));
+CUDA_CHECK(cudaFree(d_sf[me]));
 CUDA_CHECK(cudaFree(d_counts[me]));
 CUDA_CHECK(cudaFree(d_mapping[me]));
 if (d_cluster_map[me]) CUDA_CHECK(cudaFree(d_cluster_map[me]));
