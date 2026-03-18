@@ -341,16 +341,16 @@ __global__ void compute_cluster_sums_summary(
   }
 }
 
-__global__ void expGPU_neg(const float* __restrict__ eta,      // [genesBatch x M] row-major
-                            const float* __restrict__ off,      // [M]
-                            float*       __restrict__ w_q,      // [genesBatch x M] col-major
+__global__ void expGPU_neg(const float* __restrict__ eta,
+                            const float* __restrict__ off,
+                            float*       __restrict__ w_q,
                             int total, int M, int genesBatch)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= total) return;
-  int g = idx / M;
-  int m = idx % M;
-  w_q[g + m * genesBatch] = expf(-eta[idx] - off[m]);  // write col-major
+  int g = idx % genesBatch;   // col-major: gene is fast axis
+  int m = idx / genesBatch;   // col-major: group is slow axis
+  w_q[g + m * genesBatch] = expf(-eta[g + m * genesBatch] - off[m]);
 }
 
 __global__ void compute_mu_from_eta_rowmajor(
@@ -361,7 +361,7 @@ __global__ void compute_mu_from_eta_rowmajor(
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= genesBatch * M) return;
-  int g = idx / M;   // row-major read
-  int m = idx % M;
-  mu_out[g + m * genesBatch] = sf[m] * expf(eta[idx]);  // col-major write
+  int g = idx % genesBatch;   // col-major: gene is fast axis
+  int m = idx / genesBatch;   // col-major: group is slow axis
+  mu_out[g + m * genesBatch] = sf[m] * expf(eta[g + m * genesBatch]);
 }
