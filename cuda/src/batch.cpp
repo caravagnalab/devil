@@ -1051,8 +1051,7 @@ beta_fit_gpu_external_summary(
     // w_q = exp(eta + off_unique)  [genesBatch x M]
     dim3 t1(256);
     dim3 b1((genesBatch * groups + 255) / 256);
-    expGPU_neg<<<b1, t1>>>(cg_tmp2[me], d_off[me], w_q[me],
-                           genesBatch * groups, groups);
+    expGPU_neg<<<grid, block>>>(eta, off, w_q, total, M, genesBatch);
     
     // weight = mu_g_sum * w_q, in M-space
     dim3 t2(16, 16);
