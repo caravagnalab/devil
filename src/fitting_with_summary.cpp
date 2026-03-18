@@ -1,7 +1,11 @@
-
 #include <RcppEigen.h>
 #include <map>
 #include <vector>
+#include <iostream>
+#include <chrono>
+#ifdef USE_CUDA
+#include "batch.hpp"
+#endif
 
 // [[Rcpp::depends(RcppEigen)]]
 using namespace Eigen;
