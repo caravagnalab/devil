@@ -346,10 +346,13 @@ __global__ void compute_cluster_sums_summary(
 __global__ void expGPU_neg(const float* __restrict__ eta,
                             const float* __restrict__ off,
                             float*       __restrict__ w_q,
-                            int total, int M)
+                            int total, int M, int genesBatch)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= total) return;
-  int m = idx % M;
-  w_q[idx] = expf(-eta[idx] - off[m]);   // matches CPU: exp(-eta - off)
+  int g = idx / M;                              // gene index
+  int m = idx % M;                              // group index
+  // eta:  [genesBatch x M] row-major  → element (g,m) = eta[g*M + m] = eta[idx]
+  // w_q:  [genesBatch x M] col-major  → element (g,m) = w_q[g + m*genesBatch]
+  w_q[g + m * genesBatch] = expf(-eta[idx] - off[m]);
 }
