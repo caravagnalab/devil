@@ -101,4 +101,4 @@ __global__ void compute_cluster_sums_summary(
 __global__ void expGPU_neg(const float* __restrict__ eta,
                            const float* __restrict__ off,
                            float*       __restrict__ w_q,
-                           int total, int M);
+                           int total, int M, int genesBatch);
