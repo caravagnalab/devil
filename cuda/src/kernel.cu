@@ -215,8 +215,8 @@ __global__ void aggregate_y_by_group(
 
   int m   = mapping[n] - 1;              // 0-based
   float v = Y[n + g * N];
-  atomicAdd(&y_sums   [m * genesBatch + g], v);
-  atomicAdd(&y_sq_sums[m * genesBatch + g], v * v);
+  atomicAdd(&y_sums   [m + g * M], v);
+  atomicAdd(&y_sq_sums[m + g * M], v * v);
 }
 
 // IRLS inner step: compute weight = mu_g_sum * w_q in M-space.
