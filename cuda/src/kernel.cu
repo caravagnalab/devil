@@ -342,3 +342,14 @@ __global__ void compute_cluster_sums_summary(
               score * xfm);
   }
 }
+
+__global__ void expGPU_neg(const float* __restrict__ eta,
+                            const float* __restrict__ off,
+                            float*       __restrict__ w_q,
+                            int total, int M)
+{
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= total) return;
+  int m = idx % M;
+  w_q[idx] = expf(-eta[idx] - off[m]);   // matches CPU: exp(-eta - off)
+}

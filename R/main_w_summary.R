@@ -414,7 +414,6 @@ cpu_fit_summary <- function(
   ))
 }
 
-
 get_group_blueprint <- function(X_mat, off_vec, clusters = NULL) {
   df <- as.data.frame(X_mat)
   df$off <- off_vec
