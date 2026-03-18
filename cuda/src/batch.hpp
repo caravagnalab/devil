@@ -25,3 +25,13 @@ beta_fit_gpu_external(
   bool TEST = false,
   const std::vector<int>& cluster_ends = {},
   int n_clusters = 0);
+
+BatchResult beta_fit_gpu_external_summary(
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const& Y_host,
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> const& X_unique_host,
+    Eigen::VectorXf const& off_unique_host,
+    Eigen::VectorXi const& mapping_host,
+    Eigen::VectorXf const& counts_host,
+    Eigen::VectorXi const& cluster_map_host,
+    int n_clusters,
+    int max_iter, float eps, int batch_size);

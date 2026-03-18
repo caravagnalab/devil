@@ -161,6 +161,73 @@ List beta_fit_gpu(Eigen::MatrixXf y, Eigen::MatrixXf X, Eigen::VectorXf off,
 }
 #endif // USE_CUDA
 
+#ifdef USE_CUDA
+// [[Rcpp::export]]
+List beta_fit_gpu_summary(
+    Eigen::MatrixXf        y,             // [genes x cells]  — raw counts, same as beta_fit_gpu
+    Eigen::MatrixXf        X_unique,      // [M x features]   — unique design rows from blueprint
+    Eigen::VectorXf        off_unique,    // [M]              — log(sf) per unique group
+    Eigen::VectorXi        mapping,       // [N] 1-based      — cell -> group index
+    Eigen::VectorXf        counts,        // [M]              — cells per group
+    Eigen::VectorXi        cluster_map,   // [M] 1-based      — group -> cluster index
+    int                    n_clusters,
+    int                    max_iter,
+    float                  eps,
+    int                    batch_size)
+{
+  auto t1 = std::chrono::high_resolution_clock::now();
+  
+  // ── Transpose to col-major layouts expected by the CUDA function ─────────
+  // y:        [genes x cells] -> [cells x genes]  (N x G, col-major)
+  // X_unique: [M x features]  -> [features x M]   (P x M, col-major)
+  auto y_float = y.transpose().eval();
+  auto X_float = X_unique.transpose().eval();
+  
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::cout << "TIME Reorder cost "
+            << std::chrono::duration<double, std::milli>(t2 - t1).count()
+            << " ms" << std::endl;
+  
+  // ── Delegate to the CUDA implementation ──────────────────────────────────
+  std::vector<int> iterations(y.rows());   // one entry per gene, filled by the function
+  
+  t1 = std::chrono::high_resolution_clock::now();
+  
+  auto result = beta_fit_gpu_external_summary(
+    y_float,       // [N x G]  col-major
+    X_float,       // [P x M]  col-major
+    off_unique,    // [M]
+    mapping,       // [N] int
+    counts,        // [M]
+    cluster_map,   // [M] int
+    n_clusters,
+    max_iter, eps, batch_size);
+  
+  t2 = std::chrono::high_resolution_clock::now();
+  std::cout << "TIME Compute cost "
+            << std::chrono::duration<double, std::milli>(t2 - t1).count()
+            << " ms" << std::endl;
+  
+  // ── Build return list ─────────────────────────────────────────────────────
+  // The summary version always has sandwich components when n_clusters > 0,
+  // and never has TEST-mode debug fields (k, beta_init) — there is no rough
+  // per-cell initialisation path to debug here.
+  if (n_clusters > 0) {
+    return List::create(
+      Named("mu_beta")     = result.beta.cast<double>().transpose(),
+      Named("theta")       = result.theta.cast<double>(),
+      Named("hessian_inv") = result.hessian_inv.cast<double>(),
+      Named("meat")        = result.meat.cast<double>(),
+      Named("iter")        = iterations);
+  } else {
+    return List::create(
+      Named("mu_beta")     = result.beta.cast<double>().transpose(),
+      Named("theta")       = result.theta.cast<double>(),
+      Named("iter")        = iterations);
+  }
+}
+#endif // USE_CUDA
+
 /*
  *
  * This code was copied from glmGamPoi

@@ -48,3 +48,52 @@ __global__ void compute_cluster_sums_and_scores(
 
 // In-place negate
 __global__ void negate_kernel(float* x, int n);
+
+// ── Summary-space kernels ─────────────────────────────────────────────────────
+
+__global__ void aggregate_y_by_group(
+    const float* __restrict__ Y,
+    const int*   __restrict__ mapping,
+    float*       __restrict__ y_sums,
+    float*       __restrict__ y_sq_sums,
+    int N, int M, int genesBatch);
+
+__global__ void process2D_summary(
+    const float* __restrict__ k,
+    const float* __restrict__ y_sums,
+    const float* __restrict__ counts,
+    const float* __restrict__ w_q,
+    float*       __restrict__ weight,
+    int genesBatch, int M);
+
+__global__ void elementWiseSub_summary(
+    float*       __restrict__ weight,
+    const float* __restrict__ counts,
+    int genesBatch, int M);
+
+__global__ void compute_mom_components_summary(
+    const float* __restrict__ y_sums,
+    const float* __restrict__ y_sq_sums,
+    const float* __restrict__ mu_mom,
+    const float* __restrict__ counts,
+    float*       __restrict__ d_num,
+    float*       __restrict__ d_den,
+    int genesBatch, int M);
+
+__global__ void compute_hessian_weights_summary(
+    const float* __restrict__ theta,
+    const float* __restrict__ y_sums,
+    const float* __restrict__ counts,
+    const float* __restrict__ mu_mom,
+    float*       __restrict__ hess_w,
+    int genesBatch, int M);
+
+__global__ void compute_cluster_sums_summary(
+    const float* __restrict__ y_sums,
+    const float* __restrict__ counts,
+    const float* __restrict__ mu_mom,
+    const float* __restrict__ X_unique,
+    const float* __restrict__ theta,
+    const int*   __restrict__ cluster_map,
+    float*       __restrict__ cluster_sums,
+    int genesBatch, int M, int features, int n_clusters);

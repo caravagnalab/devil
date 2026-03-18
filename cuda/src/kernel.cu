@@ -197,3 +197,148 @@ __global__ void negate_kernel(float* x, int n) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) x[i] = -x[i];
 }
+
+// Reduce raw Y [N x genesBatch] col-major into y_sums and y_sq_sums
+// [M x genesBatch] col-major, both zeroed before this call.
+// mapping is 1-based, length N.
+__global__ void aggregate_y_by_group(
+    const float* __restrict__ Y,          // [N x genesBatch] col-major
+    const int*   __restrict__ mapping,    // [N] 1-based group index
+    float*       __restrict__ y_sums,     // [M x genesBatch] col-major
+    float*       __restrict__ y_sq_sums,  // [M x genesBatch] col-major
+    int N, int M, int genesBatch)
+{
+  int g = blockIdx.x * blockDim.x + threadIdx.x;
+  int n = blockIdx.y * blockDim.y + threadIdx.y;
+  if (g >= genesBatch || n >= N) return;
+
+  int m   = mapping[n] - 1;              // 0-based
+  float v = Y[n * genesBatch + g];
+  atomicAdd(&y_sums   [m * genesBatch + g], v);
+  atomicAdd(&y_sq_sums[m * genesBatch + g], v * v);
+}
+
+// IRLS inner step: compute weight = mu_g_sum * w_q in M-space.
+// Replaces process2D + elementWise for the summary case.
+// w_q    [genesBatch x M] col-major (output of expGPU in M-space)
+// y_sums [M x genesBatch] col-major
+// counts [M]
+// weight [genesBatch x M] col-major  ← output
+__global__ void process2D_summary(
+    const float* __restrict__ k,       // [genesBatch]  inv-dispersion
+    const float* __restrict__ y_sums,  // [M x genesBatch] col-major
+    const float* __restrict__ counts,  // [M]
+    const float* __restrict__ w_q,     // [genesBatch x M] col-major
+    float*       __restrict__ weight,  // [genesBatch x M] col-major
+    int genesBatch, int M)
+{
+  int g = blockIdx.x * blockDim.x + threadIdx.x;
+  int m = blockIdx.y * blockDim.y + threadIdx.y;
+  if (g >= genesBatch || m >= M) return;
+
+  float inv_k = k[g];
+  float wq    = w_q [g + m * genesBatch];         // [genesBatch x M] col-major
+  float ys    = y_sums[g * M + m];                // wait — see note below
+  // NOTE on layout: y_sums is [M x genesBatch] col-major → element (m,g) = y_sums[m + g*M]
+  // Re-index correctly:
+  ys          = y_sums[m + g * M];
+  float cnt   = counts[m];
+  float mu_gs = (cnt * inv_k + ys) / (1.0f + inv_k * wq);
+  weight[g + m * genesBatch] = mu_gs * wq;
+}
+
+// Subtract counts[m] from weight[g,m] in-place (gradient step, replaces elementWiseSub).
+__global__ void elementWiseSub_summary(
+    float*       __restrict__ weight,  // [genesBatch x M] col-major, in-place
+    const float* __restrict__ counts,  // [M]
+    int genesBatch, int M)
+{
+  int g = blockIdx.x * blockDim.x + threadIdx.x;
+  int m = blockIdx.y * blockDim.y + threadIdx.y;
+  if (g >= genesBatch || m >= M) return;
+  weight[g + m * genesBatch] -= counts[m];
+}
+
+// MOM components in M-space. Replaces compute_mom_components.
+// mu_mom [genesBatch x M] col-major  (sf * exp(eta), already computed)
+// y_sums, y_sq_sums [M x genesBatch] col-major
+// counts [M]
+// d_num, d_den [genesBatch x M] col-major  ← outputs
+__global__ void compute_mom_components_summary(
+    const float* __restrict__ y_sums,    // [M x genesBatch]
+    const float* __restrict__ y_sq_sums, // [M x genesBatch]
+    const float* __restrict__ mu_mom,    // [genesBatch x M]
+    const float* __restrict__ counts,    // [M]
+    float*       __restrict__ d_num,     // [genesBatch x M]
+    float*       __restrict__ d_den,     // [genesBatch x M]
+    int genesBatch, int M)
+{
+  int g = blockIdx.x * blockDim.x + threadIdx.x;
+  int m = blockIdx.y * blockDim.y + threadIdx.y;
+  if (g >= genesBatch || m >= M) return;
+
+  float mu  = mu_mom [g + m * genesBatch];
+  float cnt = counts [m];
+  float ys  = y_sums [m + g * M];
+  float ys2 = y_sq_sums[m + g * M];
+
+  float sse = ys2 - 2.0f * mu * ys + cnt * mu * mu;
+  d_num[g + m * genesBatch] = sse - cnt * mu;
+  d_den[g + m * genesBatch] = cnt * mu * mu;
+}
+
+// Hessian weights in M-space. Replaces compute_hessian_weights.
+// weight_out = mu / (1 + alpha*mu)^2 * (alpha*y_sum + count)
+__global__ void compute_hessian_weights_summary(
+    const float* __restrict__ theta,     // [genesBatch]
+    const float* __restrict__ y_sums,    // [M x genesBatch]
+    const float* __restrict__ counts,    // [M]
+    const float* __restrict__ mu_mom,    // [genesBatch x M]
+    float*       __restrict__ hess_w,    // [genesBatch x M]
+    int genesBatch, int M)
+{
+  int g = blockIdx.x * blockDim.x + threadIdx.x;
+  int m = blockIdx.y * blockDim.y + threadIdx.y;
+  if (g >= genesBatch || m >= M) return;
+
+  float alpha = theta[g];
+  float mu    = mu_mom [g + m * genesBatch];
+  float denom = 1.0f + alpha * mu;
+  float ys    = y_sums [m + g * M];
+  float cnt   = counts [m];
+  hess_w[g + m * genesBatch] = (mu / (denom * denom)) * (alpha * ys + cnt);
+}
+
+// Clustered meat in M-space.
+// Each group m belongs to exactly one cluster given by cluster_map[m] (1-based).
+// Computes cluster_sums[f, cl, g] += score(g,m) * X[f,m]
+// where score(g,m) = (y_sums[m,g] - counts[m]*mu[g,m]) / (1 + mu[g,m]*theta[g])
+// Output cluster_sums: [features x n_clusters x genesBatch] col-major
+__global__ void compute_cluster_sums_summary(
+    const float* __restrict__ y_sums,       // [M x genesBatch]
+    const float* __restrict__ counts,       // [M]
+    const float* __restrict__ mu_mom,       // [genesBatch x M]
+    const float* __restrict__ X_unique,     // [features x M] col-major
+    const float* __restrict__ theta,        // [genesBatch]
+    const int*   __restrict__ cluster_map,  // [M] 1-based cluster index
+    float*       __restrict__ cluster_sums, // [features x n_clusters x genesBatch]
+    int genesBatch, int M, int features, int n_clusters)
+{
+  int f  = blockIdx.x * blockDim.x + threadIdx.x;
+  int g  = blockIdx.y * blockDim.y + threadIdx.y;
+  if (f >= features || g >= genesBatch) return;
+
+  for (int m = 0; m < M; ++m) {
+    int cl   = cluster_map[m] - 1;          // 0-based cluster
+    float mu = mu_mom [g + m * genesBatch];
+    float ys = y_sums [m + g * M];
+    float cnt= counts [m];
+    float th = theta  [g];
+    float score = (ys - cnt * mu) / (1.0f + mu * th);
+    float xfm   = X_unique[f + m * features]; // [features x M] col-major
+    // cluster_sums layout: [features x n_clusters x genesBatch] col-major
+    // index: f + cl*features + g*features*n_clusters
+    atomicAdd(&cluster_sums[f + cl * features + g * features * n_clusters],
+              score * xfm);
+  }
+}
