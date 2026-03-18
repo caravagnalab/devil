@@ -94,8 +94,9 @@ __global__ void compute_mu_from_eta(const float* eta, const float* offset,
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     
     if (g < genes && j < cells) {
-        int idx = g * cells + j;
-        mu[idx] = expf(eta[idx] + offset[j]);
+      int idx_row = g * cells + j;
+      int idx_col = g + j * genes;
+      mu[idx_col] = expf(eta[idx_row] + offset[j]);
     }
 }
 

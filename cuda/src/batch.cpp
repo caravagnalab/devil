@@ -1125,18 +1125,18 @@ beta_fit_gpu_external_summary(
   // CHANGE: leading dimension and vector length are M not N
   {
     const float alpha1 = 1.0f, beta0 = 0.0f;
-    CUBLAS_CHECK(cublasSgemv(cublasH[me], CUBLAS_OP_T,
-                             groups, genesBatch,
+    CUBLAS_CHECK(cublasSgemv(cublasH[me], CUBLAS_OP_N,
+                             genesBatch, groups,
                              &alpha1,
-                             d_num[me], groups,
+                             d_num[me], genesBatch,
                              d_ones[me], 1,
                              &beta0,
                              d_theta[me], 1));
     // Temporarily store den sum in k (it is a genesBatch buffer we can reuse here)
-    CUBLAS_CHECK(cublasSgemv(cublasH[me], CUBLAS_OP_T,
-                             groups, genesBatch,
+    CUBLAS_CHECK(cublasSgemv(cublasH[me], CUBLAS_OP_N,
+                             genesBatch, groups,
                              &alpha1,
-                             d_den[me], groups,
+                             d_den[me], genesBatch,
                              d_ones[me], 1,
                              &beta0,
                              k[me], 1));
