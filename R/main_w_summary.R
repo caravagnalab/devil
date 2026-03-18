@@ -189,9 +189,7 @@ fit_devil_summary <- function(
     sf <- devil:::calculate_sf(input_matrix, method = size_factors, verbose = verbose)
     
     if (!is.null(clusters)) {
-      for (c in clusters) {
-        sf[c == clusters] = median(sf[c == clusters])
-      }
+      sf <- ave(sf, clusters, FUN = median)
     }
   } else {
     sf <- rep(1, nrow(design_matrix))
