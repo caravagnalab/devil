@@ -102,3 +102,9 @@ __global__ void expGPU_neg(const float* __restrict__ eta,
                            const float* __restrict__ off,
                            float*       __restrict__ w_q,
                            int total, int M, int genesBatch);
+
+__global__ void compute_mu_from_eta_rowmajor(
+    const float* __restrict__ eta,
+    const float* __restrict__ sf,
+    float*       __restrict__ mu_out,
+    int genesBatch, int M);

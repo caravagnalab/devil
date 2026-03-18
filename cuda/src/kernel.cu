@@ -352,3 +352,16 @@ __global__ void expGPU_neg(const float* __restrict__ eta,      // [genesBatch x 
   int m = idx % M;
   w_q[g + m * genesBatch] = expf(-eta[idx] - off[m]);  // write col-major
 }
+
+__global__ void compute_mu_from_eta_rowmajor(
+    const float* __restrict__ eta,
+    const float* __restrict__ sf,
+    float*       __restrict__ mu_out,
+    int genesBatch, int M)
+{
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= genesBatch * M) return;
+  int g = idx / M;   // row-major read
+  int m = idx % M;
+  mu_out[g + m * genesBatch] = sf[m] * expf(eta[idx]);  // col-major write
+}
