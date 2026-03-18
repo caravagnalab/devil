@@ -242,7 +242,7 @@ __global__ void process2D_summary(
   float ys    = y_sums[m + g * M];
   float cnt   = counts[m];
   float mu_gs = (cnt * inv_k + ys) / (1.0f + inv_k * wq);
-  weight[g + m * genesBatch] = mu_gs * wq;
+  weight[g * M + m] = mu_gs * wq;
 }
 
 // Subtract counts[m] from weight[g,m] in-place (gradient step, replaces elementWiseSub).
@@ -254,7 +254,7 @@ __global__ void elementWiseSub_summary(
   int g = blockIdx.x * blockDim.x + threadIdx.x;
   int m = blockIdx.y * blockDim.y + threadIdx.y;
   if (g >= genesBatch || m >= M) return;
-  weight[g + m * genesBatch] -= counts[m];
+  weight[g * M + m] -= counts[m];
 }
 
 // MOM components in M-space. Replaces compute_mom_components.
@@ -348,9 +348,9 @@ __global__ void expGPU_neg(const float* __restrict__ eta,
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= total) return;
-  int g = idx % genesBatch;   // col-major: gene is fast axis
-  int m = idx / genesBatch;   // col-major: group is slow axis
-  w_q[g + m * genesBatch] = expf(-eta[g + m * genesBatch] - off[m]);
+  int g = idx / M;
+  int m = idx % M;
+  w_q[g + m * genesBatch] = expf(-eta[idx] - off[m]);
 }
 
 __global__ void compute_mu_from_eta_rowmajor(
@@ -361,7 +361,7 @@ __global__ void compute_mu_from_eta_rowmajor(
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= genesBatch * M) return;
-  int g = idx % genesBatch;   // col-major: gene is fast axis
-  int m = idx / genesBatch;   // col-major: group is slow axis
-  mu_out[g + m * genesBatch] = sf[m] * expf(eta[g + m * genesBatch]);
+  int g = idx / M;
+  int m = idx % M;
+  mu_out[g + m * genesBatch] = sf[m] * expf(eta[idx]);
 }
