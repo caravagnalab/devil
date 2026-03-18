@@ -1101,13 +1101,12 @@ beta_fit_gpu_external_summary(
    ******************************/
   // 1. eta already in cg_tmp2; recompute mu_mom = sf * exp(eta) in M-space
   einsum_cg_tmp2[me].execute(cutensorH[me], X[me], mu_beta[me], workspace[me]);
+  // AFTER
   {
-    dim3 t2(16, 16);
-    dim3 b2((groups     + t2.x - 1) / t2.x,
-            (genesBatch + t2.y - 1) / t2.y);
-    // CHANGE: pass groups (M) instead of cells (N)
-    compute_mu_from_eta<<<b2, t2>>>(cg_tmp2[me], d_sf[me],
-                                    d_mu_mom[me], genesBatch, groups);
+    dim3 t1(256);
+    dim3 b1((genesBatch * groups + 255) / 256);
+    compute_mu_from_eta_rowmajor<<<b1, t1>>>(cg_tmp2[me], d_sf[me],
+                                             d_mu_mom[me], genesBatch, groups);
   }
   
   // 2. MOM numerator and denominator in M-space
