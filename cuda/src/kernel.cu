@@ -239,10 +239,7 @@ __global__ void process2D_summary(
 
   float inv_k = k[g];
   float wq    = w_q [g + m * genesBatch];         // [genesBatch x M] col-major
-  float ys    = y_sums[g * M + m];                // wait — see note below
-  // NOTE on layout: y_sums is [M x genesBatch] col-major → element (m,g) = y_sums[m + g*M]
-  // Re-index correctly:
-  ys          = y_sums[m + g * M];
+  float ys    = y_sums[m + g * M];
   float cnt   = counts[m];
   float mu_gs = (cnt * inv_k + ys) / (1.0f + inv_k * wq);
   weight[g + m * genesBatch] = mu_gs * wq;
@@ -353,5 +350,5 @@ __global__ void expGPU_neg(const float* __restrict__ eta,      // [genesBatch x 
   if (idx >= total) return;
   int g = idx / M;
   int m = idx % M;
-  w_q[g + m * genesBatch] = expf(-eta[idx] - off[m]);   // write col-major
+  w_q[g + m * genesBatch] = expf(-eta[idx] - off[m]);  // write col-major
 }
