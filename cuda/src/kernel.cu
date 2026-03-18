@@ -213,7 +213,7 @@ __global__ void aggregate_y_by_group(
   if (g >= genesBatch || n >= N) return;
 
   int m   = mapping[n] - 1;              // 0-based
-  float v = Y[n * genesBatch + g];
+  float v = Y[n + g * N];
   atomicAdd(&y_sums   [m * genesBatch + g], v);
   atomicAdd(&y_sq_sums[m * genesBatch + g], v * v);
 }
