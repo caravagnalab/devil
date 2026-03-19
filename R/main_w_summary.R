@@ -360,7 +360,7 @@ cpu_fit_summary <- function(
   nsamples   <- ncol(input_matrix)
   
   # Init beta
-  initialized_beta <- matrix(0, nrow = ngenes, ncol = ncol(design_matrix))
+  initialized_beta <- matrix(0, nrow = ngenes, ncol = ncol(blueprint$X_unique))
   initialized_beta[, 1] <- DelayedMatrixStats::rowMeans2(input_matrix) %>% log1p()
   
   # Init theta
