@@ -356,37 +356,56 @@ cpu_fit_summary <- function(
     tolerance,
     verbose
 ) {
-  ngenes     <- nrow(input_matrix)
-  nsamples   <- ncol(input_matrix)
+  ngenes   <- nrow(input_matrix)
+  nsamples <- ncol(input_matrix)
   
-  # Init beta
-  initialized_beta <- matrix(0, nrow = ngenes, ncol = ncol(blueprint$X_unique))
-  initialized_beta[, 1] <- DelayedMatrixStats::rowMeans2(input_matrix) %>% log1p()
+  # Init beta / theta (unchanged)
+  initialized_beta        <- matrix(0, nrow = ngenes, ncol = ncol(blueprint$X_unique))
+  initialized_beta[, 1]   <- log1p(DelayedMatrixStats::rowMeans2(input_matrix))
+  initialized_theta       <- devil:::estimate_dispersion(input_matrix, offset_vector)
   
-  # Init theta
-  initialized_theta = devil:::estimate_dispersion(input_matrix, offset_vector)
+  # ── Pre-compute ALL gene aggregates in two matrix rowsum calls ────────────
+  tY          <- t(input_matrix)                          # samples × genes
+  all_y_sums  <- rowsum(tY,    blueprint$mapping)         # n_groups × n_genes
+  all_y_sq    <- rowsum(tY * tY,  blueprint$mapping)         # n_groups × n_genes
+  rm(tY)
+  # ─────────────────────────────────────────────────────────────────────────
   
-  fit_single_gene = function(gene_idx) {
-    agg = get_aggregate(input_matrix[gene_idx,], blueprint$mapping, blueprint$n_groups)
-    beta_fit = devil:::beta_fit_efficient(agg$y_sums, blueprint$counts, blueprint$X_unique, initialized_beta[gene_idx,], blueprint$off_unique, initialized_theta[gene_idx], max_iter, tolerance)
-    mu_beta = beta_fit$mu_beta
-    iters = beta_fit$iter
-    theta = devil:::estimate_mom_dispersion_efficient(agg$y_sums, agg$y_squared, blueprint$X_unique, exp(blueprint$off_unique), blueprint$counts, mu_beta, ncol(input_matrix))
-    hessian = devil:::compute_hessian_efficient(mu_beta, theta, agg$y_sums, blueprint$counts, blueprint$X_unique, exp(blueprint$off_unique))
-    meat <- devil:::compute_clustered_meat_efficient(
+  fit_single_gene <- function(gene_idx) {
+    y_sums    <- all_y_sums[, gene_idx]
+    y_squared <- all_y_sq[, gene_idx]
+    
+    beta_fit <- devil:::beta_fit_efficient(
+      y_sums, blueprint$counts, blueprint$X_unique,
+      initialized_beta[gene_idx, ], blueprint$off_unique,
+      initialized_theta[gene_idx], max_iter, tolerance
+    )
+    mu_beta <- beta_fit$mu_beta
+    iters   <- beta_fit$iter
+    
+    theta    <- devil:::estimate_mom_dispersion_efficient(
+      y_sums, y_squared, blueprint$X_unique, exp(blueprint$off_unique),
+      blueprint$counts, mu_beta, nsamples
+    )
+    hessian  <- devil:::compute_hessian_efficient(
+      mu_beta, theta, y_sums, blueprint$counts,
+      blueprint$X_unique, exp(blueprint$off_unique)
+    )
+    meat     <- devil:::compute_clustered_meat_efficient(
       X_unique                 = blueprint$X_unique,
-      y_sums_per_group_cluster = agg$y_sums,
+      y_sums_per_group_cluster = y_sums,
       counts_per_group_cluster = blueprint$counts,
-      group_to_cluster_map     = as.integer(blueprint$clusters), # The patient IDs
+      group_to_cluster_map     = as.integer(blueprint$clusters),
       beta                     = mu_beta,
       overdispersion           = theta,
-      sf_unique_per_pair       = exp(blueprint$off_unique), # Assuming off is log-scale sf
+      sf_unique_per_pair       = exp(blueprint$off_unique),
       num_clusters             = length(unique(blueprint$clusters)),
-      N_total                  = ncol(input_matrix)
+      N_total                  = nsamples
     )
     sandwich <- (hessian %*% meat %*% hessian) * nsamples
     
-    list(beta = mu_beta, theta = theta, hessian = hessian, meat = meat, sandwich = sandwich, iters = iters)
+    list(beta = mu_beta, theta = theta,
+         hessian = hessian, meat = meat, sandwich = sandwich, iters = iters)
   }
   
   result_list = lapply(1:ngenes, fit_single_gene)
