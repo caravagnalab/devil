@@ -751,11 +751,11 @@ beta_fit_gpu_external_summary(
   std::vector<float*> d_off  (deviceCount);  // [M]  exp(off_unique)
   std::vector<float*> d_counts(deviceCount); // [M]
   std::vector<float*> d_sf   (deviceCount);
-  std::vector<int*>   d_mapping(deviceCount);// [N]  for aggregation
+  // std::vector<int*>   d_mapping(deviceCount);// [N]  for aggregation
   std::vector<int*>   d_cluster_map(deviceCount); // [M]
   
   // Per-batch device buffers
-  std::vector<float*> Y_dev     (deviceCount); // [N x genesBatch] col-major (raw, for aggregation)
+  // std::vector<float*> Y_dev     (deviceCount); // [N x genesBatch] col-major (raw, for aggregation)
   std::vector<float*> mu_beta   (deviceCount); // [genesBatch x features]
   std::vector<float*> k         (deviceCount); // [genesBatch]
   std::vector<float*> w_q       (deviceCount); // [genesBatch x M]
@@ -800,6 +800,44 @@ beta_fit_gpu_external_summary(
   for (int m = 0; m < (int)groups; ++m)
     sf_unique_host[m] = std::exp(off_unique_host[m]);
   
+  // ── CPU pre-aggregation ───────────────────────────────────────────────────
+  // Aggregate all of Y into y_sums and y_sq_sums in M-space, once.
+  // Layout: [M x G] col-major, i.e. element (m, g) = index m + g*M.
+  // Also compute per-gene means and initial k values so the GPU batch loop
+  // no longer needs raw Y, Y_dev, d_mapping, or any aggregation kernels.
+  const int G = (int)genes;
+  const int M = (int)groups;
+  
+  std::vector<float> all_y_sums   (G * M, 0.0f);
+  std::vector<float> all_y_sq_sums(G * M, 0.0f);
+  
+  for (int n = 0; n < (int)cells; ++n) {
+    int m = mapping_host[n] - 1;                   // 0-based group index
+    for (int g = 0; g < G; ++g) {
+      float v = Y_host(n, g);                      // [N x G] col-major
+      all_y_sums   [m + g * M] += v;
+      all_y_sq_sums[m + g * M] += v * v;
+    }
+  }
+  
+  // Per-gene mean, variance, and initial k — all derived from the aggregated sums.
+  std::vector<float> gene_means(G, 0.0f);
+  std::vector<float> gene_k    (G, 0.0f);
+  
+  for (int g = 0; g < G; ++g) {
+    float s = 0.0f, s2 = 0.0f;
+    for (int m = 0; m < M; ++m) {
+      s  += all_y_sums   [m + g * M];
+      s2 += all_y_sq_sums[m + g * M];
+    }
+    float mean = s / (float)cells;
+    float var  = (s2 - (float)cells * mean * mean) / ((float)cells - 1.0f);
+    float disp = (var - offset_inv * mean) / (mean * mean + 1e-8f);
+    gene_means[g] = mean;
+    gene_k    [g] = 1.0f / std::max(0.01f, disp);
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+  
 #pragma omp parallel default(shared)
 {
   std::size_t BatchCount = genes / genesBatch;
@@ -833,9 +871,9 @@ beta_fit_gpu_external_summary(
   CUDA_CHECK(cudaMemcpy(d_counts[me], counts_host.data(),
                         groups * sizeof(float), cudaMemcpyHostToDevice));
   
-  CUDA_CHECK(cudaMalloc((void**)&d_mapping[me],   cells * sizeof(int)));
-  CUDA_CHECK(cudaMemcpy(d_mapping[me], mapping_host.data(),
-                        cells * sizeof(int), cudaMemcpyHostToDevice));
+  // CUDA_CHECK(cudaMalloc((void**)&d_mapping[me],   cells * sizeof(int)));
+  // CUDA_CHECK(cudaMemcpy(d_mapping[me], mapping_host.data(),
+  //                       cells * sizeof(int), cudaMemcpyHostToDevice));
   
   if (n_clusters > 0) {
     CUDA_CHECK(cudaMalloc((void**)&d_cluster_map[me], groups * sizeof(int)));
@@ -851,7 +889,7 @@ beta_fit_gpu_external_summary(
    *         d_y_sums / d_y_sq_sums are new [M x genesBatch].
    *         Y_dev stays [N x genesBatch] — used only during aggregation.
    ******************************/
-  CUDA_CHECK(cudaMalloc((void**)&Y_dev[me],       cells * genesBatch * sizeof(float)));
+  // CUDA_CHECK(cudaMalloc((void**)&Y_dev[me],       cells * genesBatch * sizeof(float)));
   CUDA_CHECK(cudaMalloc((void**)&mu_beta[me],      genesBatch * features * sizeof(float)));
   CUDA_CHECK(cudaMalloc((void**)&k[me],            genesBatch * sizeof(float)));
   CUDA_CHECK(cudaMalloc((void**)&w_q[me],          genesBatch * groups * sizeof(float)));
@@ -958,74 +996,39 @@ beta_fit_gpu_external_summary(
   CUDA_CHECK(cudaSetDevice(me));
   
   /******************************
-   * Copy Y batch to device (same as original)
+   * Upload pre-aggregated sums for this batch.
+   * Transfer is [M x genesBatch] floats — far smaller than [N x genesBatch].
+   * Layout: all_y_sums is [M x G] col-major; the slice for batch i starts
+   * at offset i*genesBatch*M and has length genesBatch*M.
    ******************************/
-  CUDA_CHECK(cudaMemcpy(
-      Y_dev[me],
-           Y_host.data() + i * genesBatch * cells,
-           genesBatch * cells * sizeof(float),
-           cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(d_y_sums[me],
+                        all_y_sums.data()    + (std::size_t)i * genesBatch * M,
+                        genesBatch * M * sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(d_y_sq_sums[me],
+                        all_y_sq_sums.data() + (std::size_t)i * genesBatch * M,
+                        genesBatch * M * sizeof(float), cudaMemcpyHostToDevice));
   
   /******************************
-   * CHANGE: Aggregate Y -> y_sums, y_sq_sums in M-space.
-   * This replaces the direct use of raw Y inside process2D and compute_mom_components.
-   ******************************/
-  CUDA_CHECK(cudaMemset(d_y_sums[me],    0, groups * genesBatch * sizeof(float)));
-  CUDA_CHECK(cudaMemset(d_y_sq_sums[me], 0, groups * genesBatch * sizeof(float)));
-  {
-    dim3 t2d(32, 8);
-    dim3 b2d((genesBatch + t2d.x - 1) / t2d.x,
-             (cells      + t2d.y - 1) / t2d.y);
-    aggregate_y_by_group<<<b2d, t2d>>>(
-        Y_dev[me], d_mapping[me],
-                            d_y_sums[me], d_y_sq_sums[me],
-                                                     (int)cells, (int)groups, (int)genesBatch);
-  }
-  CUDA_CHECK(cudaDeviceSynchronize());
-  
-  /******************************
-   * Beta initialisation
-   * CHANGE: compute_row_means still works on raw Y (gives mean across N cells),
-   *         which is a good initialisation regardless of the M-space IRLS.
-   *         init_beta_rough_kernel is unchanged.
+   * Beta initialisation from pre-computed gene means.
+   * Upload the genesBatch-slice of gene_means into d_theta (used as scratch),
+   * then call init_beta_rough_kernel exactly as before.
    ******************************/
   dim3 t1d(256);
   dim3 b1d_genes((genesBatch + 255) / 256);
-  // Temporary means buffer — reuse d_theta as scratch (it is genesBatch floats)
-  float* d_means_tmp = d_theta[me];  // safe: will be overwritten properly after IRLS
-  compute_row_means<<<b1d_genes, t1d>>>(Y_dev[me], d_means_tmp, genesBatch, cells);
-  init_beta_rough_kernel<<<b1d_genes, t1d>>>(d_means_tmp, mu_beta[me], genesBatch, features);
-  CUDA_CHECK(cudaDeviceSynchronize());
+  float* d_means_tmp = d_theta[me];   // safe: overwritten after IRLS
+  CUDA_CHECK(cudaMemcpy(d_means_tmp,
+                        gene_means.data() + (std::size_t)i * genesBatch,
+                        genesBatch * sizeof(float), cudaMemcpyHostToDevice));
+  init_beta_rough_kernel<<<b1d_genes, t1d>>>(d_means_tmp, mu_beta[me],
+                                             genesBatch, features);
   
   /******************************
-   * Initial dispersion k
-   * CHANGE: compute_row_variances still runs on raw Y (N-space).
-   *         This is intentional: the moment estimator from raw counts is a
-   *         better cold-start than anything we could derive from y_sums alone.
+   * Initial k from pre-computed gene_k values.
    ******************************/
-  // d_means_tmp still holds row means from above
-  float* d_vars_tmp = d_y_sums[me];  // [M x genesBatch] — repurpose first genesBatch
-  // floats as scratch; will be zeroed again below
-  // NOTE: compute_row_variances expects a [genesBatch] vars buffer; d_vars_tmp
-  //       has genesBatch*groups floats, so the first genesBatch entries are safe.
-  compute_row_variances<<<b1d_genes, t1d>>>(Y_dev[me], d_means_tmp, d_vars_tmp,
-                                            genesBatch, cells);
-  compute_dispersion<<<b1d_genes, t1d>>>(d_means_tmp, d_vars_tmp, offset_inv,
-                                         k[me], genesBatch);
-  CUDA_CHECK(cudaDeviceSynchronize());
+  CUDA_CHECK(cudaMemcpy(k[me],
+                        gene_k.data() + (std::size_t)i * genesBatch,
+                        genesBatch * sizeof(float), cudaMemcpyHostToDevice));
   
-  // Re-zero y_sums (we just used its memory as scratch)
-  CUDA_CHECK(cudaMemset(d_y_sums[me],    0, groups * genesBatch * sizeof(float)));
-  CUDA_CHECK(cudaMemset(d_y_sq_sums[me], 0, groups * genesBatch * sizeof(float)));
-  {
-    dim3 t2d(32, 8);
-    dim3 b2d((genesBatch + t2d.x - 1) / t2d.x,
-             (cells      + t2d.y - 1) / t2d.y);
-    aggregate_y_by_group<<<b2d, t2d>>>(
-        Y_dev[me], d_mapping[me],
-                            d_y_sums[me], d_y_sq_sums[me],
-                                                     (int)cells, (int)groups, (int)genesBatch);
-  }
   CUDA_CHECK(cudaDeviceSynchronize());
   
   // Zero working buffers
@@ -1268,9 +1271,9 @@ CUDA_CHECK(cudaFree(X[me]));
 CUDA_CHECK(cudaFree(d_off[me]));
 CUDA_CHECK(cudaFree(d_sf[me]));
 CUDA_CHECK(cudaFree(d_counts[me]));
-CUDA_CHECK(cudaFree(d_mapping[me]));
+// CUDA_CHECK(cudaFree(d_mapping[me]));
 if (d_cluster_map[me]) CUDA_CHECK(cudaFree(d_cluster_map[me]));
-CUDA_CHECK(cudaFree(Y_dev[me]));
+// CUDA_CHECK(cudaFree(Y_dev[me]));
 CUDA_CHECK(cudaFree(mu_beta[me]));
 CUDA_CHECK(cudaFree(k[me]));
 CUDA_CHECK(cudaFree(w_q[me]));
