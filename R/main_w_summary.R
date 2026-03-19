@@ -381,7 +381,7 @@ cpu_fit_summary <- function(
       beta                     = mu_beta,
       overdispersion           = theta,
       sf_unique_per_pair       = exp(blueprint$off_unique), # Assuming off is log-scale sf
-      num_clusters             = length(unique(clusters)),
+      num_clusters             = length(unique(blueprint$clusters)),
       N_total                  = ncol(input_matrix)
     )
     sandwich <- (hessian %*% meat %*% hessian) * nsamples
