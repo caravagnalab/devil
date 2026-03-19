@@ -362,7 +362,7 @@ cpu_fit_summary <- function(
   # Init beta / theta (unchanged)
   initialized_beta        <- matrix(0, nrow = ngenes, ncol = ncol(blueprint$X_unique))
   initialized_beta[, 1]   <- log1p(DelayedMatrixStats::rowMeans2(input_matrix))
-  initialized_theta       <- devil:::estimate_dispersion(input_matrix, offset_vector)
+  # initialized_theta       <- devil:::estimate_dispersion(input_matrix, offset_vector)
   
   # ── Pre-compute ALL gene aggregates in two matrix rowsum calls ────────────
   tY          <- t(input_matrix)                          # samples × genes
@@ -370,6 +370,8 @@ cpu_fit_summary <- function(
   all_y_sq    <- rowsum(tY * tY,  blueprint$mapping)         # n_groups × n_genes
   rm(tY)
   # ─────────────────────────────────────────────────────────────────────────
+  
+  initialized_theta = devil:::estimate_dispersion_summary(all_y_sums, all_y_sq, blueprint)
   
   fit_single_gene <- function(gene_idx) {
     y_sums    <- all_y_sums[, gene_idx]
@@ -476,4 +478,24 @@ get_aggregate = function(y, mapping, n_groups) {
     y_sums = as.vector(y_sums[order_idx, ]), 
     y_squared = as.vector(y_sq[order_idx, ])
   ))
+}
+
+
+estimate_dispersion_summary <- function(all_y_sums, all_y_sq, blueprint) {
+  N <- sum(blueprint$counts)
+  
+  # Scalar: weighted mean of exp(off) over all samples
+  mean_offset_inverse <- N / sum(blueprint$counts * exp(blueprint$off_unique))
+  
+  # Per-gene totals (colSums over groups)
+  total_y  <- colSums(all_y_sums)   # n_genes
+  total_sq <- colSums(all_y_sq)     # n_genes
+  
+  mean_counts <- total_y / N
+  
+  # Sample variance: (Σy² - (Σy)²/N) / (N-1)  — matches rowVars()
+  variance <- (total_sq - total_y^2 / N) / (N - 1)
+  
+  dispersion <- (variance - mean_offset_inverse * mean_counts) / mean_counts^2
+  ifelse(is.na(dispersion) | dispersion < 0, 0.01, dispersion)
 }
