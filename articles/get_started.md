@@ -372,7 +372,7 @@ Volcano plot of DE genes
 
 ``` r
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.5.3 (2026-03-11)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.3 LTS
 #> 
@@ -394,7 +394,7 @@ sessionInfo()
 #> [8] base     
 #> 
 #> other attached packages:
-#>  [1] dplyr_1.1.4                 Matrix_1.7-4               
+#>  [1] dplyr_1.2.0                 Matrix_1.7-4               
 #>  [3] scRNAseq_2.24.0             SingleCellExperiment_1.32.0
 #>  [5] SummarizedExperiment_1.40.0 Biobase_2.70.0             
 #>  [7] GenomicRanges_1.62.1        Seqinfo_1.0.0              
@@ -404,31 +404,31 @@ sessionInfo()
 #> [15] devil_0.99.0               
 #> 
 #> loaded via a namespace (and not attached):
-#>   [1] DBI_1.2.3                 bitops_1.0-9             
+#>   [1] DBI_1.3.0                 bitops_1.0-9             
 #>   [3] httr2_1.2.2               rlang_1.1.7              
 #>   [5] magrittr_2.0.4            gypsum_1.6.0             
-#>   [7] compiler_4.5.2            RSQLite_2.4.5            
+#>   [7] compiler_4.5.3            RSQLite_2.4.6            
 #>   [9] DelayedMatrixStats_1.32.0 GenomicFeatures_1.62.0   
-#>  [11] png_0.1-8                 systemfonts_1.3.1        
-#>  [13] vctrs_0.6.5               ProtGenerics_1.42.0      
+#>  [11] png_0.1-9                 systemfonts_1.3.2        
+#>  [13] vctrs_0.7.2               ProtGenerics_1.42.0      
 #>  [15] pkgconfig_2.0.3           crayon_1.5.3             
-#>  [17] fastmap_1.2.0             dbplyr_2.5.1             
+#>  [17] fastmap_1.2.0             dbplyr_2.5.2             
 #>  [19] XVector_0.50.0            labeling_0.4.3           
 #>  [21] utf8_1.2.6                Rsamtools_2.26.0         
 #>  [23] rmarkdown_2.30            UCSC.utils_1.6.1         
-#>  [25] ragg_1.5.0                bit_4.6.0                
-#>  [27] xfun_0.55                 cachem_1.1.0             
+#>  [25] ragg_1.5.2                bit_4.6.0                
+#>  [27] xfun_0.57                 cachem_1.1.0             
 #>  [29] cigarillo_1.0.0           GenomeInfoDb_1.46.2      
-#>  [31] jsonlite_2.0.0            blob_1.2.4               
+#>  [31] jsonlite_2.0.0            blob_1.3.0               
 #>  [33] rhdf5filters_1.22.0       DelayedArray_0.36.0      
 #>  [35] Rhdf5lib_1.32.0           BiocParallel_1.44.0      
-#>  [37] parallel_4.5.2            R6_2.6.1                 
-#>  [39] RColorBrewer_1.1-3        bslib_0.9.0              
+#>  [37] parallel_4.5.3            R6_2.6.1                 
+#>  [39] RColorBrewer_1.1-3        bslib_0.10.0             
 #>  [41] rtracklayer_1.70.1        jquerylib_0.1.4          
 #>  [43] Rcpp_1.1.1                knitr_1.51               
 #>  [45] tidyselect_1.2.1          abind_1.4-8              
 #>  [47] yaml_2.3.12               codetools_0.2-20         
-#>  [49] curl_7.0.0                lattice_0.22-7           
+#>  [49] curl_7.0.0                lattice_0.22-9           
 #>  [51] alabaster.sce_1.10.0      tibble_3.3.1             
 #>  [53] S7_0.2.1                  withr_3.0.2              
 #>  [55] KEGGREST_1.50.0           evaluate_1.0.5           
@@ -436,25 +436,25 @@ sessionInfo()
 #>  [59] alabaster.schemas_1.10.0  ExperimentHub_3.0.0      
 #>  [61] Biostrings_2.78.0         pillar_1.11.1            
 #>  [63] BiocManager_1.30.27       filelock_1.0.3           
-#>  [65] RCurl_1.98-1.17           ggplot2_4.0.1            
+#>  [65] RCurl_1.98-1.18           ggplot2_4.0.2            
 #>  [67] BiocVersion_3.22.0        ensembldb_2.34.0         
 #>  [69] scales_1.4.0              sparseMatrixStats_1.22.0 
 #>  [71] alabaster.base_1.10.0     glue_1.8.0               
 #>  [73] alabaster.ranges_1.10.0   alabaster.matrix_1.10.0  
-#>  [75] lazyeval_0.2.2            tools_4.5.2              
+#>  [75] lazyeval_0.2.2            tools_4.5.3              
 #>  [77] AnnotationHub_4.0.0       BiocIO_1.20.0            
-#>  [79] GenomicAlignments_1.46.0  fs_1.6.6                 
-#>  [81] XML_3.99-0.20             rhdf5_2.54.1             
-#>  [83] grid_4.5.2                AnnotationDbi_1.72.0     
+#>  [79] GenomicAlignments_1.46.0  fs_2.0.0                 
+#>  [81] XML_3.99-0.23             rhdf5_2.54.1             
+#>  [83] grid_4.5.3                AnnotationDbi_1.72.0     
 #>  [85] HDF5Array_1.38.0          restfulr_0.0.16          
-#>  [87] cli_3.6.5                 rappdirs_0.3.3           
-#>  [89] textshaping_1.0.4         S4Arrays_1.10.1          
+#>  [87] cli_3.6.5                 rappdirs_0.3.4           
+#>  [89] textshaping_1.0.5         S4Arrays_1.10.1          
 #>  [91] AnnotationFilter_1.34.0   gtable_0.3.6             
 #>  [93] alabaster.se_1.10.0       sass_0.4.10              
-#>  [95] digest_0.6.39             SparseArray_1.10.8       
+#>  [95] digest_0.6.39             SparseArray_1.10.9       
 #>  [97] farver_2.1.2              rjson_0.2.23             
 #>  [99] memoise_2.0.1             htmltools_0.5.9          
 #> [101] pkgdown_2.2.0             lifecycle_1.0.5          
-#> [103] h5mread_1.2.1             httr_1.4.7               
+#> [103] h5mread_1.2.1             httr_1.4.8               
 #> [105] bit64_4.6.0-1
 ```

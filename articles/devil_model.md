@@ -230,7 +230,7 @@ system.time({
 #> Fitting beta coefficients
 #> Fit overdispersion (mode = MOM)
 #>    user  system elapsed 
-#>   0.124   0.189   0.097
+#>   0.185   0.128   0.095
 
 system.time({
     fit_cpu_new <- fit_devil(
@@ -251,7 +251,7 @@ system.time({
 #> Fitting beta coefficients
 #> Fit overdispersion (mode = MLE)
 #>    user  system elapsed 
-#>   0.321   0.588   0.242
+#>   0.516   0.458   0.258
 ```
 
 #### Examining Iteration Counts
