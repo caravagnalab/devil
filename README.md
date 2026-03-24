@@ -30,6 +30,11 @@ You can install the current version of `devil` from
 devtools::install_github("caravagnalab/devil")
 ```
 
+We also provide two detailed vignetess for both CPU and GPU installation:
+
+- [Quick CPU & GPU Setup](https://caravagnalab.github.io/devil/articles/quick_setup.html)
+- [Detailed GPU Setup](https://caravagnalab.github.io/devil/articles/gpu_setup.html)
+
 ## Example
 
 This is a basic example which shows you how to fit the expression for a
