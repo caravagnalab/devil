@@ -32,6 +32,7 @@
 #'     Requires the edgeR package from Bioconductor.
 #' }
 #' If \code{size_factors = NULL}, no normalization is performed and all size factors are set to 1.
+#' If \code{size_factors} is a vector of precoumpted size_factors, they will be used.
 #'
 #' @section Overdispersion Strategies:
 #' The \code{overdispersion} argument controls how gene-wise overdispersion is handled:
@@ -188,8 +189,13 @@ fit_devil <- function(
   
   # - Compute size factors ----
   if (!is.null(size_factors)) {
-    if (verbose) message("Compute size factors")
-    sf <- devil:::calculate_sf(input_matrix, method = size_factors, verbose = verbose)
+    if (class(size_factors) == "character") {
+      if (verbose) message("Compute size factors")
+      sf <- devil:::calculate_sf(input_matrix, method = size_factors, verbose = verbose)  
+    } else {
+      if (verbose) message("Using pre-computed size factors")
+      sf <- size_factors
+    }
   } else {
     sf <- rep(1, nrow(design_matrix))
   }
