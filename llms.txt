@@ -18,6 +18,7 @@ You can install the current version of `devil` from
 [GitHub](https://github.com/) with:
 
 ``` r
+
 devtools::install_github("caravagnalab/devil")
 ```
 
@@ -35,6 +36,7 @@ This is a basic example which shows you how to fit the expression for a
 single gene observed in 1000 cells.
 
 ``` r
+
 library(devil)
 y <- t(as.matrix(rnbinom(1000, 1, .1)))
 fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = NULL, overdispersion = "MOM")

@@ -1,6 +1,7 @@
 # devil model explained
 
 ``` r
+
 library(devil)
 library(ggplot2)
 library(dplyr)
@@ -25,17 +26,19 @@ vignette explains:
 Devil fits a **negative binomial generalized linear model** for each
 gene:
 
-$$Y_{ij} \sim \text{NB}\left( \mu_{ij},\theta_{i} \right)$$
+``` math
+Y_{ij} \sim \text{NB}(\mu_{ij}, \theta_i)
+```
 
 where:
 
-- $Y_{ij}$ is the count for gene $i$ in cell $j$
-- $\mu_{ij} = s_{j}\exp\left( \mathbf{X}_{j}^{T}{\mathbf{β}}_{i} \right)$
-  is the expected count
-- $s_{j}$ is the size factor for cell $j$ (normalization)
-- $\mathbf{X}_{j}$ is the design matrix row for cell $j$ (covariates)
-- ${\mathbf{β}}_{i}$ is the coefficient vector for gene $i$
-- $\theta_{i}$ is the overdispersion parameter for gene $i$
+- $`Y_{ij}`$ is the count for gene $`i`$ in cell $`j`$
+- $`\mu_{ij} = s_j \exp(\mathbf{X}_j^T \boldsymbol{\beta}_i)`$ is the
+  expected count
+- $`s_j`$ is the size factor for cell $`j`$ (normalization)
+- $`\mathbf{X}_j`$ is the design matrix row for cell $`j`$ (covariates)
+- $`\boldsymbol{\beta}_i`$ is the coefficient vector for gene $`i`$
+- $`\theta_i`$ is the overdispersion parameter for gene $`i`$
 
 The model accounts for:
 
@@ -52,6 +55,7 @@ Both implementations share the following preprocessing steps:
 Size factors normalize for differences in sequencing depth across cells.
 
 ``` r
+
 # Simulate example data
 set.seed(123)
 n_genes <- 500
@@ -71,6 +75,7 @@ design <- model.matrix(~ group)
 #### Available normalization methods:
 
 ``` r
+
 # Method 1: Geometric mean normalization (default, fast)
 fit_normed <- fit_devil(
     input_matrix = counts,
@@ -125,6 +130,7 @@ sf_comparison %>%
 The offset vector incorporates size factors into the model:
 
 ``` r
+
 # The offset is computed as: log(size_factor) + offset_constant
 offset_constant <- 0  # default
 offset_vector <- log(fit_normed$size_factors) + offset_constant
@@ -168,6 +174,7 @@ The CPU implementation processes genes in parallel using multiple cores.
 ### CPU Example with Detailed Timing
 
 ``` r
+
 # Small dataset for demonstration
 set.seed(456)
 
@@ -230,7 +237,7 @@ system.time({
 #> Fitting beta coefficients
 #> Fit overdispersion (mode = MOM)
 #>    user  system elapsed 
-#>   0.185   0.128   0.095
+#>   0.128   0.193   0.099
 
 system.time({
     fit_cpu_new <- fit_devil(
@@ -251,12 +258,13 @@ system.time({
 #> Fitting beta coefficients
 #> Fit overdispersion (mode = MLE)
 #>    user  system elapsed 
-#>   0.516   0.458   0.258
+#>   0.357   0.625   0.263
 ```
 
 #### Examining Iteration Counts
 
 ``` r
+
 # Beta fitting iterations (per gene)
 beta_iter_summary <- data.frame(
     iterations = fit_cpu_new$iterations$beta_iters
@@ -272,6 +280,7 @@ ggplot(beta_iter_summary, aes(x = iterations)) +
 ![](devil_model_files/figure-html/unnamed-chunk-7-1.png)
 
 ``` r
+
 
 # Theta fitting iterations (per gene)
 if (!is.na(fit_cpu_new$iterations$theta_iters[1])) {
@@ -295,6 +304,7 @@ overdispersion:
 #### 1. Method of Moments (MOM) - Fastest
 
 ``` r
+
 fit_mom <- fit_devil(
     input_matrix = counts_small,
     design_matrix = design_small,
@@ -314,23 +324,26 @@ critical and a fully iterative dispersion fit is impractical.
 **How it works**:  
 In a regression setting, MOM does **not** rely on the raw sample mean
 and variance of counts. Instead, it estimates overdispersion from the
-**residual variability around the fitted mean** $\mu_{ij}$ implied by
+**residual variability around the fitted mean** $`\mu_{ij}`$ implied by
 the design matrix and offsets.
 
 Concretely, after fitting (or updating) the regression coefficients
-${\mathbf{β}}_{i}$, devil computes fitted means $\mu_{ij}$ and matches
-the negative binomial mean–variance relationship
-$${Var}\left( Y_{ij} \right) = \mu_{ij} + \frac{\mu_{ij}^{2}}{\theta_{i}}$$
-using squared residuals $\left( y_{ij} - \mu_{ij} \right)^{2}$ to obtain
-a **closed-form, non-iterative** estimate of $\theta_{i}$.
+$`\boldsymbol{\beta}_i`$, devil computes fitted means $`\mu_{ij}`$ and
+matches the negative binomial mean–variance relationship
+``` math
+\mathrm{Var}(Y_{ij}) = \mu_{ij} + \frac{\mu_{ij}^2}{\theta_i}
+```
+using squared residuals $`(y_{ij}-\mu_{ij})^2`$ to obtain a
+**closed-form, non-iterative** estimate of $`\theta_i`$.
 
 This makes MOM extremely fast and well suited for large-scale
 single-cell analyses, while still accounting for the effects of
-covariates and normalization through $\mu_{ij}$.
+covariates and normalization through $`\mu_{ij}`$.
 
 #### 2. MLE with Cox-Reid (MLE) - Most Accurate
 
 ``` r
+
 fit_mle <- fit_devil(
     input_matrix = counts_small,
     design_matrix = design_small,
@@ -346,6 +359,7 @@ Maximum likelihood estimation with Cox-Reid adjustment.
 #### Comparing Overdispersion Estimates
 
 ``` r
+
 theta_comparison <- data.frame(
     gene = seq_len(n_genes_small),
     MOM = fit_mom$overdispersion,
@@ -365,6 +379,7 @@ theta_comparison %>%
 
 ``` r
 
+
 # Correlation between methods
 cor(theta_comparison[, -1]) %>% round(3)
 #>     MOM MLE
@@ -379,6 +394,7 @@ precise for genes with extreme overdispersion.
 ### Beta Initialization Strategies
 
 ``` r
+
 # Compare initialization strategies
 time_rough <- system.time({
     fit_rough <- fit_devil(
@@ -441,12 +457,12 @@ genes.
 
 ### Key Differences from CPU
 
-| Feature                 | CPU                                           | GPU                                        |
-|-------------------------|-----------------------------------------------|--------------------------------------------|
-| **Parallelization**     | Across genes using CPU cores (typically 4-64) | Across genes using GPU threads (thousands) |
-| **Memory model**        | Distributed (per core)                        | Shared (batched on GPU memory)             |
-| **Overdispersion**      | MOM, Iterative, or MLE                        | MOM only                                   |
-| **Beta initialization** | Full initialization available                 | Simplified initialization                  |
-| **Batch processing**    | All genes or chunked by core                  | Always batched for GPU memory              |
-| **Best for**            | Small-medium datasets (\<5k genes)            | Large datasets (\>10k genes, \>5k cells)   |
-| **Setup**               | Works out of the box                          | Requires CUDA toolkit and recompilation    |
+| Feature | CPU | GPU |
+|----|----|----|
+| **Parallelization** | Across genes using CPU cores (typically 4-64) | Across genes using GPU threads (thousands) |
+| **Memory model** | Distributed (per core) | Shared (batched on GPU memory) |
+| **Overdispersion** | MOM, Iterative, or MLE | MOM only |
+| **Beta initialization** | Full initialization available | Simplified initialization |
+| **Batch processing** | All genes or chunked by core | Always batched for GPU memory |
+| **Best for** | Small-medium datasets (\<5k genes) | Large datasets (\>10k genes, \>5k cells) |
+| **Setup** | Works out of the box | Requires CUDA toolkit and recompilation |

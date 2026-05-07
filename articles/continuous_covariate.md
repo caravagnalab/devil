@@ -10,6 +10,7 @@ experiment where the continuous variable is days post-amputation.
 ## Setup and Data Loading
 
 ``` r
+
 library(devil)
 library(scRNAseq)
 library(SingleCellExperiment)
@@ -32,6 +33,7 @@ We first filter out genes with very low expression to remove noise and
 improve computational efficiency:
 
 ``` r
+
 counts <- assay(sce, "counts")
 
 # Keep genes with:
@@ -50,6 +52,7 @@ For this vignette, we subsample the data so computations run quickly. In
 practice, you would use the full filtered dataset:
 
 ``` r
+
 set.seed(123)
 n_genes <- min(2000, nrow(sce))
 n_cells <- min(5000, ncol(sce))
@@ -71,6 +74,7 @@ variable representing time since amputation. Let’s examine its
 distribution:
 
 ``` r
+
 meta_df <- as.data.frame(colData(sce_sub))
 
 # Check the range and distribution of DaysPostAmputation
@@ -92,6 +96,7 @@ For a continuous covariate, the design matrix includes: 1. An
 for `DaysPostAmputation` representing the rate of change per day
 
 ``` r
+
 design <- model.matrix(
   ~ DaysPostAmputation,
   data = meta_df
@@ -128,6 +133,7 @@ takes a count matrix and a design matrix and returns coefficients and
 overdispersions.
 
 ``` r
+
 Y <- as.matrix(assay(sce_sub, "counts"))
 
 devil_fit <- devil::fit_devil(
@@ -156,6 +162,7 @@ The fitted model contains coefficient estimates (on the log scale) for
 each gene and each term in the design matrix:
 
 ``` r
+
 beta_matrix <- devil_fit$beta
 dim(beta_matrix)
 #> [1] 2000    2
@@ -173,6 +180,7 @@ Let’s examine the distribution of the `DaysPostAmputation` coefficient
 across all genes:
 
 ``` r
+
 coef_df <- as.data.frame(beta_matrix) %>%
   dplyr::mutate(gene = rownames(beta_matrix))
 
@@ -210,6 +218,7 @@ changes with days post-amputation. The contrast vector `c(0, 1)` tests
 the `DaysPostAmputation` coefficient (second column in design matrix):
 
 ``` r
+
 # Contrast vector: test the DaysPostAmputation coefficient
 # c(Intercept, DaysPostAmputation)
 contrast_vector <- c(0, 1)
@@ -240,6 +249,7 @@ head(de_res)
 ### Summary of DE Results
 
 ``` r
+
 # Count significant genes at FDR < 0.05
 de_summary <- de_res %>%
   summarise(
@@ -269,6 +279,7 @@ Visualize the relationship between effect size (log fold-change per day)
 and significance:
 
 ``` r
+
 devil:::plot_volcano(devil.res = de_res) + 
   labs(
     title = "Volcano plot: Time-dependent gene expression",
@@ -286,6 +297,7 @@ devil:::plot_volcano(devil.res = de_res) +
 Select the 10 genes with the strongest time-dependent effects:
 
 ``` r
+
 top_genes <- de_res %>%
   dplyr::filter(adj_pval <= 0.05) %>%
   dplyr::arrange(desc(abs(lfc))) %>%
@@ -327,6 +339,7 @@ Create scatter plots showing how expression changes with days
 post-amputation for top genes:
 
 ``` r
+
 counts <- assay(sce_sub, "counts")
 
 # Function to plot gene expression vs. DaysPostAmputation
@@ -375,6 +388,7 @@ plot_gene_trajectory <- function(gene_name) {
 ### Plot Top Upregulated and Downregulated Genes
 
 ``` r
+
 # Get top upregulated and downregulated genes
 top_up <- de_res %>%
   dplyr::filter(adj_pval < 0.05, lfc > 0) %>%
@@ -423,10 +437,11 @@ This vignette demonstrated:
     expression trajectories
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.3 (2026-03-11)
+#> R version 4.6.0 (2026-04-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.4 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -447,71 +462,71 @@ sessionInfo()
 #> 
 #> other attached packages:
 #>  [1] ggpubr_0.6.3                tidyr_1.3.2                
-#>  [3] ggplot2_4.0.2               dplyr_1.2.0                
-#>  [5] Matrix_1.7-4                scRNAseq_2.24.0            
-#>  [7] SingleCellExperiment_1.32.0 SummarizedExperiment_1.40.0
-#>  [9] Biobase_2.70.0              GenomicRanges_1.62.1       
-#> [11] Seqinfo_1.0.0               IRanges_2.44.0             
-#> [13] S4Vectors_0.48.0            BiocGenerics_0.56.0        
-#> [15] generics_0.1.4              MatrixGenerics_1.22.0      
+#>  [3] ggplot2_4.0.3               dplyr_1.2.1                
+#>  [5] Matrix_1.7-5                scRNAseq_2.26.0            
+#>  [7] SingleCellExperiment_1.34.0 SummarizedExperiment_1.42.0
+#>  [9] Biobase_2.72.0              GenomicRanges_1.64.0       
+#> [11] Seqinfo_1.2.0               IRanges_2.46.0             
+#> [13] S4Vectors_0.50.0            BiocGenerics_0.58.0        
+#> [15] generics_0.1.4              MatrixGenerics_1.24.0      
 #> [17] matrixStats_1.5.0           devil_0.99.0               
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] RColorBrewer_1.1-3        jsonlite_2.0.0           
-#>   [3] magrittr_2.0.4            GenomicFeatures_1.62.0   
-#>   [5] gypsum_1.6.0              farver_2.1.2             
-#>   [7] rmarkdown_2.30            fs_2.0.0                 
-#>   [9] BiocIO_1.20.0             ragg_1.5.2               
-#>  [11] vctrs_0.7.2               memoise_2.0.1            
-#>  [13] Rsamtools_2.26.0          DelayedMatrixStats_1.32.0
+#>   [3] magrittr_2.0.5            GenomicFeatures_1.64.0   
+#>   [5] gypsum_1.8.0              farver_2.1.2             
+#>   [7] rmarkdown_2.31            fs_2.1.0                 
+#>   [9] BiocIO_1.22.0             ragg_1.5.2               
+#>  [11] vctrs_0.7.3               memoise_2.0.1            
+#>  [13] Rsamtools_2.28.0          DelayedMatrixStats_1.34.0
 #>  [15] RCurl_1.98-1.18           rstatix_0.7.3            
-#>  [17] htmltools_0.5.9           S4Arrays_1.10.1          
-#>  [19] AnnotationHub_4.0.0       curl_7.0.0               
-#>  [21] broom_1.0.12              Rhdf5lib_1.32.0          
-#>  [23] SparseArray_1.10.9        Formula_1.2-5            
-#>  [25] rhdf5_2.54.1              sass_0.4.10              
-#>  [27] alabaster.base_1.10.0     bslib_0.10.0             
-#>  [29] desc_1.4.3                alabaster.sce_1.10.0     
+#>  [17] htmltools_0.5.9           S4Arrays_1.12.0          
+#>  [19] AnnotationHub_4.2.0       curl_7.1.0               
+#>  [21] broom_1.0.12              Rhdf5lib_2.0.0           
+#>  [23] SparseArray_1.12.2        Formula_1.2-5            
+#>  [25] rhdf5_2.56.0              sass_0.4.10              
+#>  [27] alabaster.base_1.12.0     bslib_0.10.0             
+#>  [29] desc_1.4.3                alabaster.sce_1.12.0     
 #>  [31] httr2_1.2.2               cachem_1.1.0             
-#>  [33] GenomicAlignments_1.46.0  lifecycle_1.0.5          
+#>  [33] GenomicAlignments_1.48.0  lifecycle_1.0.5          
 #>  [35] pkgconfig_2.0.3           R6_2.6.1                 
 #>  [37] fastmap_1.2.0             digest_0.6.39            
-#>  [39] AnnotationDbi_1.72.0      ExperimentHub_3.0.0      
+#>  [39] AnnotationDbi_1.74.0      ExperimentHub_3.2.0      
 #>  [41] textshaping_1.0.5         RSQLite_2.4.6            
 #>  [43] filelock_1.0.3            labeling_0.4.3           
 #>  [45] httr_1.4.8                abind_1.4-8              
-#>  [47] compiler_4.5.3            bit64_4.6.0-1            
-#>  [49] withr_3.0.2               S7_0.2.1                 
-#>  [51] backports_1.5.0           BiocParallel_1.44.0      
+#>  [47] compiler_4.6.0            bit64_4.8.0              
+#>  [49] withr_3.0.2               S7_0.2.2                 
+#>  [51] backports_1.5.1           BiocParallel_1.46.0      
 #>  [53] carData_3.0-6             DBI_1.3.0                
-#>  [55] HDF5Array_1.38.0          alabaster.ranges_1.10.0  
-#>  [57] alabaster.schemas_1.10.0  ggsignif_0.6.4           
-#>  [59] rappdirs_0.3.4            DelayedArray_0.36.0      
-#>  [61] rjson_0.2.23              tools_4.5.3              
-#>  [63] glue_1.8.0                h5mread_1.2.1            
-#>  [65] restfulr_0.0.16           rhdf5filters_1.22.0      
-#>  [67] grid_4.5.3                gtable_0.3.6             
-#>  [69] ensembldb_2.34.0          utf8_1.2.6               
-#>  [71] car_3.1-5                 XVector_0.50.0           
-#>  [73] BiocVersion_3.22.0        pillar_1.11.1            
-#>  [75] BiocFileCache_3.0.0       lattice_0.22-9           
-#>  [77] rtracklayer_1.70.1        bit_4.6.0                
-#>  [79] tidyselect_1.2.1          Biostrings_2.78.0        
-#>  [81] knitr_1.51                ProtGenerics_1.42.0      
-#>  [83] xfun_0.57                 UCSC.utils_1.6.1         
-#>  [85] lazyeval_0.2.2            yaml_2.3.12              
+#>  [55] HDF5Array_1.40.0          alabaster.ranges_1.12.0  
+#>  [57] alabaster.schemas_1.12.0  ggsignif_0.6.4           
+#>  [59] rappdirs_0.3.4            DelayedArray_0.38.1      
+#>  [61] rjson_0.2.23              tools_4.6.0              
+#>  [63] glue_1.8.1                h5mread_1.4.0            
+#>  [65] restfulr_0.0.16           rhdf5filters_1.24.0      
+#>  [67] grid_4.6.0                gtable_0.3.6             
+#>  [69] ensembldb_2.36.0          utf8_1.2.6               
+#>  [71] car_3.1-5                 XVector_0.52.0           
+#>  [73] BiocVersion_3.23.1        pillar_1.11.1            
+#>  [75] BiocFileCache_3.2.0       lattice_0.22-9           
+#>  [77] rtracklayer_1.72.0        bit_4.6.0                
+#>  [79] tidyselect_1.2.1          Biostrings_2.80.0        
+#>  [81] knitr_1.51                ProtGenerics_1.44.0      
+#>  [83] xfun_0.57                 UCSC.utils_1.8.0         
+#>  [85] lazyeval_0.2.3            yaml_2.3.12              
 #>  [87] evaluate_1.0.5            codetools_0.2-20         
-#>  [89] cigarillo_1.0.0           tibble_3.3.1             
-#>  [91] alabaster.matrix_1.10.0   BiocManager_1.30.27      
-#>  [93] cli_3.6.5                 systemfonts_1.3.2        
-#>  [95] jquerylib_0.1.4           Rcpp_1.1.1               
-#>  [97] GenomeInfoDb_1.46.2       dbplyr_2.5.2             
+#>  [89] cigarillo_1.2.0           tibble_3.3.1             
+#>  [91] alabaster.matrix_1.12.0   BiocManager_1.30.27      
+#>  [93] cli_3.6.6                 systemfonts_1.3.2        
+#>  [95] jquerylib_0.1.4           Rcpp_1.1.1-1.1           
+#>  [97] GenomeInfoDb_1.48.0       dbplyr_2.5.2             
 #>  [99] png_0.1-9                 XML_3.99-0.23            
-#> [101] parallel_4.5.3            pkgdown_2.2.0            
-#> [103] blob_1.3.0                AnnotationFilter_1.34.0  
-#> [105] sparseMatrixStats_1.22.0  bitops_1.0-9             
-#> [107] alabaster.se_1.10.0       scales_1.4.0             
-#> [109] purrr_1.2.1               crayon_1.5.3             
-#> [111] rlang_1.1.7               cowplot_1.2.0            
-#> [113] KEGGREST_1.50.0
+#> [101] parallel_4.6.0            pkgdown_2.2.0            
+#> [103] blob_1.3.0                AnnotationFilter_1.36.0  
+#> [105] sparseMatrixStats_1.24.0  bitops_1.0-9             
+#> [107] alabaster.se_1.12.0       scales_1.4.0             
+#> [109] purrr_1.2.2               crayon_1.5.3             
+#> [111] rlang_1.2.0               cowplot_1.2.0            
+#> [113] KEGGREST_1.52.0
 ```

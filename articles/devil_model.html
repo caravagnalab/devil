@@ -87,7 +87,7 @@ analysis. This vignette explains:</p>
 </h3>
 <p>Devil fits a <strong>negative binomial generalized linear
 model</strong> for each gene:</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>Y</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>∼</mo><mtext mathvariant="normal">NB</mtext><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>θ</mi><mi>i</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>Y</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>∼</mo><mtext mathvariant="normal">NB</mtext><mo stretchy="false" form="prefix">(</mo><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>,</mo><msub><mi>θ</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">
 Y_{ij} \sim \text{NB}(\mu_{ij}, \theta_i)
 </annotation></semantics></math></p>
 <p>where:</p>
@@ -100,7 +100,7 @@ in cell
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
 </li>
 <li>
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><msub><mi>s</mi><mi>j</mi></msub><mo>exp</mo><mrow><mo stretchy="true" form="prefix">(</mo><msubsup><mi>𝐗</mi><mi>j</mi><mi>T</mi></msubsup><msub><mi>𝛃</mi><mi>i</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mu_{ij} = s_j \exp(\mathbf{X}_j^T \boldsymbol{\beta}_i)</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><msub><mi>s</mi><mi>j</mi></msub><mrow><mi mathvariant="normal">exp</mi><mo>⁡</mo></mrow><mo stretchy="false" form="prefix">(</mo><msubsup><mi>𝐗</mi><mi>j</mi><mi>T</mi></msubsup><msub><mi>𝛃</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\mu_{ij} = s_j \exp(\mathbf{X}_j^T \boldsymbol{\beta}_i)</annotation></semantics></math>
 is the expected count</li>
 <li>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>s</mi><mi>j</mi></msub><annotation encoding="application/x-tex">s_j</annotation></semantics></math>
@@ -326,7 +326,7 @@ cores.</p>
 <span><span class="co">#&gt; Fitting beta coefficients</span></span>
 <span><span class="co">#&gt; Fit overdispersion (mode = MOM)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   0.185   0.128   0.095</span></span>
+<span><span class="co">#&gt;   0.128   0.193   0.099</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">fit_cpu_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_devil.html">fit_devil</a></span><span class="op">(</span></span>
@@ -347,7 +347,7 @@ cores.</p>
 <span><span class="co">#&gt; Fitting beta coefficients</span></span>
 <span><span class="co">#&gt; Fit overdispersion (mode = MLE)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   0.516   0.458   0.258</span></span></code></pre></div>
+<span><span class="co">#&gt;   0.357   0.625   0.263</span></span></code></pre></div>
 <div class="section level4">
 <h4 id="examining-iteration-counts">Examining Iteration Counts<a class="anchor" aria-label="anchor" href="#examining-iteration-counts"></a>
 </h4>
@@ -412,10 +412,10 @@ implied by the design matrix and offsets.</p>
 devil computes fitted means
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><annotation encoding="application/x-tex">\mu_{ij}</annotation></semantics></math>
 and matches the negative binomial mean–variance relationship
-<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">V</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi></mrow><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>Y</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>+</mo><mfrac><msubsup><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow><mn>2</mn></msubsup><msub><mi>θ</mi><mi>i</mi></msub></mfrac></mrow><annotation encoding="application/x-tex">
+<math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">V</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">r</mi></mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>Y</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false" form="postfix">)</mo><mo>=</mo><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>+</mo><mfrac><msubsup><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow><mn>2</mn></msubsup><msub><mi>θ</mi><mi>i</mi></msub></mfrac></mrow><annotation encoding="application/x-tex">
 \mathrm{Var}(Y_{ij}) = \mu_{ij} + \frac{\mu_{ij}^2}{\theta_i}
 </annotation></semantics></math> using squared residuals
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>y</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>−</mo><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mn>2</mn></msup><annotation encoding="application/x-tex">(y_{ij}-\mu_{ij})^2</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msub><mi>y</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>−</mo><msub><mi>μ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msup><mo stretchy="false" form="postfix">)</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">(y_{ij}-\mu_{ij})^2</annotation></semantics></math>
 to obtain a <strong>closed-form, non-iterative</strong> estimate of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>θ</mi><mi>i</mi></msub><annotation encoding="application/x-tex">\theta_i</annotation></semantics></math>.</p>
 <p>This makes MOM extremely fast and well suited for large-scale

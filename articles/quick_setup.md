@@ -11,6 +11,7 @@ computational needs.
 For most users, the standard CPU-based installation is recommended:
 
 ``` r
+
 # Install from GitHub
 devtools::install_github("caravagnalab/devil")
 ```
@@ -18,6 +19,7 @@ devtools::install_github("caravagnalab/devil")
 If you don’t have `devtools` installed:
 
 ``` r
+
 install.packages("devtools")
 devtools::install_github("caravagnalab/devil")
 ```
@@ -44,6 +46,7 @@ Before installing the GPU-accelerated version, ensure you have:
 Check if your environment variables are set correctly:
 
 ``` r
+
 # Check CUDA_HOME
 Sys.getenv("CUDA_HOME")
 
@@ -59,6 +62,7 @@ strings, you’ll need to set these variables before proceeding.
 Once prerequisites are met:
 
 ``` r
+
 devtools::install_github("caravagnalab/devil", configure.args = "--with-cuda")
 ```
 
@@ -84,6 +88,7 @@ repository](https://github.com/caravagnalab/devil/issues).
 After successful installation, load the package:
 
 ``` r
+
 library(devil)
 ```
 

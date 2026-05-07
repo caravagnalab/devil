@@ -191,6 +191,7 @@ R
 ```
 
 ``` r
+
 # In R console
 devtools::install_github("caravagnalab/devill")
 ```
@@ -303,6 +304,7 @@ Once all modules are loaded and environment variables are verified, just
 install devil with the following command:
 
 ``` r
+
 # In R console
 devtools::install_github("caravagnalab/devil", configure.args = "--with-cuda")
 ```

@@ -1,6 +1,7 @@
 # Differential expression with multiple covariates
 
 ``` r
+
 library(devil)
 library(scRNAseq)
 library(SingleCellExperiment)
@@ -23,6 +24,7 @@ dataset from the **scRNAseq** package. We’ll show how to:
 ## Loading the dataset
 
 ``` r
+
 sce <- scRNAseq::RichardTCellData()
 #> downloading 1 resources
 #> retrieving 1 resource
@@ -73,6 +75,7 @@ We keep only cells flagged as high quality and do light gene filtering
 for speed.
 
 ``` r
+
 # Keep only good-quality cells
 sce <- sce[, sce$`single cell quality` == "OK"]
 
@@ -103,6 +106,7 @@ length(unique(sce$individual))
 Filter genes with very low counts (optional):
 
 ``` r
+
 counts <- assay(sce, "counts")
 keep_genes <- Matrix::rowMeans(counts) > .1 & rowSums(counts > 0) > 100
 sce <- sce[keep_genes, ]
@@ -115,6 +119,7 @@ For this vignette, we subsample further so that `devil` runs very
 quickly:
 
 ``` r
+
 set.seed(123)
 n_genes <- min(2000, nrow(sce))
 n_cells <- min(3000, ncol(sce))
@@ -149,6 +154,7 @@ We consider a model with:
   baseline
 
 ``` r
+
 meta_df <- as.data.frame(colData(sce_sub))
 meta_df$stimulus <- droplevels(factor(meta_df$stimulus))
 meta_df$time_factor <- factor(meta_df$time_factor)
@@ -211,6 +217,7 @@ takes a count matrix and a design matrix and returns coefficients and
 overdispersions.
 
 ``` r
+
 Y <- as.matrix(assay(sce_sub, "counts"))
 devil_fit <- devil::fit_devil(
     input_matrix = Y,
@@ -236,6 +243,7 @@ The fitted model contains coefficient estimates (log-scale) for each
 gene and each term in the design matrix.
 
 ``` r
+
 # Extract coefficient matrix (genes x coefficients)
 beta_matrix <- devil_fit$beta
 dim(beta_matrix)
@@ -272,6 +280,7 @@ ggplot(coef_long %>% dplyr::filter(coefficient != "(Intercept)"),
 - Coefficients near zero suggest little effect
 
 ``` r
+
 # Extract overdispersion parameters
 theta_vec <- devil_fit$overdispersion
 names(theta_vec) = rownames(Y)
@@ -307,6 +316,7 @@ Let’s identify genes differentially expressed in response to different
 stimuli:
 
 ``` r
+
 # For demonstration, we'll create a simplified test
 stimulus_coefs <- grep("^stimulus", colnames(beta_matrix), value = TRUE)
 
@@ -348,6 +358,7 @@ print(de_summary)
 Visualize the differential expression results:
 
 ``` r
+
 # Create volcano plot for each stimulus
 de_results %>%
     mutate(
@@ -375,6 +386,7 @@ de_results %>%
 ### Top differentially expressed genes
 
 ``` r
+
 # Extract top DE genes for each stimulus
 top_genes <- de_results %>%
     dplyr::filter(adj_pval < 0.05) %>%
@@ -404,6 +416,7 @@ print(top_genes)
 ### Heatmap of top DE genes
 
 ``` r
+
 # Get top 20 most variable DE genes
 top_de_genes <- de_results %>%
     dplyr::filter(adj_pval < 0.05) %>%
@@ -433,6 +446,7 @@ if (length(top_de_genes) > 0) {
 ## Testing age effects
 
 ``` r
+
 # Test for age effect if present in model
 age_coefs <- grep("^age", colnames(beta_matrix), value = TRUE)
 
@@ -464,6 +478,7 @@ Let’s also plot the mean-variance relationship, to see how far is the
 model from a simple Poisson
 
 ``` r
+
 # Mean-variance relationship
 gene_means <- rowMeans(Y)
 gene_vars <- apply(Y, 1, var)
@@ -509,10 +524,11 @@ differential expression analysis while accounting for overdispersion.
 ## Session Info
 
 ``` r
+
 sessionInfo()
-#> R version 4.5.3 (2026-03-11)
+#> R version 4.6.0 (2026-04-24)
 #> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.3 LTS
+#> Running under: Ubuntu 24.04.4 LTS
 #> 
 #> Matrix products: default
 #> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
@@ -532,69 +548,69 @@ sessionInfo()
 #> [8] base     
 #> 
 #> other attached packages:
-#>  [1] ensembldb_2.34.0            AnnotationFilter_1.34.0    
-#>  [3] GenomicFeatures_1.62.0      AnnotationDbi_1.72.0       
-#>  [5] tidyr_1.3.2                 ggplot2_4.0.2              
-#>  [7] dplyr_1.2.0                 Matrix_1.7-4               
-#>  [9] scRNAseq_2.24.0             SingleCellExperiment_1.32.0
-#> [11] SummarizedExperiment_1.40.0 Biobase_2.70.0             
-#> [13] GenomicRanges_1.62.1        Seqinfo_1.0.0              
-#> [15] IRanges_2.44.0              S4Vectors_0.48.0           
-#> [17] BiocGenerics_0.56.0         generics_0.1.4             
-#> [19] MatrixGenerics_1.22.0       matrixStats_1.5.0          
+#>  [1] ensembldb_2.36.0            AnnotationFilter_1.36.0    
+#>  [3] GenomicFeatures_1.64.0      AnnotationDbi_1.74.0       
+#>  [5] tidyr_1.3.2                 ggplot2_4.0.3              
+#>  [7] dplyr_1.2.1                 Matrix_1.7-5               
+#>  [9] scRNAseq_2.26.0             SingleCellExperiment_1.34.0
+#> [11] SummarizedExperiment_1.42.0 Biobase_2.72.0             
+#> [13] GenomicRanges_1.64.0        Seqinfo_1.2.0              
+#> [15] IRanges_2.46.0              S4Vectors_0.50.0           
+#> [17] BiocGenerics_0.58.0         generics_0.1.4             
+#> [19] MatrixGenerics_1.24.0       matrixStats_1.5.0          
 #> [21] devil_0.99.0               
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] DBI_1.3.0                 bitops_1.0-9             
-#>   [3] httr2_1.2.2               rlang_1.1.7              
-#>   [5] magrittr_2.0.4            gypsum_1.6.0             
-#>   [7] compiler_4.5.3            RSQLite_2.4.6            
-#>   [9] DelayedMatrixStats_1.32.0 png_0.1-9                
-#>  [11] systemfonts_1.3.2         vctrs_0.7.2              
-#>  [13] ProtGenerics_1.42.0       pkgconfig_2.0.3          
+#>   [3] httr2_1.2.2               rlang_1.2.0              
+#>   [5] magrittr_2.0.5            gypsum_1.8.0             
+#>   [7] compiler_4.6.0            RSQLite_2.4.6            
+#>   [9] DelayedMatrixStats_1.34.0 png_0.1-9                
+#>  [11] systemfonts_1.3.2         vctrs_0.7.3              
+#>  [13] ProtGenerics_1.44.0       pkgconfig_2.0.3          
 #>  [15] crayon_1.5.3              fastmap_1.2.0            
-#>  [17] dbplyr_2.5.2              XVector_0.50.0           
+#>  [17] dbplyr_2.5.2              XVector_0.52.0           
 #>  [19] labeling_0.4.3            utf8_1.2.6               
-#>  [21] Rsamtools_2.26.0          rmarkdown_2.30           
-#>  [23] UCSC.utils_1.6.1          ragg_1.5.2               
-#>  [25] purrr_1.2.1               bit_4.6.0                
+#>  [21] Rsamtools_2.28.0          rmarkdown_2.31           
+#>  [23] UCSC.utils_1.8.0          ragg_1.5.2               
+#>  [25] purrr_1.2.2               bit_4.6.0                
 #>  [27] xfun_0.57                 cachem_1.1.0             
-#>  [29] cigarillo_1.0.0           GenomeInfoDb_1.46.2      
+#>  [29] cigarillo_1.2.0           GenomeInfoDb_1.48.0      
 #>  [31] jsonlite_2.0.0            blob_1.3.0               
-#>  [33] rhdf5filters_1.22.0       DelayedArray_0.36.0      
-#>  [35] Rhdf5lib_1.32.0           BiocParallel_1.44.0      
-#>  [37] parallel_4.5.3            R6_2.6.1                 
+#>  [33] rhdf5filters_1.24.0       DelayedArray_0.38.1      
+#>  [35] Rhdf5lib_2.0.0            BiocParallel_1.46.0      
+#>  [37] parallel_4.6.0            R6_2.6.1                 
 #>  [39] RColorBrewer_1.1-3        bslib_0.10.0             
-#>  [41] rtracklayer_1.70.1        jquerylib_0.1.4          
-#>  [43] Rcpp_1.1.1                knitr_1.51               
+#>  [41] rtracklayer_1.72.0        jquerylib_0.1.4          
+#>  [43] Rcpp_1.1.1-1.1            knitr_1.51               
 #>  [45] tidyselect_1.2.1          abind_1.4-8              
 #>  [47] yaml_2.3.12               codetools_0.2-20         
-#>  [49] curl_7.0.0                lattice_0.22-9           
-#>  [51] alabaster.sce_1.10.0      tibble_3.3.1             
-#>  [53] withr_3.0.2               S7_0.2.1                 
-#>  [55] KEGGREST_1.50.0           evaluate_1.0.5           
-#>  [57] desc_1.4.3                BiocFileCache_3.0.0      
-#>  [59] alabaster.schemas_1.10.0  ExperimentHub_3.0.0      
-#>  [61] Biostrings_2.78.0         pillar_1.11.1            
+#>  [49] curl_7.1.0                lattice_0.22-9           
+#>  [51] alabaster.sce_1.12.0      tibble_3.3.1             
+#>  [53] withr_3.0.2               S7_0.2.2                 
+#>  [55] KEGGREST_1.52.0           evaluate_1.0.5           
+#>  [57] desc_1.4.3                BiocFileCache_3.2.0      
+#>  [59] alabaster.schemas_1.12.0  ExperimentHub_3.2.0      
+#>  [61] Biostrings_2.80.0         pillar_1.11.1            
 #>  [63] BiocManager_1.30.27       filelock_1.0.3           
-#>  [65] RCurl_1.98-1.18           BiocVersion_3.22.0       
-#>  [67] sparseMatrixStats_1.22.0  scales_1.4.0             
-#>  [69] alabaster.base_1.10.0     glue_1.8.0               
-#>  [71] alabaster.ranges_1.10.0   pheatmap_1.0.13          
-#>  [73] alabaster.matrix_1.10.0   lazyeval_0.2.2           
-#>  [75] tools_4.5.3               AnnotationHub_4.0.0      
-#>  [77] BiocIO_1.20.0             GenomicAlignments_1.46.0 
-#>  [79] fs_2.0.0                  XML_3.99-0.23            
-#>  [81] rhdf5_2.54.1              grid_4.5.3               
-#>  [83] HDF5Array_1.38.0          restfulr_0.0.16          
-#>  [85] cli_3.6.5                 rappdirs_0.3.4           
+#>  [65] RCurl_1.98-1.18           BiocVersion_3.23.1       
+#>  [67] sparseMatrixStats_1.24.0  scales_1.4.0             
+#>  [69] alabaster.base_1.12.0     glue_1.8.1               
+#>  [71] alabaster.ranges_1.12.0   pheatmap_1.0.13          
+#>  [73] alabaster.matrix_1.12.0   lazyeval_0.2.3           
+#>  [75] tools_4.6.0               AnnotationHub_4.2.0      
+#>  [77] BiocIO_1.22.0             GenomicAlignments_1.48.0 
+#>  [79] fs_2.1.0                  XML_3.99-0.23            
+#>  [81] rhdf5_2.56.0              grid_4.6.0               
+#>  [83] HDF5Array_1.40.0          restfulr_0.0.16          
+#>  [85] cli_3.6.6                 rappdirs_0.3.4           
 #>  [87] textshaping_1.0.5         viridisLite_0.4.3        
-#>  [89] S4Arrays_1.10.1           gtable_0.3.6             
-#>  [91] alabaster.se_1.10.0       sass_0.4.10              
-#>  [93] digest_0.6.39             SparseArray_1.10.9       
+#>  [89] S4Arrays_1.12.0           gtable_0.3.6             
+#>  [91] alabaster.se_1.12.0       sass_0.4.10              
+#>  [93] digest_0.6.39             SparseArray_1.12.2       
 #>  [95] farver_2.1.2              rjson_0.2.23             
 #>  [97] memoise_2.0.1             htmltools_0.5.9          
 #>  [99] pkgdown_2.2.0             lifecycle_1.0.5          
-#> [101] h5mread_1.2.1             httr_1.4.8               
-#> [103] bit64_4.6.0-1
+#> [101] h5mread_1.4.0             httr_1.4.8               
+#> [103] bit64_4.8.0
 ```
