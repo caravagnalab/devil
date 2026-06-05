@@ -4,7 +4,13 @@
 ^docs$
 ^pkgdown$
 ^\.github$
+^\.claude$
 ^codecov\.yml$
 ^README\.Rmd$
 ^vignettes/articles$
 ^LICENSE\.md$
+^CLAUDE\.md$
+^.*\.BiocCheck$
+^inst/doc$
+^doc$
+^Meta$

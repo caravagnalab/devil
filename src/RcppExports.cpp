@@ -83,6 +83,66 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// precompute_outer
+std::vector<Eigen::MatrixXd> precompute_outer(Eigen::MatrixXd X_unique);
+RcppExport SEXP _devil_precompute_outer(SEXP X_uniqueSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X_unique(X_uniqueSEXP);
+    rcpp_result_gen = Rcpp::wrap(precompute_outer(X_unique));
+    return rcpp_result_gen;
+END_RCPP
+}
+// beta_fit_fast
+List beta_fit_fast(Eigen::VectorXd y, Eigen::MatrixXd X_unique, Eigen::VectorXi idx, Eigen::VectorXd off, Rcpp::List outer_list, Eigen::VectorXd mu_beta, float k, int max_iter, float eps);
+RcppExport SEXP _devil_beta_fit_fast(SEXP ySEXP, SEXP X_uniqueSEXP, SEXP idxSEXP, SEXP offSEXP, SEXP outer_listSEXP, SEXP mu_betaSEXP, SEXP kSEXP, SEXP max_iterSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type y(ySEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X_unique(X_uniqueSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXi >::type idx(idxSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type off(offSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type outer_list(outer_listSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
+    Rcpp::traits::input_parameter< float >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< float >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(beta_fit_fast(y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
+// beta_fit_fast_optimized
+List beta_fit_fast_optimized(const Eigen::VectorXd& y, const Eigen::MatrixXd& X_unique, const Eigen::VectorXi& idx, const Eigen::VectorXd& off, const Rcpp::List& outer_list, Eigen::VectorXd mu_beta, double k, int max_iter, double eps);
+RcppExport SEXP _devil_beta_fit_fast_optimized(SEXP ySEXP, SEXP X_uniqueSEXP, SEXP idxSEXP, SEXP offSEXP, SEXP outer_listSEXP, SEXP mu_betaSEXP, SEXP kSEXP, SEXP max_iterSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X_unique(X_uniqueSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXi& >::type idx(idxSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type off(offSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type outer_list(outer_listSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
+    Rcpp::traits::input_parameter< double >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(beta_fit_fast_optimized(y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compress_design_matrix
+List compress_design_matrix(const Eigen::MatrixXd& X);
+RcppExport SEXP _devil_compress_design_matrix(SEXP XSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X(XSEXP);
+    rcpp_result_gen = Rcpp::wrap(compress_design_matrix(X));
+    return rcpp_result_gen;
+END_RCPP
+}
 // initialize_beta_univariate_matrix_cpp
 Rcpp::NumericMatrix initialize_beta_univariate_matrix_cpp(const Rcpp::NumericMatrix& X, const Rcpp::NumericMatrix& Y, const Rcpp::NumericVector& sf);
 RcppExport SEXP _devil_initialize_beta_univariate_matrix_cpp(SEXP XSEXP, SEXP YSEXP, SEXP sfSEXP) {
@@ -419,6 +479,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_beta_fit_group", (DL_FUNC) &_devil_beta_fit_group, 6},
     {"_devil_lte_n_equal_rows", (DL_FUNC) &_devil_lte_n_equal_rows, 3},
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
+    {"_devil_precompute_outer", (DL_FUNC) &_devil_precompute_outer, 1},
+    {"_devil_beta_fit_fast", (DL_FUNC) &_devil_beta_fit_fast, 9},
+    {"_devil_beta_fit_fast_optimized", (DL_FUNC) &_devil_beta_fit_fast_optimized, 9},
+    {"_devil_compress_design_matrix", (DL_FUNC) &_devil_compress_design_matrix, 1},
     {"_devil_initialize_beta_univariate_matrix_cpp", (DL_FUNC) &_devil_initialize_beta_univariate_matrix_cpp, 3},
     {"_devil_preprocess_data", (DL_FUNC) &_devil_preprocess_data, 3},
     {"_devil_beta_fit_efficient", (DL_FUNC) &_devil_beta_fit_efficient, 8},

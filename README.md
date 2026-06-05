@@ -37,12 +37,13 @@ single gene observed in 1000 cells.
 
 ``` r
 library(devil)
-y <- t(as.matrix(rnbinom(1000, 1, .1)))
-fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = NULL, overdispersion = "MOM")
+x <- t(as.matrix(rnbinom(1000, 1, .1)))
+fit <- devil::fit_devil(x, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = NULL, overdispersion = "MOM")
+#> ==> Initializing parameters
 #> Initialize theta
 #> Initialize beta
-#> Fitting beta coefficients
-#> Fit overdispersion (mode = MOM)
+#> Fitting expression coefficients and overdispersion
+#> Aggregating results
 test <- devil::test_de(fit, contrast = c(1))
 ```
 

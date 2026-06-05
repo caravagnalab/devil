@@ -15,12 +15,11 @@ test_that("fit_devil (CPU, no size_factors) returns well-formed result", {
     )
 
     res <- fit_devil(
-        input_matrix   = input_matrix,
+        x              = input_matrix,
         design_matrix  = design_matrix,
         overdispersion = FALSE, # Poisson model, simplest
         size_factors   = NULL,
         CUDA           = FALSE,
-        parallel.cores = 1,
         verbose        = FALSE
     )
 
@@ -36,13 +35,13 @@ test_that("fit_devil (CPU, no size_factors) returns well-formed result", {
     expect_equal(dim(res$beta), c(ngenes, p))
     expect_equal(length(res$overdispersion), ngenes)
     expect_equal(length(res$iterations$beta_iters), ngenes)
-    expect_equal(length(res$iterations$theta_iters), 1L) # scalar 0L in Poisson case
+    expect_equal(length(res$iterations$theta_iters), ngenes)
 
     # Size factors and offset
     expect_equal(res$size_factors, rep(1, nsamples))
     expect_length(res$offset_vector, nsamples)
 
-    # Poisson overdispersion = FALSE ⇒ theta all zeros
+    # Poisson overdispersion = FALSE => theta all zeros
     expect_true(all(res$overdispersion == 0))
 
     # Names preserved
@@ -53,7 +52,7 @@ test_that("fit_devil (CPU, no size_factors) returns well-formed result", {
     expect_identical(res$input_matrix, input_matrix)
 
     # Input parameters stored
-    expect_equal(res$input_parameters$parallel.cores, 1)
+    expect_true(all(c("max_iter", "tolerance") %in% names(res$input_parameters)))
 })
 
 
@@ -72,15 +71,14 @@ test_that("fit_devil uses calculate_sf when size_factors is a method string", {
     )
 
     # Explicitly compute size factors with calculate_sf
-    sf_expected <- calculate_sf(input_matrix, method = "normed_sum", verbose = FALSE)
+    sf_expected <- devil:::calculate_sf(input_matrix, method = "normed_sum", verbose = FALSE)
 
     res <- fit_devil(
-        input_matrix   = input_matrix,
+        x              = input_matrix,
         design_matrix  = design_matrix,
         overdispersion = FALSE,
         size_factors   = "normed_sum",
         CUDA           = FALSE,
-        parallel.cores = 1,
         verbose        = FALSE
     )
 
@@ -102,22 +100,21 @@ test_that("cpu_fit in Poisson mode (overdispersion=FALSE) returns theta=0", {
     )
     offset_vector <- rep(0, nsamples)
 
-    res <- cpu_fit(
-        input_matrix = input_matrix,
-        design_matrix = design_matrix,
-        offset_vector = offset_vector,
+    res <- devil:::cpu_fit(
+        input_matrix        = input_matrix,
+        design_matrix       = design_matrix,
+        offset_vector       = offset_vector,
         init_overdispersion = NULL,
-        init_beta_rough = FALSE,
-        overdispersion = FALSE,
-        n.cores = 1,
-        max_iter = 50,
-        tolerance = 1e-3,
-        verbose = FALSE
+        init_beta_rough     = FALSE,
+        overdispersion      = FALSE,
+        max_iter            = 50,
+        tolerance           = 1e-3,
+        verbose             = FALSE
     )
 
     expect_equal(dim(res$beta), c(ngenes, ncol(design_matrix)))
     expect_equal(res$theta, rep(0, ngenes))
-    expect_equal(res$iterations$theta_iters, 0L)
+    expect_true(all(res$iterations$theta_iters == 0L))
 })
 
 test_that("cpu_fit respects init_beta_rough flag for beta initialization", {
@@ -135,21 +132,18 @@ test_that("cpu_fit respects init_beta_rough flag for beta initialization", {
     )
     offset_vector <- rep(0, nsamples)
 
-    res <- cpu_fit(
-        input_matrix = input_matrix,
-        design_matrix = design_matrix,
-        offset_vector = offset_vector,
+    res <- devil:::cpu_fit(
+        input_matrix        = input_matrix,
+        design_matrix       = design_matrix,
+        offset_vector       = offset_vector,
         init_overdispersion = NULL,
-        init_beta_rough = TRUE,
-        overdispersion = FALSE,
-        n.cores = 1,
-        max_iter = 5,
-        tolerance = 1e-3,
-        verbose = FALSE
+        init_beta_rough     = TRUE,
+        overdispersion      = FALSE,
+        max_iter            = 5,
+        tolerance           = 1e-3,
+        verbose             = FALSE
     )
 
-    # Rough init sets beta_0[,1] = log1p(rowMeans(counts)); a few beta_fit iterations update it
-    # We just check it's at least in the right ballpark and finite
     expect_true(all(is.finite(res$beta[, 1])))
     expect_equal(length(res$iterations$beta_iters), ngenes)
 })
@@ -169,25 +163,24 @@ test_that("cpu_fit with overdispersion='MOM' produces non-negative theta", {
     )
     offset_vector <- rep(0, nsamples)
 
-    res <- cpu_fit(
-        input_matrix = input_matrix,
-        design_matrix = design_matrix,
-        offset_vector = offset_vector,
+    res <- devil:::cpu_fit(
+        input_matrix        = input_matrix,
+        design_matrix       = design_matrix,
+        offset_vector       = offset_vector,
         init_overdispersion = NULL,
-        init_beta_rough = FALSE,
-        overdispersion = "MOM",
-        n.cores = 1,
-        max_iter = 50,
-        tolerance = 1e-3,
-        verbose = FALSE
+        init_beta_rough     = FALSE,
+        overdispersion      = "MOM",
+        max_iter            = 50,
+        tolerance           = 1e-3,
+        verbose             = FALSE
     )
 
     expect_equal(length(res$theta), ngenes)
     expect_true(all(res$theta >= 0))
-    expect_equal(res$iterations$theta_iters, 0L)
+    expect_true(all(res$iterations$theta_iters == 0L))
 })
 
-test_that("cpu_fit with overdispersion='old' returns finite theta and NA theta_iters", {
+test_that("cpu_fit with overdispersion='old' returns finite theta", {
     set.seed(13)
     ngenes <- 3
     nsamples <- 7
@@ -202,24 +195,22 @@ test_that("cpu_fit with overdispersion='old' returns finite theta and NA theta_i
     )
     offset_vector <- rep(0, nsamples)
 
-    res <- cpu_fit(
-        input_matrix = input_matrix,
-        design_matrix = design_matrix,
-        offset_vector = offset_vector,
+    res <- devil:::cpu_fit(
+        input_matrix        = input_matrix,
+        design_matrix       = design_matrix,
+        offset_vector       = offset_vector,
         init_overdispersion = NULL,
-        init_beta_rough = FALSE,
-        overdispersion = "old",
-        n.cores = 1,
-        max_iter = 50,
-        tolerance = 1e-3,
-        verbose = FALSE
+        init_beta_rough     = FALSE,
+        overdispersion      = "old",
+        max_iter            = 50,
+        tolerance           = 1e-3,
+        verbose             = FALSE
     )
 
     expect_equal(length(res$theta), ngenes)
     expect_true(all(is.finite(res$theta)))
-    expect_true(all(!is.na(res$theta))) # should not be NA
-    # theta_iters is documented/implemented as NA_integer_
-    expect_true(all(is.na(res$iterations$theta_iters)))
+    expect_true(all(!is.na(res$theta)))
+    expect_true(all(is.na(res$iterations$theta_iters)))  # "old" mode doesn't track theta iters
 })
 
 test_that("cpu_fit with overdispersion='new' runs when fit_overdispersion_cppp is available", {
@@ -242,17 +233,16 @@ test_that("cpu_fit with overdispersion='new' runs when fit_overdispersion_cppp i
     )
     offset_vector <- rep(0, nsamples)
 
-    res <- cpu_fit(
-        input_matrix = input_matrix,
-        design_matrix = design_matrix,
-        offset_vector = offset_vector,
+    res <- devil:::cpu_fit(
+        input_matrix        = input_matrix,
+        design_matrix       = design_matrix,
+        offset_vector       = offset_vector,
         init_overdispersion = NULL,
-        init_beta_rough = FALSE,
-        overdispersion = "new",
-        n.cores = 1,
-        max_iter = 50,
-        tolerance = 1e-3,
-        verbose = FALSE
+        init_beta_rough     = FALSE,
+        overdispersion      = "new",
+        max_iter            = 50,
+        tolerance           = 1e-3,
+        verbose             = FALSE
     )
 
     expect_equal(length(res$theta), ngenes)

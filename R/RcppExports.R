@@ -21,6 +21,22 @@ get_row_groups <- function(matrix, n_groups, tolerance = 1e-10) {
     .Call('_devil_get_row_groups', PACKAGE = 'devil', matrix, n_groups, tolerance)
 }
 
+precompute_outer <- function(X_unique) {
+    .Call('_devil_precompute_outer', PACKAGE = 'devil', X_unique)
+}
+
+beta_fit_fast <- function(y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps) {
+    .Call('_devil_beta_fit_fast', PACKAGE = 'devil', y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps)
+}
+
+beta_fit_fast_optimized <- function(y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps) {
+    .Call('_devil_beta_fit_fast_optimized', PACKAGE = 'devil', y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps)
+}
+
+compress_design_matrix <- function(X) {
+    .Call('_devil_compress_design_matrix', PACKAGE = 'devil', X)
+}
+
 initialize_beta_univariate_matrix_cpp <- function(X, Y, sf) {
     .Call('_devil_initialize_beta_univariate_matrix_cpp', PACKAGE = 'devil', X, Y, sf)
 }

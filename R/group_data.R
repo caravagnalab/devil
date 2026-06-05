@@ -24,6 +24,15 @@
 #' The function converts the \code{clusters} vector into a factor based on its 
 #' unique levels in order of appearance, then sorts all inputs based on these levels.
 #' 
+#' @examples
+#' set.seed(1)
+#' counts <- matrix(rnbinom(500, mu = 3, size = 1), nrow = 50, ncol = 10)
+#' rownames(counts) <- paste0("gene", seq_len(nrow(counts)))
+#' design <- model.matrix(~ 0 + factor(rep(c("A", "B"), each = 5)))
+#' patient <- rep(c("P1", "P2"), times = 5)
+#' grouped <- group_data(counts, design, patient)
+#' str(grouped)
+#'
 #' @export
 #' @rawNamespace useDynLib(devil);
 group_data <- function(input_matrix, design_matrix, clusters) {

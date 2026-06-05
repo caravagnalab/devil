@@ -54,7 +54,7 @@
 #' @examples
 #' set.seed(1)
 #' y <- t(as.matrix(rnbinom(1000, 1, .1)))
-#' fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000))
+#' fit <- devil::fit_devil(x = y, design_matrix = matrix(1, ncol = 1, nrow = 1000))
 #' de_results <- devil::test_de(devil.fit = fit, contrast = c(1))
 #'
 #' # Basic volcano plot

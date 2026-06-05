@@ -10,7 +10,7 @@ test_de(
   clusters = NULL,
   pval_adjust_method = "BH",
   max_lfc = 10,
-  parallel.cores = 1
+  BPPARAM = BiocParallel::SerialParam()
 )
 }
 \arguments{
@@ -35,8 +35,8 @@ Passed to stats::p.adjust(). Common choices:
 \item{max_lfc}{Numeric. Maximum absolute log2 fold change to report.
 Larger values are capped at ±max_lfc. Default: 10}
 
-\item{parallel.cores}{Integer or NULL. Number of CPU cores for parallel processing.
-If NULL, uses all available cores. Default: 1}
+\item{BPPARAM}{A \code{\link[BiocParallel]{BiocParallelParam}} object controlling
+parallel evaluation. Default: \code{BiocParallel::SerialParam()}.}
 }
 \value{
 A tibble with columns:
@@ -80,7 +80,7 @@ colnames(design) <- levels(group)
 
 # Fit model
 fit <- fit_devil(
-    input_matrix  = counts,
+    x             = counts,
     design_matrix = design,
     size_factors  = "normed_sum"
 )

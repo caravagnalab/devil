@@ -30,8 +30,8 @@
 #'   Larger values are capped at ±max_lfc. Default: 10
 #' @param clusters Numeric vector or factor. Sample cluster assignments for robust
 #'   variance estimation. Length must match number of samples. Default: NULL
-#' @param parallel.cores Integer or NULL. Number of CPU cores for parallel processing.
-#'   If NULL, uses all available cores. Default: 1
+#' @param BPPARAM A \code{\link[BiocParallel]{BiocParallelParam}} object controlling
+#'   parallel evaluation. Default: \code{BiocParallel::SerialParam()}.
 #'
 #' @return A tibble with columns:
 #' \describe{
@@ -56,7 +56,7 @@
 #'
 #' # Fit model
 #' fit <- fit_devil(
-#'     input_matrix  = counts,
+#'     x             = counts,
 #'     design_matrix = design,
 #'     size_factors  = "normed_sum"
 #' )
@@ -82,146 +82,53 @@
 #'
 #' @export
 #' @rawNamespace useDynLib(devil);
-test_de <- function(devil.fit, contrast, clusters = NULL, pval_adjust_method = "BH", max_lfc = 10, parallel.cores = 1) {
+test_de <- function(devil.fit, contrast, clusters = NULL, pval_adjust_method = "BH", max_lfc = 10,
+                    BPPARAM = BiocParallel::SerialParam()) {
   if (!("beta_sandwiches_null" %in% names(devil.fit))) {
-    warning("You're using an old devil fit object. From next version, this functionality will be removed.")
-    result_df = deprecated_test_de(devil.fit = devil.fit, contrast = contrast, pval_adjust_method = pval_adjust_method, max_lfc = max_lfc, clusters = clusters, parallel.cores = parallel.cores)
-    return(result_df)
-  } else {
-    # Detect cores to use
-    max.cores <- parallel::detectCores()
-    if (is.null(parallel.cores)) {
-      n.cores <- max.cores
-    } else {
-      if (parallel.cores > max.cores) {
-        message("Requested ", parallel.cores, " cores, but only ",
-                max.cores, " available.")
-      }
-      n.cores <- min(max.cores, parallel.cores)
-    }
+    stop(
+      "The fit object was created with an older version of devil and is no longer supported. ",
+      "Please re-fit your model with the current version of fit_devil()."
+    )
+  }
 
-    ngenes <- nrow(devil.fit$input_matrix)
-    nsamples <- nrow(devil.fit$design_matrix)
-    contrast <- as.array(contrast)
-    lfcs <- (devil.fit$beta %*% contrast) %>% unlist() %>% unname() %>% c()
+  nsamples <- nrow(devil.fit$design_matrix)
+  contrast  <- as.array(contrast)
+  lfcs      <- (devil.fit$beta %*% contrast) %>% unlist() %>% unname() %>% c()
 
-    p_values = lapply(seq_len(nrow(devil.fit$input_matrix)), function(gene_idx) {
+  p_values <- BiocParallel::bplapply(
+    seq_len(nrow(devil.fit$input_matrix)),
+    function(gene_idx) {
       mu_test <- lfcs[gene_idx]
 
       H_clust <- devil.fit$beta_sandwiches[[gene_idx]]
       H_null  <- devil.fit$beta_sandwiches_null[[gene_idx]]
-      
+
       if (!is.null(H_clust) && !is.null(H_null)) {
         total_variance <- t(contrast) %*% H_clust %*% contrast
-        p_clust <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
-        
+        p_clust <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+
         total_variance <- t(contrast) %*% H_null %*% contrast
-        p_null <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
-        
-        p <- max(p_clust, p_null)
+        p_null <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+
+        max(p_clust, p_null)
       } else if (!is.null(H_null)) {
         total_variance <- t(contrast) %*% H_null %*% contrast
-        p <- 2 * stats::pt(abs(mu_test)/sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
+        2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
       } else {
-        p <- NA_real_
+        NA_real_
       }
-      p
-    }) %>% unlist()
+    },
+    BPPARAM = BPPARAM
+  ) %>% unlist()
 
-    result_df <- dplyr::tibble(name = rownames(devil.fit$beta),
-                               pval = p_values,
-                               adj_pval = stats::p.adjust(p_values, method = pval_adjust_method),
-                               lfc = lfcs/log(2))
-
-    result_df <- result_df %>%
-      dplyr::mutate(lfc = ifelse(.data$lfc >= max_lfc, max_lfc, .data$lfc)) %>%
-      dplyr::mutate(lfc = ifelse(.data$lfc <= -max_lfc, -max_lfc, .data$lfc))
-
-    return(result_df)
-  }
-}
-
-
-deprecated_test_de <- function(devil.fit, contrast, pval_adjust_method = "BH", max_lfc = 10, clusters = NULL, parallel.cores = 1) {
-  # Detect cores to use
-  max.cores <- parallel::detectCores()
-  if (is.null(parallel.cores)) {
-    n.cores <- max.cores
-  } else {
-    if (parallel.cores > max.cores) {
-      message("Requested ", parallel.cores, " cores, but only ", max.cores, " available.")
-    }
-    n.cores <- min(max.cores, parallel.cores)
-  }
-
-  # Extract necessary information
-  ngenes <- nrow(devil.fit$input_matrix)
-  nsamples <- nrow(devil.fit$design_matrix)
-  contrast <- as.array(contrast)
-
-  # Calculate log fold changes
-  lfcs <- (devil.fit$beta %*% contrast) %>%
-    unlist() %>%
-    unname() %>%
-    c()
-
-  if (!is.null(clusters) & !is.numeric(clusters)) {
-    message("Converting clusters to numeric factors")
-    clusters <- as.numeric(as.factor(clusters))
-  }
-
-  # Calculate p-values in parallel
-  p_values <- parallel::mclapply(seq_len(nrow(devil.fit$input_matrix)), function(gene_idx) {
-    mu_test <- lfcs[gene_idx]
-    n = dim(devil.fit$input_matrix)[2]
-
-    b = devil:::compute_hessian(devil.fit$beta[gene_idx,],
-                                devil.fit$overdispersion[gene_idx],
-                                devil.fit$input_matrix[gene_idx,],
-                                devil.fit$design_matrix,
-                                devil.fit$size_factors)
-
-    msimple = devil:::compute_meat(
-      devil.fit$design_matrix,
-      devil.fit$input_matrix[gene_idx,],
-      devil.fit$beta[gene_idx,],
-      devil.fit$overdispersion[gene_idx],
-      devil.fit$size_factors
-    )
-
-    H = (b %*% msimple %*% b) * n
-    total_variance <- t(contrast) %*% H %*% contrast
-    p <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
-
-    if (!is.null(clusters)) {
-      m = devil:::compute_clustered_meat(devil.fit$design_matrix,
-                                         devil.fit$input_matrix[gene_idx,],
-                                         devil.fit$beta[gene_idx,],
-                                         devil.fit$overdispersion[gene_idx],
-                                         devil.fit$size_factors,
-                                         clusters)
-      S = (b %*% m %*% b) * n
-      total_variance <- t(contrast) %*% S %*% contrast
-      pnull <- 2 * stats::pt(abs(mu_test) / sqrt(total_variance), df = nsamples - 2, lower.tail = FALSE)
-    } else {
-      pnull <- 0
-    }
-
-    max(p, pnull)
-  }, mc.cores = n.cores) %>% unlist()
-
-  # Create tibble with results
   result_df <- dplyr::tibble(
-    name = rownames(devil.fit$beta),
-    pval = p_values,
+    name     = rownames(devil.fit$beta),
+    pval     = p_values,
     adj_pval = stats::p.adjust(p_values, method = pval_adjust_method),
-    lfc = lfcs / log(2)
+    lfc      = lfcs / log(2)
   )
 
-  # Filter results based on max_lfc
-  result_df <- result_df %>%
+  result_df %>%
     dplyr::mutate(lfc = ifelse(.data$lfc >= max_lfc, max_lfc, .data$lfc)) %>%
     dplyr::mutate(lfc = ifelse(.data$lfc <= -max_lfc, -max_lfc, .data$lfc))
-
-  return(result_df)
 }

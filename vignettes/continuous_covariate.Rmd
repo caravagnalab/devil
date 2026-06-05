@@ -122,7 +122,7 @@ Now, `fit_devil()` takes a count matrix and a design matrix and returns coeffici
 
 ```{r fit_model}
 devil_fit <- devil::fit_devil(
-  input_matrix = grouped_data$input_matrix,
+  x = grouped_data$input_matrix,
   design_matrix = grouped_data$design_matrix,
   clusters = grouped_data$clusters,  # Account for sample-level correlation
   verbose = TRUE,

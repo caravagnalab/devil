@@ -4,11 +4,11 @@
 \name{devil-package}
 \alias{devil}
 \alias{devil-package}
-\title{devil: devil}
+\title{devil: Differential Expression via Negative Binomial GLMs with Sandwich Covariance for Single-Cell RNA-Seq}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-devil is an R package for fast, scalable differential expression analysis of single-cell and single-nucleus RNA-sequencing data. It is designed to operate directly at the cell level while accounting for complex experimental structure. It employs a statistical framework based on generalized linear models with cluster-robust (sandwich) covariance estimators, enabling valid inference in the presence of multi-patient, multi-sample, or repeated-measurement designs. To support analyses at atlas scale, devil combines efficient variational inference with optional GPU acceleration, delivering substantial gains in runtime and memory efficiency while retaining accurate and well-calibrated statistical tests.
+devil is an R package for fast, scalable differential expression analysis of single-cell and single-nucleus RNA-sequencing data. It is designed to operate directly at the cell level while accounting for complex experimental structure. It employs a statistical framework based on generalized linear models with cluster-robust (sandwich) covariance estimators, enabling valid inference in the presence of multi-patient, multi-sample, or repeated-measurement designs. Input can be a raw count matrix, a SingleCellExperiment, or a SummarizedExperiment object. To support analyses at atlas scale, devil combines efficient variational inference with optional GPU acceleration, delivering substantial gains in runtime and memory efficiency while retaining accurate and well-calibrated statistical tests.
 }
 \seealso{
 Useful links:
@@ -19,7 +19,13 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Giovanni Santacatterina \email{santacatterinagiovanni@gmail.com}
+\strong{Maintainer}: Giulio Caravagna \email{gcaravagn@gmail.com} (\href{https://orcid.org/0000-0003-4240-3265}{ORCID})
+
+Authors:
+\itemize{
+  \item Giovanni Santacatterina \email{santacatterinagiovanni@gmail.com} (\href{https://orcid.org/0009-0003-8507-6521}{ORCID})
+  \item Niccolò Tosato (https://github.com/NiccoloTosato)
+}
 
 }
 \keyword{internal}
