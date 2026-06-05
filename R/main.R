@@ -1,3 +1,14 @@
+.extract_matrix_from_x <- function(x, assay.type) {
+  if (is(x, "SummarizedExperiment")) {
+    assay(x, assay.type)
+  } else if (is.matrix(x) || is(x, "Matrix")) {
+    x
+  } else {
+    stop("'x' must be a matrix, SummarizedExperiment, or SingleCellExperiment object.")
+  }
+}
+
+
 #' Fit Statistical Model for Count Data
 #'
 #' @description
@@ -32,7 +43,7 @@
 #'     Requires the edgeR package from Bioconductor.
 #' }
 #' If \code{size_factors = NULL}, no normalization is performed and all size factors are set to 1.
-#' If \code{size_factors} is a vector of precoumpted size_factors, they will be used.
+#' If \code{size_factors} is a numeric vector of precomputed size factors (one per sample), they will be used directly.
 #'
 #' @section Overdispersion Strategies:
 #' The \code{overdispersion} argument controls how gene-wise overdispersion is handled:
@@ -49,11 +60,20 @@
 #'         (overdispersion fixed to 0).
 #' }
 #'
-#' @param input_matrix A numeric matrix of count data (genes x samples).
+#' @param x A numeric matrix of count data (genes x samples), a
+#'   \code{\link[SummarizedExperiment]{SummarizedExperiment}}, or a
+#'   \code{\link[SingleCellExperiment]{SingleCellExperiment}} object.
 #'   Rows represent genes/features, columns represent samples/cells.
+#'   When \code{x} is an SE/SCE object, the assay named by \code{assay.type} is used.
 #' @param design_matrix A numeric matrix of predictor variables (samples x predictors).
 #'   Each row corresponds to a sample, each column to a predictor variable.
-#'   Must have \code{nrow(design_matrix) == ncol(input_matrix)}.
+#'   Must have \code{nrow(design_matrix) == ncol(x)}.
+#' @param assay.type Character. Name of the assay to extract when \code{x} is a
+#'   \code{SummarizedExperiment} or \code{SingleCellExperiment}. Default: \code{"counts"}.
+#' @param clusters Vector of cluster or patient identifiers (one element per cell/sample).
+#'   Cells belonging to the same cluster must be contiguous — use \code{group_data()} to
+#'   sort them first. When provided, enables clustered sandwich covariance estimation.
+#'   Default: \code{NULL}.
 #' @param overdispersion Character or logical. Strategy for estimating overdispersion:
 #'   one of \code{"new"}, \code{"I"}, \code{"old"}, \code{"MLE"}, \code{"MOM"}, or
 #'   \code{FALSE} to disable overdispersion fitting (Poisson model).
@@ -66,13 +86,15 @@
 #'   Default: \code{FALSE}.
 #' @param offset Numeric scalar. Value used when computing the offset vector to avoid
 #'   numerical issues with zero counts. Default: \code{0}.
-#' @param size_factors Character string or \code{NULL}. Method for computing normalization
-#'   factors to account for different sequencing depths. Options are:
+#' @param size_factors Character string, numeric vector, or \code{NULL}. Controls
+#'   normalization for sequencing depth. Options are:
 #'   \itemize{
 #'     \item \code{NULL} (default): No normalization (all size factors set to 1)
 #'     \item \code{"normed_sum"}: Geometric mean normalization
 #'     \item \code{"psinorm"}: Psi-normalization
 #'     \item \code{"edgeR"}: edgeR TMM method
+#'     \item A numeric vector of length \code{ncol(x)}: precomputed size
+#'       factors used directly without further normalization
 #'   }
 #' @param verbose Logical. Whether to print progress messages during execution.
 #'   Default: \code{FALSE}.
@@ -84,13 +106,16 @@
 #'   a compiled \code{beta_fit_gpu()} implementation). Default: \code{FALSE}.
 #' @param batch_size Integer. Number of genes to process per batch in GPU mode.
 #'   Only relevant if \code{CUDA = TRUE}. Default: \code{1024}.
-#' @param parallel.cores Integer or \code{NULL}. Number of CPU cores for parallel
-#'   processing with \code{parallel::mclapply}. If \code{NULL}, uses all available cores.
-#'   Default: \code{1}.
+#' @param BPPARAM A \code{\link[BiocParallel]{BiocParallelParam}} object controlling
+#'   parallel evaluation. Default: \code{BiocParallel::SerialParam()}.
 #'
 #' @return A list containing:
 #' \describe{
 #'   \item{beta}{Matrix of fitted coefficients (genes x predictors).}
+#'   \item{beta_sandwiches_null}{List of per-gene Hessian inverse matrices (\eqn{H^{-1}}).}
+#'   \item{beta_sandwiches}{List of per-gene clustered sandwich matrices
+#'         (\eqn{H^{-1} M H^{-1} \times n\_samples}); \code{NULL} entries when no
+#'         \code{clusters} are provided.}
 #'   \item{overdispersion}{Vector of fitted overdispersion parameters (one per gene).}
 #'   \item{iterations}{List with elements \code{beta_iters} and \code{theta_iters}
 #'         giving the number of iterations used for each gene.}
@@ -99,7 +124,7 @@
 #'   \item{design_matrix}{Input design matrix (as provided, possibly coerced to numeric matrix).}
 #'   \item{input_matrix}{Input count matrix (as provided, possibly coerced to numeric matrix).}
 #'   \item{input_parameters}{List of used parameter values
-#'         (\code{max_iter}, \code{tolerance}, \code{parallel.cores}).}
+#'         (\code{max_iter}, \code{tolerance}).}
 #' }
 #'
 #' @examples
@@ -118,19 +143,28 @@
 #' design <- model.matrix(~ 0 + group)
 #' colnames(design) <- levels(group)
 #'
-#' # Fit the model
+#' # Fit from a raw matrix
 #' fit <- fit_devil(
-#'     input_matrix  = counts,
+#'     x             = counts,
 #'     design_matrix = design,
-#'     size_factors  = "normed_sum",
-#'     verbose       = TRUE
+#'     size_factors  = "normed_sum"
+#' )
+#'
+#' ## Example: fit from a SingleCellExperiment object
+#' library(SingleCellExperiment)
+#' sce <- SingleCellExperiment(assays = list(counts = counts))
+#' fit_sce <- fit_devil(
+#'     x             = sce,
+#'     design_matrix = design,
+#'     assay.type    = "counts"
 #' )
 #'
 #' @export
 #' @rawNamespace useDynLib(devil);
 fit_devil <- function(
-    input_matrix,
+    x,
     design_matrix,
+    assay.type = "counts",
     clusters = NULL,
     overdispersion = "MOM",
     init_overdispersion = NULL,
@@ -142,8 +176,11 @@ fit_devil <- function(
     tolerance = 1e-3,
     CUDA = FALSE,
     batch_size = 1024L,
-    parallel.cores = 1
+    BPPARAM = BiocParallel::SerialParam()
 ) {
+  # - Resolve input matrix from x (matrix, SummarizedExperiment, or SingleCellExperiment)
+  input_matrix <- .extract_matrix_from_x(x, assay.type)
+
   # - Input parameters ----
   gene_names <- rownames(input_matrix)
   ngenes     <- nrow(input_matrix)
@@ -156,17 +193,6 @@ fit_devil <- function(
     cluster_blocks_indexes <- cumsum(rle(clusters)$lengths)
   } else {
     cluster_blocks_indexes <- NULL
-  }
-  
-  # Detect cores to use
-  max.cores <- parallel::detectCores()
-  if (is.null(parallel.cores)) {
-    n.cores <- max.cores
-  } else {
-    if (parallel.cores > max.cores) {
-      message("Requested ", parallel.cores, " cores, but only ", max.cores, " available.")
-    }
-    n.cores <- min(max.cores, parallel.cores)
   }
   
   # Check if CUDA is available
@@ -189,9 +215,9 @@ fit_devil <- function(
   
   # - Compute size factors ----
   if (!is.null(size_factors)) {
-    if (class(size_factors) == "character") {
+    if (is.character(size_factors)) {
       if (verbose) message("Compute size factors")
-      sf <- devil:::calculate_sf(input_matrix, method = size_factors, verbose = verbose)  
+      sf <- calculate_sf(input_matrix, method = size_factors, verbose = verbose)  
     } else {
       if (verbose) message("Using pre-computed size factors")
       sf <- size_factors
@@ -201,7 +227,7 @@ fit_devil <- function(
   }
   
   # - Compute offset vector ----
-  offset_vector <- devil:::compute_offset_vector(offset, input_matrix, sf)
+  offset_vector <- compute_offset_vector(offset, input_matrix, sf)
   
   # - GPU vs CPU branch ----
   if (CUDA & CUDA_is_available) {
@@ -225,7 +251,7 @@ fit_devil <- function(
       init_overdispersion    = init_overdispersion,
       init_beta_rough        = init_beta_rough,
       overdispersion         = overdispersion,
-      n.cores                = n.cores,
+      BPPARAM                = BPPARAM,
       max_iter               = max_iter,
       tolerance              = tolerance,
       verbose                = verbose
@@ -242,7 +268,7 @@ fit_devil <- function(
     offset_vector        = offset_vector,
     design_matrix        = design_matrix,
     input_matrix         = input_matrix,
-    input_parameters     = list(max_iter = max_iter, tolerance = tolerance, parallel.cores = n.cores)
+    input_parameters     = list(max_iter = max_iter, tolerance = tolerance)
   ))
 }
 
@@ -349,12 +375,12 @@ gpu_fit <- function(
 cpu_fit <- function(
     input_matrix,
     design_matrix,
-    cluster_blocks_indexes,
+    cluster_blocks_indexes = NULL,
     offset_vector,
     init_overdispersion,
     init_beta_rough,
     overdispersion,
-    n.cores,
+    BPPARAM = BiocParallel::SerialParam(),
     max_iter,
     tolerance,
     verbose
@@ -368,7 +394,7 @@ cpu_fit <- function(
   # Initialize dispersion
   if (verbose) message("Initialize theta")
   if (is.null(init_overdispersion)) {
-    dispersion_init <- devil:::estimate_dispersion(input_matrix, offset_vector)
+    dispersion_init <- estimate_dispersion(input_matrix, offset_vector)
   } else {
     dispersion_init <- rep(init_overdispersion, ngenes)
   }
@@ -384,13 +410,13 @@ cpu_fit <- function(
   
   if (verbose) message("Fitting expression coefficients and overdispersion")
   
-  results_list <- parallel::mclapply(
-    X        = seq_len(ngenes),
-    mc.cores = n.cores,
-    FUN = function(i) {
+  results_list <- BiocParallel::bplapply(
+    X       = seq_len(ngenes),
+    BPPARAM = BPPARAM,
+    FUN     = function(i) {
       
       # Step A: Fit beta
-      fit <- devil:::beta_fit(
+      fit <- beta_fit(
         y        = input_matrix[i, ],
         X        = design_matrix,
         mu_beta  = beta_0[i, ],
@@ -403,6 +429,7 @@ cpu_fit <- function(
       
       # Step B: Fit theta
       curr_theta <- dispersion_init[i]
+      curr_theta_iters <- NA_integer_
       if (overdispersion %in% c("old", "MLE")) {
         curr_theta <- fit_dispersion(
           beta                    = curr_beta,
@@ -413,21 +440,35 @@ cpu_fit <- function(
           max_iter                = max_iter,
           do_cox_reid_adjustment  = TRUE
         )
+      } else if (overdispersion %in% c("new", "I")) {
+        od_res <- fit_overdispersion_cppp(
+          y        = input_matrix[i, ],
+          X        = design_matrix,
+          mu_beta  = curr_beta,
+          off      = offset_vector,
+          kappa    = dispersion_init[i],
+          max_iter = max_iter,
+          eps_theta = tolerance
+        )
+        curr_theta       <- od_res$kappa
+        curr_theta_iters <- as.integer(od_res$kappa_iters)
       } else if (overdispersion == "MOM") {
-        curr_theta <- devil:::estimate_mom_dispersion_cpp(
+        curr_theta <- estimate_mom_dispersion_cpp(
           count_matrix  = matrix(input_matrix[i, ], nrow = 1),
           design_matrix = design_matrix,
           beta_matrix   = matrix(curr_beta, nrow = 1),
           sf            = exp_offset
         )
+        curr_theta_iters <- 0L
       } else if (isFALSE(overdispersion)) {
-        curr_theta <- 0
+        curr_theta       <- 0
+        curr_theta_iters <- 0L
       } else {
         stop("Unknown overdispersion mode: ", overdispersion)
       }
       
       # Step C: Hessian inverse (used as s_null, matching GPU convention)
-      bread  <- devil:::compute_hessian(
+      bread  <- compute_hessian(
         beta           = curr_beta,
         overdispersion = curr_theta,
         y              = input_matrix[i, ],
@@ -439,7 +480,7 @@ cpu_fit <- function(
       # Step D: Clustered sandwich
       s_clust <- NULL
       if (!is.null(cluster_blocks_indexes)) {
-        meat_clust <- devil:::compute_clustered_meat_fast(
+        meat_clust <- compute_clustered_meat_fast(
           design_matrix          = design_matrix,
           y                      = input_matrix[i, ],
           beta                   = curr_beta,
@@ -451,29 +492,31 @@ cpu_fit <- function(
       }
       
       return(list(
-        beta    = curr_beta,
-        theta   = curr_theta,
-        iter    = fit$iter,
-        s_null  = s_null,   # H⁻¹
-        s_clust = s_clust   # H⁻¹ M H⁻¹ * n  (NULL if no clusters)
+        beta        = curr_beta,
+        theta       = curr_theta,
+        iter        = fit$iter,
+        theta_iters = curr_theta_iters,
+        s_null      = s_null,
+        s_clust     = s_clust
       ))
     }
   )
   
   if (verbose) message("Aggregating results")
-  
-  final_beta  <- do.call(rbind, lapply(results_list, `[[`, "beta"))
-  final_theta <- vapply(results_list, `[[`, numeric(1),  "theta")
-  final_iters <- vapply(results_list, `[[`, integer(1),  "iter")
-  s_null_list  <- lapply(results_list, `[[`, "s_null")
-  s_clust_list <- lapply(results_list, `[[`, "s_clust")
-  
+
+  final_beta        <- do.call(rbind, lapply(results_list, `[[`, "beta"))
+  final_theta       <- vapply(results_list, `[[`, numeric(1),  "theta")
+  final_iters       <- vapply(results_list, `[[`, integer(1),  "iter")
+  final_theta_iters <- vapply(results_list, `[[`, integer(1),  "theta_iters")
+  s_null_list       <- lapply(results_list, `[[`, "s_null")
+  s_clust_list      <- lapply(results_list, `[[`, "s_clust")
+
   rownames(final_beta) <- rownames(input_matrix)
-  
+
   return(list(
     beta                 = final_beta,
     theta                = final_theta,
-    iterations           = final_iters,
+    iterations           = list(beta_iters = final_iters, theta_iters = final_theta_iters),
     beta_sandwiches_null = s_null_list,
     beta_sandwiches      = s_clust_list
   ))

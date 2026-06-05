@@ -1,0 +1,12 @@
+citEntry(
+  entry    = "Manual",
+  title    = "devil: Differential Expression via Negative Binomial GLMs with Sandwich Covariance for Single-Cell RNA-Seq",
+  author   = person("Giovanni", "Santacatterina"),
+  year     = "2026",
+  url      = "https://caravagnalab.github.io/devil/",
+  textVersion = paste(
+    "Santacatterina G. (2026).",
+    "devil: Differential Expression via Negative Binomial GLMs with Sandwich Covariance for Single-Cell RNA-Seq.",
+    "https://caravagnalab.github.io/devil/"
+  )
+)

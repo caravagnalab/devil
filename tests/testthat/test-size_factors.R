@@ -141,19 +141,6 @@ test_that("edgeR_sf roughly increases with column scaling", {
     expect_true(sf[2] > sf[1])
 })
 
-test_that("compute_offset_matrix returns constant offset when no size_factors", {
-    skip_if_not_installed("DelayedArray")
-
-    off <- 2.5
-    Y <- matrix(0, nrow = 3, ncol = 4)
-
-    offset_mat <- compute_offset_matrix(off, Y, size_factors = NULL)
-    offset_mat <- as.matrix(offset_mat)
-
-    expect_equal(dim(offset_mat), dim(Y))
-    expect_true(all(offset_mat == off))
-})
-
 test_that("compute_offset_vector returns constant vector when no size_factors", {
     off <- 1.2
     Y <- matrix(0, nrow = 5, ncol = 4)
@@ -175,18 +162,3 @@ test_that("compute_offset_vector correctly incorporates size_factors", {
     expect_equal(off_vec, off + log(sf))
 })
 
-test_that("compute_offset_matrix and compute_offset_vector are consistent per sample", {
-    skip_if_not_installed("DelayedArray")
-
-    off <- 0
-    Y <- matrix(0, nrow = 3, ncol = 4)
-    sf <- c(1, 2, 3, 4)
-
-    mat <- as.matrix(compute_offset_matrix(off, Y, size_factors = sf))
-    vec <- compute_offset_vector(off, Y, size_factors = sf)
-
-    # Every row of mat should equal vec
-    for (i in seq_len(nrow(mat))) {
-        expect_equal(mat[i, ], vec)
-    }
-})

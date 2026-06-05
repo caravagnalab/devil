@@ -23,3 +23,7 @@ docs
 src/*.o
 src/*.so
 inst/doc
+/doc/
+/Meta/
+*.BiocCheck
+inst/doc
