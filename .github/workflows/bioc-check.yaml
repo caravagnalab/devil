@@ -21,7 +21,7 @@ jobs:
         with:
           extra-packages: |
             any::rcmdcheck
-            bioc::BiocCheck
+            any::BiocCheck
           needs: check
 
       - name: Run BiocCheck
