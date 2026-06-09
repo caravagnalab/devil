@@ -117,9 +117,9 @@ colnames(design)
 *(Optional) Cluster variable for patient-aware SEs, if available:*
 
 ```{r}
-cluster <- NULL
-if ("donor" %in% names(meta)) cluster <- factor(meta$donor)
-if (is.null(cluster) && "patient" %in% names(meta)) cluster <- factor(meta$patient)
+clusters <- NULL
+if ("donor" %in% names(meta)) clusters <- factor(meta$donor)
+if (is.null(clusters) && "patient" %in% names(meta)) clusters <- factor(meta$patient)
 ```
 
 ## Fit the model
@@ -128,13 +128,14 @@ if (is.null(cluster) && "patient" %in% names(meta)) cluster <- factor(meta$patie
 
 ```{r}
 fit <- devil::fit_devil(
-    input_matrix = as.matrix(counts),
+    x = as.matrix(counts),
     design_matrix = design,
+    clusters = as.factor(clusters),
     overdispersion = "MOM",
     offset = 1e-6,
     init_overdispersion = NULL,
     size_factors = "normed_sum",
-    parallel.cores = 1,
+    
     verbose = TRUE,
     max_iter = 200,
     tolerance = 1e-4
@@ -170,8 +171,7 @@ Run a Wald test with optional **clustered SEs** if `cluster` exists.
 test <- devil::test_de(
     fit,
     contrast = contrast,
-    max_lfc  = 20, # Cap extreme fold changes
-    cluster  = cluster # NULL if not present; enables patient-aware SE if provided
+    max_lfc  = 10 # Cap extreme fold changes
 )
 
 # Add gene names if missing

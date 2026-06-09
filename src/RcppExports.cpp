@@ -83,6 +83,66 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// precompute_outer
+std::vector<Eigen::MatrixXd> precompute_outer(Eigen::MatrixXd X_unique);
+RcppExport SEXP _devil_precompute_outer(SEXP X_uniqueSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X_unique(X_uniqueSEXP);
+    rcpp_result_gen = Rcpp::wrap(precompute_outer(X_unique));
+    return rcpp_result_gen;
+END_RCPP
+}
+// beta_fit_fast
+List beta_fit_fast(Eigen::VectorXd y, Eigen::MatrixXd X_unique, Eigen::VectorXi idx, Eigen::VectorXd off, Rcpp::List outer_list, Eigen::VectorXd mu_beta, float k, int max_iter, float eps);
+RcppExport SEXP _devil_beta_fit_fast(SEXP ySEXP, SEXP X_uniqueSEXP, SEXP idxSEXP, SEXP offSEXP, SEXP outer_listSEXP, SEXP mu_betaSEXP, SEXP kSEXP, SEXP max_iterSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type y(ySEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X_unique(X_uniqueSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXi >::type idx(idxSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type off(offSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type outer_list(outer_listSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
+    Rcpp::traits::input_parameter< float >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< float >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(beta_fit_fast(y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
+// beta_fit_fast_optimized
+List beta_fit_fast_optimized(const Eigen::VectorXd& y, const Eigen::MatrixXd& X_unique, const Eigen::VectorXi& idx, const Eigen::VectorXd& off, const Rcpp::List& outer_list, Eigen::VectorXd mu_beta, double k, int max_iter, double eps);
+RcppExport SEXP _devil_beta_fit_fast_optimized(SEXP ySEXP, SEXP X_uniqueSEXP, SEXP idxSEXP, SEXP offSEXP, SEXP outer_listSEXP, SEXP mu_betaSEXP, SEXP kSEXP, SEXP max_iterSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X_unique(X_uniqueSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXi& >::type idx(idxSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type off(offSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type outer_list(outer_listSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
+    Rcpp::traits::input_parameter< double >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(beta_fit_fast_optimized(y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compress_design_matrix
+List compress_design_matrix(const Eigen::MatrixXd& X);
+RcppExport SEXP _devil_compress_design_matrix(SEXP XSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X(XSEXP);
+    rcpp_result_gen = Rcpp::wrap(compress_design_matrix(X));
+    return rcpp_result_gen;
+END_RCPP
+}
 // initialize_beta_univariate_matrix_cpp
 Rcpp::NumericMatrix initialize_beta_univariate_matrix_cpp(const Rcpp::NumericMatrix& X, const Rcpp::NumericMatrix& Y, const Rcpp::NumericVector& sf);
 RcppExport SEXP _devil_initialize_beta_univariate_matrix_cpp(SEXP XSEXP, SEXP YSEXP, SEXP sfSEXP) {
@@ -93,6 +153,118 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type Y(YSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type sf(sfSEXP);
     rcpp_result_gen = Rcpp::wrap(initialize_beta_univariate_matrix_cpp(X, Y, sf));
+    return rcpp_result_gen;
+END_RCPP
+}
+// preprocess_data
+List preprocess_data(Eigen::VectorXd y, Eigen::MatrixXd X, Eigen::VectorXd off);
+RcppExport SEXP _devil_preprocess_data(SEXP ySEXP, SEXP XSEXP, SEXP offSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type y(ySEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type off(offSEXP);
+    rcpp_result_gen = Rcpp::wrap(preprocess_data(y, X, off));
+    return rcpp_result_gen;
+END_RCPP
+}
+// beta_fit_efficient
+List beta_fit_efficient(Eigen::VectorXd y_sums, Eigen::VectorXd counts, Eigen::MatrixXd X, Eigen::VectorXd mu_beta, Eigen::VectorXd off, float k, int max_iter, float eps);
+RcppExport SEXP _devil_beta_fit_efficient(SEXP y_sumsSEXP, SEXP countsSEXP, SEXP XSEXP, SEXP mu_betaSEXP, SEXP offSEXP, SEXP kSEXP, SEXP max_iterSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type y_sums(y_sumsSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type counts(countsSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type X(XSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type mu_beta(mu_betaSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type off(offSEXP);
+    Rcpp::traits::input_parameter< float >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< float >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(beta_fit_efficient(y_sums, counts, X, mu_beta, off, k, max_iter, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
+// estimate_mom_dispersion_efficient
+double estimate_mom_dispersion_efficient(const Eigen::VectorXd& y_sums_vec, const Eigen::VectorXd& y_sq_sums_vec, const Eigen::MatrixXd& X_unique, const Eigen::VectorXd& sf_unique, const Eigen::VectorXd& counts, const Eigen::VectorXd& beta_g, int N_total);
+RcppExport SEXP _devil_estimate_mom_dispersion_efficient(SEXP y_sums_vecSEXP, SEXP y_sq_sums_vecSEXP, SEXP X_uniqueSEXP, SEXP sf_uniqueSEXP, SEXP countsSEXP, SEXP beta_gSEXP, SEXP N_totalSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y_sums_vec(y_sums_vecSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y_sq_sums_vec(y_sq_sums_vecSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X_unique(X_uniqueSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type sf_unique(sf_uniqueSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type counts(countsSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta_g(beta_gSEXP);
+    Rcpp::traits::input_parameter< int >::type N_total(N_totalSEXP);
+    rcpp_result_gen = Rcpp::wrap(estimate_mom_dispersion_efficient(y_sums_vec, y_sq_sums_vec, X_unique, sf_unique, counts, beta_g, N_total));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_hessian_efficient
+Eigen::MatrixXd compute_hessian_efficient(const Eigen::VectorXd& beta, const double overdispersion, const Eigen::VectorXd& y_sums, const Eigen::VectorXd& counts, const Eigen::MatrixXd& X_unique, const Eigen::VectorXd& sf_unique);
+RcppExport SEXP _devil_compute_hessian_efficient(SEXP betaSEXP, SEXP overdispersionSEXP, SEXP y_sumsSEXP, SEXP countsSEXP, SEXP X_uniqueSEXP, SEXP sf_uniqueSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const double >::type overdispersion(overdispersionSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y_sums(y_sumsSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type counts(countsSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X_unique(X_uniqueSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type sf_unique(sf_uniqueSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_hessian_efficient(beta, overdispersion, y_sums, counts, X_unique, sf_unique));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_scores_efficient
+Eigen::MatrixXd compute_scores_efficient(const Eigen::MatrixXd& X_unique, const Eigen::VectorXd& y_sums, const Eigen::VectorXd& counts, const Eigen::VectorXd& beta, const double overdispersion, const Eigen::VectorXd& sf_unique);
+RcppExport SEXP _devil_compute_scores_efficient(SEXP X_uniqueSEXP, SEXP y_sumsSEXP, SEXP countsSEXP, SEXP betaSEXP, SEXP overdispersionSEXP, SEXP sf_uniqueSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X_unique(X_uniqueSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y_sums(y_sumsSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type counts(countsSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const double >::type overdispersion(overdispersionSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type sf_unique(sf_uniqueSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_scores_efficient(X_unique, y_sums, counts, beta, overdispersion, sf_unique));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_clustered_meat_efficient
+Eigen::MatrixXd compute_clustered_meat_efficient(const Eigen::MatrixXd& X_unique, const Eigen::VectorXd& y_sums_per_group_cluster, const Eigen::VectorXd& counts_per_group_cluster, const Eigen::VectorXi& group_to_cluster_map, const Eigen::VectorXd& beta, const double overdispersion, const Eigen::VectorXd& sf_unique_per_pair, int num_clusters, int N_total);
+RcppExport SEXP _devil_compute_clustered_meat_efficient(SEXP X_uniqueSEXP, SEXP y_sums_per_group_clusterSEXP, SEXP counts_per_group_clusterSEXP, SEXP group_to_cluster_mapSEXP, SEXP betaSEXP, SEXP overdispersionSEXP, SEXP sf_unique_per_pairSEXP, SEXP num_clustersSEXP, SEXP N_totalSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X_unique(X_uniqueSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y_sums_per_group_cluster(y_sums_per_group_clusterSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type counts_per_group_cluster(counts_per_group_clusterSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXi& >::type group_to_cluster_map(group_to_cluster_mapSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const double >::type overdispersion(overdispersionSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type sf_unique_per_pair(sf_unique_per_pairSEXP);
+    Rcpp::traits::input_parameter< int >::type num_clusters(num_clustersSEXP);
+    Rcpp::traits::input_parameter< int >::type N_total(N_totalSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_clustered_meat_efficient(X_unique, y_sums_per_group_cluster, counts_per_group_cluster, group_to_cluster_map, beta, overdispersion, sf_unique_per_pair, num_clusters, N_total));
+    return rcpp_result_gen;
+END_RCPP
+}
+// aggregate_vector_by_group_efficient
+Rcpp::List aggregate_vector_by_group_efficient(const Eigen::VectorXd& y, const Eigen::VectorXi& mapping, int n_groups);
+RcppExport SEXP _devil_aggregate_vector_by_group_efficient(SEXP ySEXP, SEXP mappingSEXP, SEXP n_groupsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXi& >::type mapping(mappingSEXP);
+    Rcpp::traits::input_parameter< int >::type n_groups(n_groupsSEXP);
+    rcpp_result_gen = Rcpp::wrap(aggregate_vector_by_group_efficient(y, mapping, n_groups));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -284,6 +456,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// compute_clustered_meat_fast
+Eigen::MatrixXd compute_clustered_meat_fast(const Eigen::MatrixXd& design_matrix, const Eigen::VectorXd& y, const Eigen::VectorXd& beta, const double overdispersion, const Eigen::VectorXd& size_factors, const Eigen::VectorXi& cluster_blocks_indexes);
+RcppExport SEXP _devil_compute_clustered_meat_fast(SEXP design_matrixSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP overdispersionSEXP, SEXP size_factorsSEXP, SEXP cluster_blocks_indexesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type design_matrix(design_matrixSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const double >::type overdispersion(overdispersionSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type size_factors(size_factorsSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXi& >::type cluster_blocks_indexes(cluster_blocks_indexesSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_clustered_meat_fast(design_matrix, y, beta, overdispersion, size_factors, cluster_blocks_indexes));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_devil_init_beta", (DL_FUNC) &_devil_init_beta, 2},
@@ -291,7 +479,18 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_beta_fit_group", (DL_FUNC) &_devil_beta_fit_group, 6},
     {"_devil_lte_n_equal_rows", (DL_FUNC) &_devil_lte_n_equal_rows, 3},
     {"_devil_get_row_groups", (DL_FUNC) &_devil_get_row_groups, 3},
+    {"_devil_precompute_outer", (DL_FUNC) &_devil_precompute_outer, 1},
+    {"_devil_beta_fit_fast", (DL_FUNC) &_devil_beta_fit_fast, 9},
+    {"_devil_beta_fit_fast_optimized", (DL_FUNC) &_devil_beta_fit_fast_optimized, 9},
+    {"_devil_compress_design_matrix", (DL_FUNC) &_devil_compress_design_matrix, 1},
     {"_devil_initialize_beta_univariate_matrix_cpp", (DL_FUNC) &_devil_initialize_beta_univariate_matrix_cpp, 3},
+    {"_devil_preprocess_data", (DL_FUNC) &_devil_preprocess_data, 3},
+    {"_devil_beta_fit_efficient", (DL_FUNC) &_devil_beta_fit_efficient, 8},
+    {"_devil_estimate_mom_dispersion_efficient", (DL_FUNC) &_devil_estimate_mom_dispersion_efficient, 7},
+    {"_devil_compute_hessian_efficient", (DL_FUNC) &_devil_compute_hessian_efficient, 6},
+    {"_devil_compute_scores_efficient", (DL_FUNC) &_devil_compute_scores_efficient, 6},
+    {"_devil_compute_clustered_meat_efficient", (DL_FUNC) &_devil_compute_clustered_meat_efficient, 9},
+    {"_devil_aggregate_vector_by_group_efficient", (DL_FUNC) &_devil_aggregate_vector_by_group_efficient, 3},
     {"_devil_estimate_mom_dispersion_cpp", (DL_FUNC) &_devil_estimate_mom_dispersion_cpp, 4},
     {"_devil_H_log_gh_cpp", (DL_FUNC) &_devil_H_log_gh_cpp, 6},
     {"_devil_H_log_gh_pmhalf", (DL_FUNC) &_devil_H_log_gh_pmhalf, 5},
@@ -304,6 +503,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_compute_scores", (DL_FUNC) &_devil_compute_scores, 5},
     {"_devil_compute_clustered_meat", (DL_FUNC) &_devil_compute_clustered_meat, 6},
     {"_devil_compute_meat", (DL_FUNC) &_devil_compute_meat, 5},
+    {"_devil_compute_clustered_meat_fast", (DL_FUNC) &_devil_compute_clustered_meat_fast, 6},
     {NULL, NULL, 0}
 };
 

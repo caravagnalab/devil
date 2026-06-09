@@ -1,27 +1,41 @@
 Package: devil
-Title: devil
+Title: Differential Expression via Negative Binomial GLMs with Sandwich Covariance for Single-Cell RNA-Seq
 Version: 0.99.0
-Authors@R: c(person("Giovanni", "Santacatterina", role=c("aut", "cre"), email="santacatterinagiovanni@gmail.com"))
-Description: devil is an R package for fast, scalable differential expression analysis of single-cell and single-nucleus RNA-sequencing data. It is designed to operate directly at the cell level while accounting for complex experimental structure. It employs a statistical framework based on generalized linear models with cluster-robust (sandwich) covariance estimators, enabling valid inference in the presence of multi-patient, multi-sample, or repeated-measurement designs. To support analyses at atlas scale, devil combines efficient variational inference with optional GPU acceleration, delivering substantial gains in runtime and memory efficiency while retaining accurate and well-calibrated statistical tests.
+Authors@R: c(
+    person("Giovanni", "Santacatterina", , "santacatterinagiovanni@gmail.com",
+           role = "aut",
+           comment = c(ORCID = "0009-0003-8507-6521")),
+    person("Niccolò", "Tosato",
+           role = "aut",
+           comment = c(github = "https://github.com/NiccoloTosato")),
+    person("Giulio", "Caravagna", , "gcaravagn@gmail.com",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-4240-3265"))
+    )
+Description: devil is an R package for fast, scalable differential expression analysis of single-cell and single-nucleus RNA-sequencing data. It is designed to operate directly at the cell level while accounting for complex experimental structure. It employs a statistical framework based on generalized linear models with cluster-robust (sandwich) covariance estimators, enabling valid inference in the presence of multi-patient, multi-sample, or repeated-measurement designs. Input can be a raw count matrix, a SingleCellExperiment, or a SummarizedExperiment object. To support analyses at atlas scale, devil combines efficient variational inference with optional GPU acceleration, delivering substantial gains in runtime and memory efficiency while retaining accurate and well-calibrated statistical tests.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Imports: 
-    DelayedArray,
+Imports:
+    BiocParallel,
     DelayedMatrixStats,
     dplyr,
     ggplot2,
     magrittr,
+    methods,
     Rcpp (>= 1.0.12),
     rlang,
-    stats
+    stats,
+    SummarizedExperiment
 Suggests:
-    scRNAseq,
+    DelayedArray,
     edgeR,
     ggpubr,
-    testthat (>= 3.0.0),
     knitr,
-    rmarkdown, 
-    pheatmap
+    pheatmap,
+    rmarkdown,
+    scRNAseq,
+    SingleCellExperiment,
+    testthat (>= 3.0.0)
 LinkingTo: 
     Rcpp,
     RcppArmadillo,

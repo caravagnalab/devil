@@ -5,8 +5,10 @@
 \title{Fit Statistical Model for Count Data}
 \usage{
 fit_devil(
-  input_matrix,
+  x,
   design_matrix,
+  assay.type = "counts",
+  clusters = NULL,
   overdispersion = "MOM",
   init_overdispersion = NULL,
   init_beta_rough = FALSE,
@@ -17,16 +19,27 @@ fit_devil(
   tolerance = 0.001,
   CUDA = FALSE,
   batch_size = 1024L,
-  parallel.cores = 1
+  BPPARAM = BiocParallel::SerialParam()
 )
 }
 \arguments{
-\item{input_matrix}{A numeric matrix of count data (genes × samples).
-Rows represent genes/features, columns represent samples/cells.}
+\item{x}{A numeric matrix of count data (genes x samples), a
+\code{\link[SummarizedExperiment]{SummarizedExperiment}}, or a
+\code{\link[SingleCellExperiment]{SingleCellExperiment}} object.
+Rows represent genes/features, columns represent samples/cells.
+When \code{x} is an SE/SCE object, the assay named by \code{assay.type} is used.}
 
-\item{design_matrix}{A numeric matrix of predictor variables (samples × predictors).
+\item{design_matrix}{A numeric matrix of predictor variables (samples x predictors).
 Each row corresponds to a sample, each column to a predictor variable.
-Must have \code{nrow(design_matrix) == ncol(input_matrix)}.}
+Must have \code{nrow(design_matrix) == ncol(x)}.}
+
+\item{assay.type}{Character. Name of the assay to extract when \code{x} is a
+\code{SummarizedExperiment} or \code{SingleCellExperiment}. Default: \code{"counts"}.}
+
+\item{clusters}{Vector of cluster or patient identifiers (one element per cell/sample).
+Cells belonging to the same cluster must be contiguous — use \code{group_data()} to
+sort them first. When provided, enables clustered sandwich covariance estimation.
+Default: \code{NULL}.}
 
 \item{overdispersion}{Character or logical. Strategy for estimating overdispersion:
 one of \code{"new"}, \code{"I"}, \code{"old"}, \code{"MLE"}, \code{"MOM"}, or
@@ -38,19 +51,21 @@ overdispersion parameter used as a starting point for the iterative procedures.
 If \code{NULL}, an initial value is estimated from the data via \code{estimate_dispersion()}.
 Recommended value if specified: \code{100}. Default: \code{NULL}.}
 
-\item{init_beta_rough}{Logial. Whether to initialize betas in a rough but extremely fast way.
+\item{init_beta_rough}{Logical. Whether to initialize betas in a rough but extremely fast way.
 Default: \code{FALSE}.}
 
 \item{offset}{Numeric scalar. Value used when computing the offset vector to avoid
 numerical issues with zero counts. Default: \code{0}.}
 
-\item{size_factors}{Character string or \code{NULL}. Method for computing normalization
-factors to account for different sequencing depths. Options are:
+\item{size_factors}{Character string, numeric vector, or \code{NULL}. Controls
+normalization for sequencing depth. Options are:
 \itemize{
-\item \code{NULL} (default):  No normalization (all size factors set to 1)
+\item \code{NULL} (default): No normalization (all size factors set to 1)
 \item \code{"normed_sum"}: Geometric mean normalization
 \item \code{"psinorm"}: Psi-normalization
 \item \code{"edgeR"}: edgeR TMM method
+\item A numeric vector of length \code{ncol(x)}: precomputed size
+factors used directly without further normalization
 }}
 
 \item{verbose}{Logical. Whether to print progress messages during execution.
@@ -68,14 +83,17 @@ a compiled \code{beta_fit_gpu()} implementation). Default: \code{FALSE}.}
 \item{batch_size}{Integer. Number of genes to process per batch in GPU mode.
 Only relevant if \code{CUDA = TRUE}. Default: \code{1024}.}
 
-\item{parallel.cores}{Integer or \code{NULL}. Number of CPU cores for parallel
-processing with \code{parallel::mclapply}. If \code{NULL}, uses all available cores.
-Default: \code{1}.}
+\item{BPPARAM}{A \code{\link[BiocParallel]{BiocParallelParam}} object controlling
+parallel evaluation. Default: \code{BiocParallel::SerialParam()}.}
 }
 \value{
 A list containing:
 \describe{
-\item{beta}{Matrix of fitted coefficients (genes × predictors).}
+\item{beta}{Matrix of fitted coefficients (genes x predictors).}
+\item{beta_sandwiches_null}{List of per-gene Hessian inverse matrices (\eqn{H^{-1}}).}
+\item{beta_sandwiches}{List of per-gene clustered sandwich matrices
+(\eqn{H^{-1} M H^{-1} \times n\_samples}); \code{NULL} entries when no
+\code{clusters} are provided.}
 \item{overdispersion}{Vector of fitted overdispersion parameters (one per gene).}
 \item{iterations}{List with elements \code{beta_iters} and \code{theta_iters}
 giving the number of iterations used for each gene.}
@@ -84,7 +102,7 @@ giving the number of iterations used for each gene.}
 \item{design_matrix}{Input design matrix (as provided, possibly coerced to numeric matrix).}
 \item{input_matrix}{Input count matrix (as provided, possibly coerced to numeric matrix).}
 \item{input_parameters}{List of used parameter values
-(\code{max_iter}, \code{tolerance}, \code{parallel.cores}).}
+(\code{max_iter}, \code{tolerance}).}
 }
 }
 \description{
@@ -120,6 +138,7 @@ More robust to highly variable genes.
 Requires the edgeR package from Bioconductor.
 }
 If \code{size_factors = NULL}, no normalization is performed and all size factors are set to 1.
+If \code{size_factors} is a numeric vector of precomputed size factors (one per sample), they will be used directly.
 }
 
 \section{Overdispersion Strategies}{
@@ -127,7 +146,7 @@ If \code{size_factors = NULL}, no normalization is performed and all size factor
 The \code{overdispersion} argument controls how gene-wise overdispersion is handled:
 \itemize{
 \item \code{"old"} or \code{"MLE"}: Overdispersion is fit via the original (legacy) NB
-MLE-based procedure (with Cox–Reid adjustment inside \code{fit_dispersion()}).
+MLE-based procedure (with Cox-Reid adjustment inside \code{fit_dispersion()}).
 \item \code{"new"} or \code{"I"}: Overdispersion is fit via the new iterative NB
 routine implemented in \code{fit_overdispersion_cppp()}, typically faster and
 more stable for large single-cell datasets.
@@ -155,12 +174,20 @@ group <- factor(rep(c("A", "B"), each = 5))
 design <- model.matrix(~ 0 + group)
 colnames(design) <- levels(group)
 
-# Fit the model
+# Fit from a raw matrix
 fit <- fit_devil(
-    input_matrix  = counts,
+    x             = counts,
     design_matrix = design,
-    size_factors  = "normed_sum",
-    verbose       = TRUE
+    size_factors  = "normed_sum"
+)
+
+## Example: fit from a SingleCellExperiment object
+library(SingleCellExperiment)
+sce <- SingleCellExperiment(assays = list(counts = counts))
+fit_sce <- fit_devil(
+    x             = sce,
+    design_matrix = design,
+    assay.type    = "counts"
 )
 
 }

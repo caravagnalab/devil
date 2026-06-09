@@ -34,29 +34,39 @@ echo "USE_CUDA=$USE_CUDA" > src/Makevars.config
 # If CUDA is disabled, remove the Rcpp::export annotation from beta_fit_gpu
 # to prevent Rcpp from generating exports for unavailable functions
 if [ "$USE_CUDA" -eq 0 ]; then
-    echo "Removing beta_fit_gpu export (CUDA disabled)"
-    # Create backup
+    echo "Removing beta_fit_gpu and beta_fit_gpu_summary exports (CUDA disabled)"
+    # Create backups
     cp src/beta.cpp src/beta.cpp.bak
-    # Remove the // [[Rcpp::export]] line immediately before beta_fit_gpu
+    cp src/fitting_with_summary.cpp src/fitting_with_summary.cpp.bak
+    # Remove the // [[Rcpp::export]] line immediately after #ifdef USE_CUDA
     if sed --version >/dev/null 2>&1; then
         # GNU sed
         sed -i '/^#ifdef USE_CUDA$/{
             n
             /^\/\/ \[\[Rcpp::export\]\]$/d
         }' src/beta.cpp
+        sed -i '/^#ifdef USE_CUDA$/{
+            n
+            /^\/\/ \[\[Rcpp::export\]\]$/d
+        }' src/fitting_with_summary.cpp
     else
         # BSD sed (macOS)
         sed -i '' '/^#ifdef USE_CUDA$/{
             n
             /^\/\/ \[\[Rcpp::export\]\]$/d
         }' src/beta.cpp
+        sed -i '' '/^#ifdef USE_CUDA$/{
+            n
+            /^\/\/ \[\[Rcpp::export\]\]$/d
+        }' src/fitting_with_summary.cpp
     fi
 
-    # Regenerate Rcpp exports without beta_fit_gpu
+    # Regenerate Rcpp exports without the GPU functions
     ${R_HOME}/bin/R --vanilla --silent -e 'Rcpp::compileAttributes()'
-    # Restore original file for version control
+    # Restore original files for version control
     mv src/beta.cpp.bak src/beta.cpp
+    mv src/fitting_with_summary.cpp.bak src/fitting_with_summary.cpp
 else
-    echo "CUDA support enabled - beta_fit_gpu will be available"
+    echo "CUDA support enabled - GPU functions will be available"
 fi
 

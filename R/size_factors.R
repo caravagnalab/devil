@@ -98,20 +98,22 @@ normed_sum_sf <- function(Y) {
 #'
 #' @keywords internal
 psinorm_sf <- function(Y) {
-    pareto.MLE <- function(Y) {
-        n <- nrow(Y)
-        m <- DelayedMatrixStats::colMins(Y)
-        a <- n / DelayedMatrixStats::colSums2(t(t(log(Y)) - log(m)))
-        return(a)
-    }
+  # Use log1p(Y) if Y contains counts to handle zeros and improve precision
+  logY <- log1p(Y)
 
-    computePsiNormSF <- function(x) {
-        1 / pareto.MLE(x + 1)
-    }
+  # 2. Use specialized column-wise functions from DelayedMatrixStats
+  m_log <- DelayedMatrixStats::colMins(logY)
+  means_log <- DelayedMatrixStats::colMeans2(logY)
 
-    sf <- computePsiNormSF(Y)
-    sf <- sf / exp(mean(log(sf), na.rm = TRUE))
-    return(sf)
+  # 3. Calculate 1/a (the scale factor)
+  sf <- means_log - m_log
+
+  # 4. Global geometric mean normalization
+  log_sf <- log(sf)
+  # Handle potential non-finite values from log(0) if any sf was 0
+  sf <- sf / exp(mean(log_sf, na.rm = TRUE))
+
+  return(sf)
 }
 
 #' edgeR TMM Size Factors
@@ -140,20 +142,20 @@ edgeR_sf <- function(Y) {
     }
 }
 
-compute_offset_matrix <- function(off, Y, size_factors) {
-    n_samples <- ncol(Y)
-    n_genes <- nrow(Y)
-
-    offset_matrix <- matrix(off, nrow = n_genes, ncol = n_samples)
-
-    if (!(is.null(size_factors))) {
-        # lsf <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, 1))) + log(size_factors)
-        lsf <- DelayedArray::DelayedArray(matrix(log(size_factors), ncol = 1))
-        offset_matrix <- DelayedArray::sweep(offset_matrix, 2, lsf, "+")
-    }
-
-    return(offset_matrix)
-}
+# compute_offset_matrix <- function(off, Y, size_factors) {
+#     n_samples <- ncol(Y)
+#     n_genes <- nrow(Y)
+#
+#     offset_matrix <- matrix(off, nrow = n_genes, ncol = n_samples)
+#
+#     if (!(is.null(size_factors))) {
+#         # lsf <- DelayedArray::DelayedArray(DelayedArray::SparseArraySeed(c(n_samples, 1))) + log(size_factors)
+#         lsf <- DelayedArray::DelayedArray(matrix(log(size_factors), ncol = 1))
+#         offset_matrix <- DelayedArray::sweep(offset_matrix, 2, lsf, "+")
+#     }
+#
+#     return(offset_matrix)
+# }
 
 #' Compute Offset Matrix for Statistical Model
 #'

@@ -21,8 +21,52 @@ get_row_groups <- function(matrix, n_groups, tolerance = 1e-10) {
     .Call('_devil_get_row_groups', PACKAGE = 'devil', matrix, n_groups, tolerance)
 }
 
+precompute_outer <- function(X_unique) {
+    .Call('_devil_precompute_outer', PACKAGE = 'devil', X_unique)
+}
+
+beta_fit_fast <- function(y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps) {
+    .Call('_devil_beta_fit_fast', PACKAGE = 'devil', y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps)
+}
+
+beta_fit_fast_optimized <- function(y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps) {
+    .Call('_devil_beta_fit_fast_optimized', PACKAGE = 'devil', y, X_unique, idx, off, outer_list, mu_beta, k, max_iter, eps)
+}
+
+compress_design_matrix <- function(X) {
+    .Call('_devil_compress_design_matrix', PACKAGE = 'devil', X)
+}
+
 initialize_beta_univariate_matrix_cpp <- function(X, Y, sf) {
     .Call('_devil_initialize_beta_univariate_matrix_cpp', PACKAGE = 'devil', X, Y, sf)
+}
+
+preprocess_data <- function(y, X, off) {
+    .Call('_devil_preprocess_data', PACKAGE = 'devil', y, X, off)
+}
+
+beta_fit_efficient <- function(y_sums, counts, X, mu_beta, off, k, max_iter, eps) {
+    .Call('_devil_beta_fit_efficient', PACKAGE = 'devil', y_sums, counts, X, mu_beta, off, k, max_iter, eps)
+}
+
+estimate_mom_dispersion_efficient <- function(y_sums_vec, y_sq_sums_vec, X_unique, sf_unique, counts, beta_g, N_total) {
+    .Call('_devil_estimate_mom_dispersion_efficient', PACKAGE = 'devil', y_sums_vec, y_sq_sums_vec, X_unique, sf_unique, counts, beta_g, N_total)
+}
+
+compute_hessian_efficient <- function(beta, overdispersion, y_sums, counts, X_unique, sf_unique) {
+    .Call('_devil_compute_hessian_efficient', PACKAGE = 'devil', beta, overdispersion, y_sums, counts, X_unique, sf_unique)
+}
+
+compute_scores_efficient <- function(X_unique, y_sums, counts, beta, overdispersion, sf_unique) {
+    .Call('_devil_compute_scores_efficient', PACKAGE = 'devil', X_unique, y_sums, counts, beta, overdispersion, sf_unique)
+}
+
+compute_clustered_meat_efficient <- function(X_unique, y_sums_per_group_cluster, counts_per_group_cluster, group_to_cluster_map, beta, overdispersion, sf_unique_per_pair, num_clusters, N_total) {
+    .Call('_devil_compute_clustered_meat_efficient', PACKAGE = 'devil', X_unique, y_sums_per_group_cluster, counts_per_group_cluster, group_to_cluster_map, beta, overdispersion, sf_unique_per_pair, num_clusters, N_total)
+}
+
+aggregate_vector_by_group_efficient <- function(y, mapping, n_groups) {
+    .Call('_devil_aggregate_vector_by_group_efficient', PACKAGE = 'devil', y, mapping, n_groups)
 }
 
 estimate_mom_dispersion_cpp <- function(count_matrix, design_matrix, beta_matrix, sf) {
@@ -71,5 +115,9 @@ compute_clustered_meat <- function(design_matrix, y, beta, overdispersion, size_
 
 compute_meat <- function(design_matrix, y, beta, overdispersion, size_factors) {
     .Call('_devil_compute_meat', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors)
+}
+
+compute_clustered_meat_fast <- function(design_matrix, y, beta, overdispersion, size_factors, cluster_blocks_indexes) {
+    .Call('_devil_compute_clustered_meat_fast', PACKAGE = 'devil', design_matrix, y, beta, overdispersion, size_factors, cluster_blocks_indexes)
 }
 

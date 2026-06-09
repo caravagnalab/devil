@@ -303,3 +303,9 @@ The installation will automatically detect the CUDA and cuTENSOR libraries and c
 ## Notes on Module Paths
 
 **Important:** The module files provided use relative paths. You need to adjust these to absolute paths on your system. Additionally, ensure you have a working CUDA installation configured by your HPC system administrators.
+
+## Session info
+
+```{r}
+sessionInfo()
+```

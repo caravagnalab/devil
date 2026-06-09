@@ -7,10 +7,10 @@
 test_de(
   devil.fit,
   contrast,
+  clusters = NULL,
   pval_adjust_method = "BH",
   max_lfc = 10,
-  clusters = NULL,
-  parallel.cores = 1
+  BPPARAM = BiocParallel::SerialParam()
 )
 }
 \arguments{
@@ -20,6 +20,9 @@ Must contain beta coefficients, design matrix, and overdispersion parameters.}
 \item{contrast}{Numeric vector or matrix specifying the comparison of interest.
 Length must match number of coefficients in the model.
 For example, c(0, 1, -1) tests difference between second and third coefficient.}
+
+\item{clusters}{Numeric vector or factor. Sample cluster assignments for robust
+variance estimation. Length must match number of samples. Default: NULL}
 
 \item{pval_adjust_method}{Character. Method for p-value adjustment.
 Passed to stats::p.adjust(). Common choices:
@@ -32,11 +35,8 @@ Passed to stats::p.adjust(). Common choices:
 \item{max_lfc}{Numeric. Maximum absolute log2 fold change to report.
 Larger values are capped at ±max_lfc. Default: 10}
 
-\item{clusters}{Numeric vector or factor. Sample cluster assignments for robust
-variance estimation. Length must match number of samples. Default: NULL}
-
-\item{parallel.cores}{Integer or NULL. Number of CPU cores for parallel processing.
-If NULL, uses all available cores. Default: 1}
+\item{BPPARAM}{A \code{\link[BiocParallel]{BiocParallelParam}} object controlling
+parallel evaluation. Default: \code{BiocParallel::SerialParam()}.}
 }
 \value{
 A tibble with columns:
@@ -80,7 +80,7 @@ colnames(design) <- levels(group)
 
 # Fit model
 fit <- fit_devil(
-    input_matrix  = counts,
+    x             = counts,
     design_matrix = design,
     size_factors  = "normed_sum"
 )

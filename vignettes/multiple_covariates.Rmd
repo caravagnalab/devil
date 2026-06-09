@@ -116,13 +116,21 @@ The design matrix includes:
 
 ## Fitting the devil model
 
-Now, `fit_devil()` takes a count matrix and a design matrix and returns coefficients and overdispersions.
+Let's first group the data by patients
 
 ```{r}
 Y <- as.matrix(assay(sce_sub, "counts"))
+grouped_data = devil::group_data(Y, design, meta_df$individual)
+```
+
+Now, `fit_devil()` takes a count matrix and a design matrix and returns coefficients and overdispersions.
+
+```{r}
+
 devil_fit <- devil::fit_devil(
-    input_matrix = Y,
-    design_matrix = design,
+    x = grouped_data$input_matrix,
+    design_matrix = grouped_data$design_matrix,
+    clusters = grouped_data$clusters,
     verbose = TRUE,
     init_beta_rough = FALSE,
     size_factors = "normed_sum", 
@@ -201,7 +209,7 @@ de_results_list <- lapply(stimulus_coefs, function(coef) {
     contrast_vector = as.numeric(colnames(beta_matrix) == coef)
   
     # Simple approach: test if coefficient significantly different from 0
-    de_res = devil::test_de(devil_fit, contrast = contrast_vector, clusters = meta_df$individual, max_lfc = 100)
+    de_res = devil::test_de(devil_fit, contrast = contrast_vector, max_lfc = 100)
     de_res %>% dplyr::mutate(coefficient = coef)
 })
 
@@ -292,7 +300,7 @@ age_coefs <- grep("^age", colnames(beta_matrix), value = TRUE)
 
 if (length(age_coefs) > 0) {
     contrast_vector = as.numeric(colnames(beta_matrix) == age_coefs)
-    age_de <- devil::test_de(devil_fit, contrast = contrast_vector, clusters = meta_df$individual)
+    age_de <- devil::test_de(devil_fit, contrast = contrast_vector)
     
     print(paste("Number of age-associated DE genes (FDR < 0.05):", sum(age_de$adj_pval < 0.05)))
     

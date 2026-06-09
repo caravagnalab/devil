@@ -91,3 +91,10 @@ library(devil)
 ```
 
 Continue to the main vignettes to learn how to use `devil` for your analysis.
+
+
+## Session info
+
+```{r}
+sessionInfo()
+```

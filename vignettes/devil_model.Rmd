@@ -84,24 +84,27 @@ design <- model.matrix(~ group)
 ```{r}
 # Method 1: Geometric mean normalization (default, fast)
 fit_normed <- fit_devil(
-    input_matrix = counts,
+    x = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = "normed_sum",
     verbose = FALSE
 )
 
 # Method 2: Psi-normalization (robust to highly variable genes)
 fit_psi <- fit_devil(
-    input_matrix = counts,
+    x = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = "psinorm",
     verbose = FALSE
 )
 
 # Method 3: No normalization (all size factors = 1)
 fit_no_norm <- fit_devil(
-    input_matrix = counts,
+    x = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = NULL,
     verbose = FALSE
 )
@@ -219,22 +222,24 @@ design_small <- model.matrix(
 # CPU fit with different overdispersion strategies
 system.time({
     fit_cpu_mom <- fit_devil(
-        input_matrix = counts_small,
+        x = counts_small,
         design_matrix = design_small,
+        clusters = NULL,
         size_factors = "normed_sum",
         overdispersion = "MOM",
-        parallel.cores = 1,
+        
         verbose = TRUE
     )
 })
 
 system.time({
     fit_cpu_new <- fit_devil(
-        input_matrix = counts_small,
+        x = counts_small,
         design_matrix = design_small,
+        clusters = NULL,
         size_factors = "normed_sum",
         overdispersion = "MLE",
-        parallel.cores = 1,
+        
         verbose = TRUE
     )
 })
@@ -252,19 +257,6 @@ ggplot(beta_iter_summary, aes(x = iterations)) +
     theme_bw() +
     labs(title = "Beta coefficient fitting: iterations per gene",
          x = "Number of iterations", y = "Number of genes")
-
-# Theta fitting iterations (per gene)
-if (!is.na(fit_cpu_new$iterations$theta_iters[1])) {
-    theta_iter_summary <- data.frame(
-        iterations = fit_cpu_new$iterations$theta_iters
-    )
-    
-    ggplot(theta_iter_summary, aes(x = iterations)) +
-        geom_histogram(bins = 20, fill = "coral", alpha = 0.7) +
-        theme_bw() +
-        labs(title = "Overdispersion fitting: iterations per gene",
-             x = "Number of iterations", y = "Number of genes")
-}
 ```
 
 ## Overdispersion Estimation Strategies
@@ -274,14 +266,13 @@ The CPU implementation offers three strategies for estimating overdispersion:
 ### 1. Method of Moments (MOM) - Fastest
 ```{r}
 fit_mom <- fit_devil(
-    input_matrix = counts_small,
+    x = counts_small,
     design_matrix = design_small,
     overdispersion = "MOM",
     verbose = FALSE
 )
 
 # MOM is non-iterative (0 iterations)
-print(paste("Theta iterations (MOM):", unique(fit_mom$iterations$theta_iters)))
 ```
 
 **When to use**:  
@@ -302,7 +293,7 @@ This makes MOM extremely fast and well suited for large-scale single-cell analys
 ### 2. MLE with Cox-Reid (MLE) - Most Accurate
 ```{r}
 fit_mle <- fit_devil(
-    input_matrix = counts_small,
+    x = counts_small,
     design_matrix = design_small,
     overdispersion = "old",
     max_iter = 200,
@@ -341,7 +332,7 @@ cor(theta_comparison[, -1]) %>% round(3)
 # Compare initialization strategies
 time_rough <- system.time({
     fit_rough <- fit_devil(
-        input_matrix = counts_small,
+        x = counts_small,
         design_matrix = design_small,
         init_beta_rough = TRUE,
         verbose = FALSE
@@ -350,7 +341,7 @@ time_rough <- system.time({
 
 time_proper <- system.time({
     fit_proper <- fit_devil(
-        input_matrix = counts_small,
+        x = counts_small,
         design_matrix = design_small,
         init_beta_rough = FALSE,
         verbose = FALSE
@@ -404,3 +395,10 @@ The GPU implementation uses CUDA for massive parallelization across genes.
 | **Batch processing** | All genes or chunked by core | Always batched for GPU memory |
 | **Best for** | Small-medium datasets (<5k genes) | Large datasets (>10k genes, >5k cells) |
 | **Setup** | Works out of the box | Requires CUDA toolkit and recompilation |
+
+
+## Session info
+
+```{r}
+sessionInfo()
+```

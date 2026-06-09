@@ -7,6 +7,10 @@
 
 <!-- badges: start -->
 
+[![R-CMD-check](https://github.com/caravagnalab/devil/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/caravagnalab/devil/actions/workflows/R-CMD-check.yaml)
+[![BiocCheck](https://github.com/caravagnalab/devil/actions/workflows/bioc-check.yaml/badge.svg)](https://github.com/caravagnalab/devil/actions/workflows/bioc-check.yaml)
+[![test-coverage](https://github.com/caravagnalab/devil/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/caravagnalab/devil/actions/workflows/test-coverage.yaml)
+[![pkgdown](https://github.com/caravagnalab/devil/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/caravagnalab/devil/actions/workflows/pkgdown.yaml)
 <!-- badges: end -->
 
 `devil` is an R package for differential expression analysis in
@@ -30,26 +34,13 @@ You can install the current version of `devil` from
 devtools::install_github("caravagnalab/devil")
 ```
 
-We also provide two detailed vignetess for both CPU and GPU installation:
+We also provide two detailed vignettes for both CPU and GPU
+installation:
 
-- [Quick CPU & GPU Setup](https://caravagnalab.github.io/devil/articles/quick_setup.html)
-- [Detailed GPU Setup](https://caravagnalab.github.io/devil/articles/gpu_setup.html)
-
-## Example
-
-This is a basic example which shows you how to fit the expression for a
-single gene observed in 1000 cells.
-
-``` r
-library(devil)
-y <- t(as.matrix(rnbinom(1000, 1, .1)))
-fit <- devil::fit_devil(input_matrix = y, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = NULL, overdispersion = "MOM")
-#> Initialize theta
-#> Initialize beta
-#> Fitting beta coefficients
-#> Fit overdispersion (mode = MOM)
-test <- devil::test_de(fit, contrast = c(1))
-```
+- [Quick CPU & GPU
+  Setup](https://caravagnalab.github.io/devil/articles/quick_setup.html)
+- [Detailed GPU
+  Setup](https://caravagnalab.github.io/devil/articles/gpu_setup.html)
 
 ------------------------------------------------------------------------
 
