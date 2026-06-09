@@ -403,7 +403,7 @@ cpu_fit <- function(
   if (verbose) message("Initialize beta")
   if (isTRUE(init_beta_rough)) {
     beta_0 <- matrix(0, nrow = ngenes, ncol = ncol(design_matrix))
-    beta_0[, 1] <- DelayedMatrixStats::rowMeans2(input_matrix) %>% log1p()
+    beta_0[, 1] <- log1p(DelayedMatrixStats::rowMeans2(input_matrix))
   } else {
     beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
   }

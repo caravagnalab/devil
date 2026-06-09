@@ -41,6 +41,10 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
+          
+      - name: Install OpenSSL on macOS
+        if: runner.os == 'macOS'
+        run: brew install openssl
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
