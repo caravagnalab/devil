@@ -10,8 +10,10 @@ computation with parallel processing capabilities.
 
 ``` r
 fit_devil(
-  input_matrix,
+  x,
   design_matrix,
+  assay.type = "counts",
+  clusters = NULL,
   overdispersion = "MOM",
   init_overdispersion = NULL,
   init_beta_rough = FALSE,
@@ -22,22 +24,41 @@ fit_devil(
   tolerance = 0.001,
   CUDA = FALSE,
   batch_size = 1024L,
-  parallel.cores = 1
+  BPPARAM = BiocParallel::SerialParam()
 )
 ```
 
 ## Arguments
 
-- input_matrix:
+- x:
 
-  A numeric matrix of count data (genes × samples). Rows represent
-  genes/features, columns represent samples/cells.
+  A numeric matrix of count data (genes x samples), a
+  [`SummarizedExperiment`](https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html),
+  or a
+  [`SingleCellExperiment`](https://rdrr.io/pkg/SingleCellExperiment/man/SingleCellExperiment.html)
+  object. Rows represent genes/features, columns represent
+  samples/cells. When `x` is an SE/SCE object, the assay named by
+  `assay.type` is used.
 
 - design_matrix:
 
-  A numeric matrix of predictor variables (samples × predictors). Each
+  A numeric matrix of predictor variables (samples x predictors). Each
   row corresponds to a sample, each column to a predictor variable. Must
-  have `nrow(design_matrix) == ncol(input_matrix)`.
+  have `nrow(design_matrix) == ncol(x)`.
+
+- assay.type:
+
+  Character. Name of the assay to extract when `x` is a
+  `SummarizedExperiment` or `SingleCellExperiment`. Default: `"counts"`.
+
+- clusters:
+
+  Vector of cluster or patient identifiers (one element per
+  cell/sample). Cells belonging to the same cluster must be contiguous —
+  use
+  [`group_data()`](https://caravagnalab.github.io/devil/reference/group_data.md)
+  to sort them first. When provided, enables clustered sandwich
+  covariance estimation. Default: `NULL`.
 
 - overdispersion:
 
@@ -55,8 +76,8 @@ fit_devil(
 
 - init_beta_rough:
 
-  Logial. Whether to initialize betas in a rough but extremely fast way.
-  Default: `FALSE`.
+  Logical. Whether to initialize betas in a rough but extremely fast
+  way. Default: `FALSE`.
 
 - offset:
 
@@ -65,8 +86,8 @@ fit_devil(
 
 - size_factors:
 
-  Character string or `NULL`. Method for computing normalization factors
-  to account for different sequencing depths. Options are:
+  Character string, numeric vector, or `NULL`. Controls normalization
+  for sequencing depth. Options are:
 
   - `NULL` (default): No normalization (all size factors set to 1)
 
@@ -75,6 +96,9 @@ fit_devil(
   - `"psinorm"`: Psi-normalization
 
   - `"edgeR"`: edgeR TMM method
+
+  - A numeric vector of length `ncol(x)`: precomputed size factors used
+    directly without further normalization
 
 - verbose:
 
@@ -101,11 +125,12 @@ fit_devil(
   Integer. Number of genes to process per batch in GPU mode. Only
   relevant if `CUDA = TRUE`. Default: `1024`.
 
-- parallel.cores:
+- BPPARAM:
 
-  Integer or `NULL`. Number of CPU cores for parallel processing with
-  [`parallel::mclapply`](https://rdrr.io/r/parallel/mclapply.html). If
-  `NULL`, uses all available cores. Default: `1`.
+  A
+  [`BiocParallelParam`](https://rdrr.io/pkg/BiocParallel/man/BiocParallelParam-class.html)
+  object controlling parallel evaluation. Default:
+  [`BiocParallel::SerialParam()`](https://rdrr.io/pkg/BiocParallel/man/SerialParam-class.html).
 
 ## Value
 
@@ -113,7 +138,16 @@ A list containing:
 
 - beta:
 
-  Matrix of fitted coefficients (genes × predictors).
+  Matrix of fitted coefficients (genes x predictors).
+
+- beta_sandwiches_null:
+
+  List of per-gene Hessian inverse matrices (\\H^{-1}\\).
+
+- beta_sandwiches:
+
+  List of per-gene clustered sandwich matrices (\\H^{-1} M H^{-1} \times
+  n\\samples\\); `NULL` entries when no `clusters` are provided.
 
 - overdispersion:
 
@@ -143,8 +177,7 @@ A list containing:
 
 - input_parameters:
 
-  List of used parameter values (`max_iter`, `tolerance`,
-  `parallel.cores`).
+  List of used parameter values (`max_iter`, `tolerance`).
 
 ## Details
 
@@ -182,7 +215,8 @@ character string:
   edgeR package from Bioconductor.
 
 If `size_factors = NULL`, no normalization is performed and all size
-factors are set to 1.
+factors are set to 1. If `size_factors` is a numeric vector of
+precomputed size factors (one per sample), they will be used directly.
 
 ## Overdispersion Strategies
 
@@ -190,7 +224,7 @@ The `overdispersion` argument controls how gene-wise overdispersion is
 handled:
 
 - `"old"` or `"MLE"`: Overdispersion is fit via the original (legacy) NB
-  MLE-based procedure (with Cox–Reid adjustment inside
+  MLE-based procedure (with Cox-Reid adjustment inside
   [`fit_dispersion()`](https://caravagnalab.github.io/devil/reference/fit_dispersion.md)).
 
 - `"new"` or `"I"`: Overdispersion is fit via the new iterative NB
@@ -222,19 +256,89 @@ group <- factor(rep(c("A", "B"), each = 5))
 design <- model.matrix(~ 0 + group)
 colnames(design) <- levels(group)
 
-# Fit the model
+# Fit from a raw matrix
 fit <- fit_devil(
-    input_matrix  = counts,
+    x             = counts,
     design_matrix = design,
-    size_factors  = "normed_sum",
-    verbose       = TRUE
+    size_factors  = "normed_sum"
 )
-#> Compute size factors
-#> Calculating size factors using method: normed_sum
-#> Size factors calculated successfully.
-#> Range: [0.53, 1.4311]
-#> Initialize theta
-#> Initialize beta
-#> Fitting beta coefficients
-#> Fit overdispersion (mode = MOM)
+
+## Example: fit from a SingleCellExperiment object
+library(SingleCellExperiment)
+#> Loading required package: SummarizedExperiment
+#> Loading required package: MatrixGenerics
+#> Loading required package: matrixStats
+#> 
+#> Attaching package: ‘MatrixGenerics’
+#> The following objects are masked from ‘package:matrixStats’:
+#> 
+#>     colAlls, colAnyNAs, colAnys, colAvgsPerRowSet, colCollapse,
+#>     colCounts, colCummaxs, colCummins, colCumprods, colCumsums,
+#>     colDiffs, colIQRDiffs, colIQRs, colLogSumExps, colMadDiffs,
+#>     colMads, colMaxs, colMeans2, colMedians, colMins, colOrderStats,
+#>     colProds, colQuantiles, colRanges, colRanks, colSdDiffs, colSds,
+#>     colSums2, colTabulates, colVarDiffs, colVars, colWeightedMads,
+#>     colWeightedMeans, colWeightedMedians, colWeightedSds,
+#>     colWeightedVars, rowAlls, rowAnyNAs, rowAnys, rowAvgsPerColSet,
+#>     rowCollapse, rowCounts, rowCummaxs, rowCummins, rowCumprods,
+#>     rowCumsums, rowDiffs, rowIQRDiffs, rowIQRs, rowLogSumExps,
+#>     rowMadDiffs, rowMads, rowMaxs, rowMeans2, rowMedians, rowMins,
+#>     rowOrderStats, rowProds, rowQuantiles, rowRanges, rowRanks,
+#>     rowSdDiffs, rowSds, rowSums2, rowTabulates, rowVarDiffs, rowVars,
+#>     rowWeightedMads, rowWeightedMeans, rowWeightedMedians,
+#>     rowWeightedSds, rowWeightedVars
+#> Loading required package: GenomicRanges
+#> Loading required package: stats4
+#> Loading required package: BiocGenerics
+#> Loading required package: generics
+#> 
+#> Attaching package: ‘generics’
+#> The following objects are masked from ‘package:base’:
+#> 
+#>     as.difftime, as.factor, as.ordered, intersect, is.element, setdiff,
+#>     setequal, union
+#> 
+#> Attaching package: ‘BiocGenerics’
+#> The following objects are masked from ‘package:stats’:
+#> 
+#>     IQR, mad, sd, var, xtabs
+#> The following objects are masked from ‘package:base’:
+#> 
+#>     Filter, Find, Map, Position, Reduce, anyDuplicated, aperm, append,
+#>     as.data.frame, basename, cbind, colnames, dirname, do.call,
+#>     duplicated, eval, evalq, get, grep, grepl, is.unsorted, lapply,
+#>     mapply, match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,
+#>     rank, rbind, rownames, sapply, saveRDS, table, tapply, unique,
+#>     unsplit, which.max, which.min
+#> Loading required package: S4Vectors
+#> 
+#> Attaching package: ‘S4Vectors’
+#> The following object is masked from ‘package:utils’:
+#> 
+#>     findMatches
+#> The following objects are masked from ‘package:base’:
+#> 
+#>     I, expand.grid, unname
+#> Loading required package: IRanges
+#> Loading required package: Seqinfo
+#> Loading required package: Biobase
+#> Welcome to Bioconductor
+#> 
+#>     Vignettes contain introductory material; view with
+#>     'browseVignettes()'. To cite Bioconductor, see
+#>     'citation("Biobase")', and for packages 'citation("pkgname")'.
+#> 
+#> Attaching package: ‘Biobase’
+#> The following object is masked from ‘package:MatrixGenerics’:
+#> 
+#>     rowMedians
+#> The following objects are masked from ‘package:matrixStats’:
+#> 
+#>     anyMissing, rowMedians
+sce <- SingleCellExperiment(assays = list(counts = counts))
+fit_sce <- fit_devil(
+    x             = sce,
+    design_matrix = design,
+    assay.type    = "counts"
+)
 ```

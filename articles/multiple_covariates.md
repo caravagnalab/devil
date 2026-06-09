@@ -211,6 +211,14 @@ The design matrix includes:
 
 ## Fitting the devil model
 
+Let’s first group the data by patients
+
+``` r
+
+Y <- as.matrix(assay(sce_sub, "counts"))
+grouped_data = devil::group_data(Y, design, meta_df$individual)
+```
+
 Now,
 [`fit_devil()`](https://caravagnalab.github.io/devil/reference/fit_devil.md)
 takes a count matrix and a design matrix and returns coefficients and
@@ -218,10 +226,11 @@ overdispersions.
 
 ``` r
 
-Y <- as.matrix(assay(sce_sub, "counts"))
+
 devil_fit <- devil::fit_devil(
-    input_matrix = Y,
-    design_matrix = design,
+    x = grouped_data$input_matrix,
+    design_matrix = grouped_data$design_matrix,
+    clusters = grouped_data$clusters,
     verbose = TRUE,
     init_beta_rough = FALSE,
     size_factors = "normed_sum", 
@@ -231,10 +240,11 @@ devil_fit <- devil::fit_devil(
 #> Calculating size factors using method: normed_sum
 #> Size factors calculated successfully.
 #> Range: [0.1449, 18.1165]
+#> ==> Initializing parameters
 #> Initialize theta
 #> Initialize beta
-#> Fitting beta coefficients
-#> Fit overdispersion (mode = MOM)
+#> Fitting expression coefficients and overdispersion
+#> Aggregating results
 ```
 
 ## Interpreting the model coefficients
@@ -269,7 +279,7 @@ ggplot(coef_long %>% dplyr::filter(coefficient != "(Intercept)"),
     theme(legend.position = "none")
 ```
 
-![](multiple_covariates_files/figure-html/unnamed-chunk-9-1.png)
+![](multiple_covariates_files/figure-html/unnamed-chunk-10-1.png)
 
 **Interpretation**:
 
@@ -299,7 +309,7 @@ data.frame(theta = theta_vec, gene = names(theta_vec)) %>%
     geom_vline(xintercept = median(theta_vec), linetype = "dashed", color = "red")
 ```
 
-![](multiple_covariates_files/figure-html/unnamed-chunk-10-1.png)
+![](multiple_covariates_files/figure-html/unnamed-chunk-11-1.png)
 
 **Interpretation**: Higher theta values indicate less overdispersion
 (more Poisson-like), while lower values indicate more overdispersion
@@ -325,12 +335,9 @@ de_results_list <- lapply(stimulus_coefs, function(coef) {
     contrast_vector = as.numeric(colnames(beta_matrix) == coef)
   
     # Simple approach: test if coefficient significantly different from 0
-    de_res = devil::test_de(devil_fit, contrast = contrast_vector, clusters = meta_df$individual, max_lfc = 100)
+    de_res = devil::test_de(devil_fit, contrast = contrast_vector, max_lfc = 100)
     de_res %>% dplyr::mutate(coefficient = coef)
 })
-#> Converting clusters to numeric factors
-#> Converting clusters to numeric factors
-#> Converting clusters to numeric factors
 
 de_results <- bind_rows(de_results_list)
 
@@ -348,9 +355,9 @@ print(de_summary)
 #> # A tibble: 3 × 4
 #>   coefficient                                          n_de  n_up n_down
 #>   <chr>                                               <int> <int>  <int>
-#> 1 stimulusOT-I non-binding peptide NP68 (ASNENMDAM)     533   261    272
-#> 2 stimulusOT-I reduced affinity peptide G4 (SIIGFEKL)   139    70     69
-#> 3 stimulusOT-I reduced affinity peptide T4 (SIITFEKL)    19     9     10
+#> 1 stimulusOT-I non-binding peptide NP68 (ASNENMDAM)     621   290    331
+#> 2 stimulusOT-I reduced affinity peptide G4 (SIIGFEKL)   224   104    120
+#> 3 stimulusOT-I reduced affinity peptide T4 (SIITFEKL)    40    20     20
 ```
 
 ### Volcano plots
@@ -381,7 +388,7 @@ de_results %>%
     geom_vline(xintercept = c(-0.5, 0.5), linetype = "dashed", alpha = 0.5)
 ```
 
-![](multiple_covariates_files/figure-html/unnamed-chunk-12-1.png)
+![](multiple_covariates_files/figure-html/unnamed-chunk-13-1.png)
 
 ### Top differentially expressed genes
 
@@ -400,16 +407,16 @@ print(top_genes)
 #> # Groups:   coefficient [3]
 #>    coefficient                                       name           lfc adj_pval
 #>    <chr>                                             <chr>        <dbl>    <dbl>
-#>  1 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -1.72 6.55e-39
-#>  2 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000…  2.47 7.58e-36
-#>  3 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -2.17 1.63e-21
-#>  4 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -1.87 2.74e-20
-#>  5 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000…  1.73 1.12e-19
-#>  6 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -6.27 2.45e-19
-#>  7 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -4.06 2.97e-17
-#>  8 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000…  1.96 1.41e-16
-#>  9 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -4.56 4.68e-16
-#> 10 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000…  2.56 3.41e-15
+#>  1 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -4.56 4.55e-99
+#>  2 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -4.57 2.55e-72
+#>  3 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -4.06 1.09e-69
+#>  4 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -1.72 1.50e-63
+#>  5 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000…  2.47 1.13e-44
+#>  6 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -3.46 2.61e-39
+#>  7 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -3.99 6.53e-37
+#>  8 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -2.00 7.64e-35
+#>  9 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -2.53 4.25e-33
+#> 10 stimulusOT-I non-binding peptide NP68 (ASNENMDAM) ENSMUSG0000… -2.31 5.69e-33
 #> # ℹ 20 more rows
 ```
 
@@ -441,7 +448,7 @@ if (length(top_de_genes) > 0) {
 }
 ```
 
-![](multiple_covariates_files/figure-html/unnamed-chunk-14-1.png)
+![](multiple_covariates_files/figure-html/unnamed-chunk-15-1.png)
 
 ## Testing age effects
 
@@ -452,24 +459,23 @@ age_coefs <- grep("^age", colnames(beta_matrix), value = TRUE)
 
 if (length(age_coefs) > 0) {
     contrast_vector = as.numeric(colnames(beta_matrix) == age_coefs)
-    age_de <- devil::test_de(devil_fit, contrast = contrast_vector, clusters = meta_df$individual)
+    age_de <- devil::test_de(devil_fit, contrast = contrast_vector)
     
     print(paste("Number of age-associated DE genes (FDR < 0.05):", sum(age_de$adj_pval < 0.05)))
     
     # Show top age-associated genes
     print(head(age_de))
 }
-#> Converting clusters to numeric factors
-#> [1] "Number of age-associated DE genes (FDR < 0.05): 466"
+#> [1] "Number of age-associated DE genes (FDR < 0.05): 605"
 #> # A tibble: 6 × 4
 #>   name                  pval adj_pval    lfc
 #>   <chr>                <dbl>    <dbl>  <dbl>
-#> 1 ENSMUSG00000038342 0.146     0.313   0.320
-#> 2 ENSMUSG00000060261 0.126     0.284  -0.298
-#> 3 ENSMUSG00000029198 0.00268   0.0159  0.608
-#> 4 ENSMUSG00000082951 0.00730   0.0356  0.493
-#> 5 ENSMUSG00000022204 0.0935    0.232  -0.316
-#> 6 ENSMUSG00000063802 0.0423    0.130   0.403
+#> 1 ENSMUSG00000038342 0.0878    0.196   0.320
+#> 2 ENSMUSG00000060261 0.0629    0.155  -0.298
+#> 3 ENSMUSG00000029198 0.00749   0.0291  0.608
+#> 4 ENSMUSG00000082951 0.00267   0.0124  0.493
+#> 5 ENSMUSG00000022204 0.0423    0.116  -0.316
+#> 6 ENSMUSG00000063802 0.0625    0.155   0.403
 ```
 
 ## Mean-variance relationship
@@ -503,7 +509,7 @@ ggplot(plot_df, aes(x = log10(mean + 1), y = log10(variance + 1))) +
              hjust = 1.1, vjust = -0.5, size = 3, color = "red")
 ```
 
-![](multiple_covariates_files/figure-html/unnamed-chunk-16-1.png)
+![](multiple_covariates_files/figure-html/unnamed-chunk-17-1.png)
 
 ## Summary
 
@@ -548,69 +554,69 @@ sessionInfo()
 #> [8] base     
 #> 
 #> other attached packages:
-#>  [1] ensembldb_2.36.0            AnnotationFilter_1.36.0    
+#>  [1] ensembldb_2.36.1            AnnotationFilter_1.36.0    
 #>  [3] GenomicFeatures_1.64.0      AnnotationDbi_1.74.0       
 #>  [5] tidyr_1.3.2                 ggplot2_4.0.3              
 #>  [7] dplyr_1.2.1                 Matrix_1.7-5               
 #>  [9] scRNAseq_2.26.0             SingleCellExperiment_1.34.0
 #> [11] SummarizedExperiment_1.42.0 Biobase_2.72.0             
 #> [13] GenomicRanges_1.64.0        Seqinfo_1.2.0              
-#> [15] IRanges_2.46.0              S4Vectors_0.50.0           
-#> [17] BiocGenerics_0.58.0         generics_0.1.4             
+#> [15] IRanges_2.46.0              S4Vectors_0.50.1           
+#> [17] BiocGenerics_0.58.1         generics_0.1.4             
 #> [19] MatrixGenerics_1.24.0       matrixStats_1.5.0          
 #> [21] devil_0.99.0               
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] DBI_1.3.0                 bitops_1.0-9             
 #>   [3] httr2_1.2.2               rlang_1.2.0              
-#>   [5] magrittr_2.0.5            gypsum_1.8.0             
-#>   [7] compiler_4.6.0            RSQLite_2.4.6            
-#>   [9] DelayedMatrixStats_1.34.0 png_0.1-9                
-#>  [11] systemfonts_1.3.2         vctrs_0.7.3              
-#>  [13] ProtGenerics_1.44.0       pkgconfig_2.0.3          
-#>  [15] crayon_1.5.3              fastmap_1.2.0            
-#>  [17] dbplyr_2.5.2              XVector_0.52.0           
-#>  [19] labeling_0.4.3            utf8_1.2.6               
-#>  [21] Rsamtools_2.28.0          rmarkdown_2.31           
-#>  [23] UCSC.utils_1.8.0          ragg_1.5.2               
-#>  [25] purrr_1.2.2               bit_4.6.0                
-#>  [27] xfun_0.57                 cachem_1.1.0             
-#>  [29] cigarillo_1.2.0           GenomeInfoDb_1.48.0      
-#>  [31] jsonlite_2.0.0            blob_1.3.0               
-#>  [33] rhdf5filters_1.24.0       DelayedArray_0.38.1      
-#>  [35] Rhdf5lib_2.0.0            BiocParallel_1.46.0      
-#>  [37] parallel_4.6.0            R6_2.6.1                 
-#>  [39] RColorBrewer_1.1-3        bslib_0.10.0             
-#>  [41] rtracklayer_1.72.0        jquerylib_0.1.4          
-#>  [43] Rcpp_1.1.1-1.1            knitr_1.51               
-#>  [45] tidyselect_1.2.1          abind_1.4-8              
-#>  [47] yaml_2.3.12               codetools_0.2-20         
-#>  [49] curl_7.1.0                lattice_0.22-9           
-#>  [51] alabaster.sce_1.12.0      tibble_3.3.1             
-#>  [53] withr_3.0.2               S7_0.2.2                 
-#>  [55] KEGGREST_1.52.0           evaluate_1.0.5           
-#>  [57] desc_1.4.3                BiocFileCache_3.2.0      
-#>  [59] alabaster.schemas_1.12.0  ExperimentHub_3.2.0      
-#>  [61] Biostrings_2.80.0         pillar_1.11.1            
-#>  [63] BiocManager_1.30.27       filelock_1.0.3           
-#>  [65] RCurl_1.98-1.18           BiocVersion_3.23.1       
-#>  [67] sparseMatrixStats_1.24.0  scales_1.4.0             
-#>  [69] alabaster.base_1.12.0     glue_1.8.1               
-#>  [71] alabaster.ranges_1.12.0   pheatmap_1.0.13          
-#>  [73] alabaster.matrix_1.12.0   lazyeval_0.2.3           
-#>  [75] tools_4.6.0               AnnotationHub_4.2.0      
-#>  [77] BiocIO_1.22.0             GenomicAlignments_1.48.0 
-#>  [79] fs_2.1.0                  XML_3.99-0.23            
-#>  [81] rhdf5_2.56.0              grid_4.6.0               
-#>  [83] HDF5Array_1.40.0          restfulr_0.0.16          
-#>  [85] cli_3.6.6                 rappdirs_0.3.4           
-#>  [87] textshaping_1.0.5         viridisLite_0.4.3        
-#>  [89] S4Arrays_1.12.0           gtable_0.3.6             
-#>  [91] alabaster.se_1.12.0       sass_0.4.10              
-#>  [93] digest_0.6.39             SparseArray_1.12.2       
-#>  [95] farver_2.1.2              rjson_0.2.23             
-#>  [97] memoise_2.0.1             htmltools_0.5.9          
-#>  [99] pkgdown_2.2.0             lifecycle_1.0.5          
-#> [101] h5mread_1.4.0             httr_1.4.8               
-#> [103] bit64_4.8.0
+#>   [5] magrittr_2.0.5            otel_0.2.0               
+#>   [7] gypsum_1.8.0              compiler_4.6.0           
+#>   [9] RSQLite_3.53.1            DelayedMatrixStats_1.34.0
+#>  [11] png_0.1-9                 systemfonts_1.3.2        
+#>  [13] vctrs_0.7.3               ProtGenerics_1.44.0      
+#>  [15] pkgconfig_2.0.3           crayon_1.5.3             
+#>  [17] fastmap_1.2.0             dbplyr_2.5.2             
+#>  [19] XVector_0.52.0            labeling_0.4.3           
+#>  [21] utf8_1.2.6                Rsamtools_2.28.0         
+#>  [23] rmarkdown_2.31            UCSC.utils_1.8.0         
+#>  [25] ragg_1.5.2                purrr_1.2.2              
+#>  [27] bit_4.6.0                 xfun_0.58                
+#>  [29] cachem_1.1.0              cigarillo_1.2.0          
+#>  [31] GenomeInfoDb_1.48.0       jsonlite_2.0.0           
+#>  [33] blob_1.3.0                rhdf5filters_1.24.0      
+#>  [35] DelayedArray_0.38.2       Rhdf5lib_2.0.0           
+#>  [37] BiocParallel_1.46.0       parallel_4.6.0           
+#>  [39] R6_2.6.1                  RColorBrewer_1.1-3       
+#>  [41] bslib_0.11.0              rtracklayer_1.72.0       
+#>  [43] jquerylib_0.1.4           Rcpp_1.1.1-1.1           
+#>  [45] knitr_1.51                tidyselect_1.2.1         
+#>  [47] abind_1.4-8               yaml_2.3.12              
+#>  [49] codetools_0.2-20          curl_7.1.0               
+#>  [51] lattice_0.22-9            alabaster.sce_1.12.0     
+#>  [53] tibble_3.3.1              withr_3.0.2              
+#>  [55] S7_0.2.2                  KEGGREST_1.52.0          
+#>  [57] evaluate_1.0.5            desc_1.4.3               
+#>  [59] BiocFileCache_3.2.0       alabaster.schemas_1.12.0 
+#>  [61] ExperimentHub_3.2.0       Biostrings_2.80.1        
+#>  [63] pillar_1.11.1             BiocManager_1.30.27      
+#>  [65] filelock_1.0.3            RCurl_1.98-1.19          
+#>  [67] BiocVersion_3.23.1        sparseMatrixStats_1.24.0 
+#>  [69] scales_1.4.0              alabaster.base_1.12.0    
+#>  [71] alabaster.ranges_1.12.0   glue_1.8.1               
+#>  [73] pheatmap_1.0.13           alabaster.matrix_1.12.0  
+#>  [75] lazyeval_0.2.3            tools_4.6.0              
+#>  [77] AnnotationHub_4.2.0       BiocIO_1.22.0            
+#>  [79] GenomicAlignments_1.48.0  fs_2.1.0                 
+#>  [81] XML_3.99-0.23             rhdf5_2.56.0             
+#>  [83] grid_4.6.0                HDF5Array_1.40.0         
+#>  [85] restfulr_0.0.16           cli_3.6.6                
+#>  [87] rappdirs_0.3.4            textshaping_1.0.5        
+#>  [89] viridisLite_0.4.3         S4Arrays_1.12.0          
+#>  [91] gtable_0.3.6              alabaster.se_1.12.0      
+#>  [93] sass_0.4.10               digest_0.6.39            
+#>  [95] SparseArray_1.12.2        farver_2.1.2             
+#>  [97] rjson_0.2.23              memoise_2.0.1            
+#>  [99] htmltools_0.5.9           pkgdown_2.2.0            
+#> [101] lifecycle_1.0.5           h5mread_1.4.0            
+#> [103] httr_1.4.8                bit64_4.8.2
 ```

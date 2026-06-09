@@ -4,6 +4,8 @@
 
 Functions to fit scRNA data
 
+- [`group_data()`](https://caravagnalab.github.io/devil/reference/group_data.md)
+  : Group and Reorder Data by Clusters
 - [`fit_devil()`](https://caravagnalab.github.io/devil/reference/fit_devil.md)
   : Fit Statistical Model for Count Data
 

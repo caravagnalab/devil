@@ -78,24 +78,27 @@ design <- model.matrix(~ group)
 
 # Method 1: Geometric mean normalization (default, fast)
 fit_normed <- fit_devil(
-    input_matrix = counts,
+    x = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = "normed_sum",
     verbose = FALSE
 )
 
 # Method 2: Psi-normalization (robust to highly variable genes)
 fit_psi <- fit_devil(
-    input_matrix = counts,
+    x = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = "psinorm",
     verbose = FALSE
 )
 
 # Method 3: No normalization (all size factors = 1)
 fit_no_norm <- fit_devil(
-    input_matrix = counts,
+    x = counts,
     design_matrix = design,
+    clusters = NULL,
     size_factors = NULL,
     verbose = FALSE
 )
@@ -220,11 +223,12 @@ design_small <- model.matrix(
 # CPU fit with different overdispersion strategies
 system.time({
     fit_cpu_mom <- fit_devil(
-        input_matrix = counts_small,
+        x = counts_small,
         design_matrix = design_small,
+        clusters = NULL,
         size_factors = "normed_sum",
         overdispersion = "MOM",
-        parallel.cores = 1,
+        
         verbose = TRUE
     )
 })
@@ -232,20 +236,22 @@ system.time({
 #> Calculating size factors using method: normed_sum
 #> Size factors calculated successfully.
 #> Range: [0.6759, 1.6736]
+#> ==> Initializing parameters
 #> Initialize theta
 #> Initialize beta
-#> Fitting beta coefficients
-#> Fit overdispersion (mode = MOM)
+#> Fitting expression coefficients and overdispersion
+#> Aggregating results
 #>    user  system elapsed 
-#>   0.128   0.193   0.099
+#>   0.197   0.296   0.163
 
 system.time({
     fit_cpu_new <- fit_devil(
-        input_matrix = counts_small,
+        x = counts_small,
         design_matrix = design_small,
+        clusters = NULL,
         size_factors = "normed_sum",
         overdispersion = "MLE",
-        parallel.cores = 1,
+        
         verbose = TRUE
     )
 })
@@ -253,12 +259,13 @@ system.time({
 #> Calculating size factors using method: normed_sum
 #> Size factors calculated successfully.
 #> Range: [0.6759, 1.6736]
+#> ==> Initializing parameters
 #> Initialize theta
 #> Initialize beta
-#> Fitting beta coefficients
-#> Fit overdispersion (mode = MLE)
+#> Fitting expression coefficients and overdispersion
+#> Aggregating results
 #>    user  system elapsed 
-#>   0.357   0.625   0.263
+#>   0.428   0.785   0.318
 ```
 
 #### Examining Iteration Counts
@@ -279,23 +286,6 @@ ggplot(beta_iter_summary, aes(x = iterations)) +
 
 ![](devil_model_files/figure-html/unnamed-chunk-7-1.png)
 
-``` r
-
-
-# Theta fitting iterations (per gene)
-if (!is.na(fit_cpu_new$iterations$theta_iters[1])) {
-    theta_iter_summary <- data.frame(
-        iterations = fit_cpu_new$iterations$theta_iters
-    )
-    
-    ggplot(theta_iter_summary, aes(x = iterations)) +
-        geom_histogram(bins = 20, fill = "coral", alpha = 0.7) +
-        theme_bw() +
-        labs(title = "Overdispersion fitting: iterations per gene",
-             x = "Number of iterations", y = "Number of genes")
-}
-```
-
 ### Overdispersion Estimation Strategies
 
 The CPU implementation offers three strategies for estimating
@@ -306,15 +296,13 @@ overdispersion:
 ``` r
 
 fit_mom <- fit_devil(
-    input_matrix = counts_small,
+    x = counts_small,
     design_matrix = design_small,
     overdispersion = "MOM",
     verbose = FALSE
 )
 
 # MOM is non-iterative (0 iterations)
-print(paste("Theta iterations (MOM):", unique(fit_mom$iterations$theta_iters)))
-#> [1] "Theta iterations (MOM): 0"
 ```
 
 **When to use**:  
@@ -345,7 +333,7 @@ covariates and normalization through $`\mu_{ij}`$.
 ``` r
 
 fit_mle <- fit_devil(
-    input_matrix = counts_small,
+    x = counts_small,
     design_matrix = design_small,
     overdispersion = "old",
     max_iter = 200,
@@ -398,7 +386,7 @@ precise for genes with extreme overdispersion.
 # Compare initialization strategies
 time_rough <- system.time({
     fit_rough <- fit_devil(
-        input_matrix = counts_small,
+        x = counts_small,
         design_matrix = design_small,
         init_beta_rough = TRUE,
         verbose = FALSE
@@ -407,7 +395,7 @@ time_rough <- system.time({
 
 time_proper <- system.time({
     fit_proper <- fit_devil(
-        input_matrix = counts_small,
+        x = counts_small,
         design_matrix = design_small,
         init_beta_rough = FALSE,
         verbose = FALSE
@@ -415,9 +403,9 @@ time_proper <- system.time({
 })
 
 print(paste("Rough init:", round(time_rough["elapsed"], 2), "sec"))
-#> [1] "Rough init: 0.06 sec"
+#> [1] "Rough init: 0.09 sec"
 print(paste("Proper init:", round(time_proper["elapsed"], 2), "sec"))
-#> [1] "Proper init: 0.09 sec"
+#> [1] "Proper init: 0.14 sec"
 
 # Check if results are similar
 cor(fit_rough$beta[, 2], fit_proper$beta[, 2])
@@ -466,3 +454,69 @@ genes.
 | **Batch processing** | All genes or chunked by core | Always batched for GPU memory |
 | **Best for** | Small-medium datasets (\<5k genes) | Large datasets (\>10k genes, \>5k cells) |
 | **Setup** | Works out of the box | Requires CUDA toolkit and recompilation |
+
+### Session info
+
+``` r
+
+sessionInfo()
+#> R version 4.6.0 (2026-04-24)
+#> Platform: x86_64-pc-linux-gnu
+#> Running under: Ubuntu 24.04.4 LTS
+#> 
+#> Matrix products: default
+#> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> 
+#> locale:
+#>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+#>  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+#>  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+#> [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
+#> 
+#> time zone: UTC
+#> tzcode source: system (glibc)
+#> 
+#> attached base packages:
+#> [1] stats     graphics  grDevices utils     datasets  methods   base     
+#> 
+#> other attached packages:
+#> [1] tidyr_1.3.2   dplyr_1.2.1   ggplot2_4.0.3 devil_0.99.0 
+#> 
+#> loaded via a namespace (and not attached):
+#>  [1] SummarizedExperiment_1.42.0 gtable_0.3.6               
+#>  [3] xfun_0.58                   bslib_0.11.0               
+#>  [5] Biobase_2.72.0              lattice_0.22-9             
+#>  [7] vctrs_0.7.3                 tools_4.6.0                
+#>  [9] generics_0.1.4              stats4_4.6.0               
+#> [11] parallel_4.6.0              tibble_3.3.1               
+#> [13] pkgconfig_2.0.3             Matrix_1.7-5               
+#> [15] RColorBrewer_1.1-3          S7_0.2.2                   
+#> [17] desc_1.4.3                  S4Vectors_0.50.1           
+#> [19] sparseMatrixStats_1.24.0    lifecycle_1.0.5            
+#> [21] compiler_4.6.0              farver_2.1.2               
+#> [23] textshaping_1.0.5           Seqinfo_1.2.0              
+#> [25] codetools_0.2-20            htmltools_0.5.9            
+#> [27] sass_0.4.10                 yaml_2.3.12                
+#> [29] pkgdown_2.2.0               pillar_1.11.1              
+#> [31] jquerylib_0.1.4             BiocParallel_1.46.0        
+#> [33] DelayedArray_0.38.2         cachem_1.1.0               
+#> [35] abind_1.4-8                 nlme_3.1-169               
+#> [37] tidyselect_1.2.1            digest_0.6.39              
+#> [39] purrr_1.2.2                 labeling_0.4.3             
+#> [41] splines_4.6.0               fastmap_1.2.0              
+#> [43] grid_4.6.0                  cli_3.6.6                  
+#> [45] SparseArray_1.12.2          magrittr_2.0.5             
+#> [47] S4Arrays_1.12.0             withr_3.0.2                
+#> [49] DelayedMatrixStats_1.34.0   scales_1.4.0               
+#> [51] rmarkdown_2.31              XVector_0.52.0             
+#> [53] matrixStats_1.5.0           otel_0.2.0                 
+#> [55] ragg_1.5.2                  evaluate_1.0.5             
+#> [57] knitr_1.51                  GenomicRanges_1.64.0       
+#> [59] IRanges_2.46.0              mgcv_1.9-4                 
+#> [61] rlang_1.2.0                 Rcpp_1.1.1-1.1             
+#> [63] glue_1.8.1                  BiocGenerics_0.58.1        
+#> [65] jsonlite_2.0.0              R6_2.6.1                   
+#> [67] MatrixGenerics_1.24.0       systemfonts_1.3.2          
+#> [69] fs_2.1.0
+```

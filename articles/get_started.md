@@ -149,6 +149,9 @@ library(dplyr)
 #> The following object is masked from 'package:matrixStats':
 #> 
 #>     count
+#> The following object is masked from 'package:devil':
+#> 
+#>     group_data
 #> The following objects are masked from 'package:stats':
 #> 
 #>     filter, lag
@@ -252,9 +255,9 @@ colnames(design)
 
 ``` r
 
-cluster <- NULL
-if ("donor" %in% names(meta)) cluster <- factor(meta$donor)
-if (is.null(cluster) && "patient" %in% names(meta)) cluster <- factor(meta$patient)
+clusters <- NULL
+if ("donor" %in% names(meta)) clusters <- factor(meta$donor)
+if (is.null(clusters) && "patient" %in% names(meta)) clusters <- factor(meta$patient)
 ```
 
 ### Fit the model
@@ -268,13 +271,14 @@ cell.
 ``` r
 
 fit <- devil::fit_devil(
-    input_matrix = as.matrix(counts),
+    x = as.matrix(counts),
     design_matrix = design,
+    clusters = as.factor(clusters),
     overdispersion = "MOM",
     offset = 1e-6,
     init_overdispersion = NULL,
     size_factors = "normed_sum",
-    parallel.cores = 1,
+    
     verbose = TRUE,
     max_iter = 200,
     tolerance = 1e-4
@@ -283,10 +287,11 @@ fit <- devil::fit_devil(
 #> Calculating size factors using method: normed_sum
 #> Size factors calculated successfully.
 #> Range: [0.1036, 8.0148]
+#> ==> Initializing parameters
 #> Initialize theta
 #> Initialize beta
-#> Fitting beta coefficients
-#> Fit overdispersion (mode = MOM)
+#> Fitting expression coefficients and overdispersion
+#> Aggregating results
 ```
 
 ### Specify contrasts
@@ -324,10 +329,8 @@ Run a Wald test with optional **clustered SEs** if `cluster` exists.
 test <- devil::test_de(
     fit,
     contrast = contrast,
-    max_lfc  = 20, # Cap extreme fold changes
-    cluster  = cluster # NULL if not present; enables patient-aware SE if provided
+    max_lfc  = 10 # Cap extreme fold changes
 )
-#> Converting clusters to numeric factors
 
 # Add gene names if missing
 if (!("name" %in% colnames(test))) {
@@ -348,18 +351,18 @@ test %>%
     dplyr::select(name, lfc, pval, adj_pval) %>%
     head(10)
 #> # A tibble: 10 × 4
-#>    name      lfc      pval  adj_pval
-#>    <chr>   <dbl>     <dbl>     <dbl>
-#>  1 KRT7    -9.35 5.43e-212 2.72e-209
-#>  2 CPE      4.40 7.38e-171 1.85e-168
-#>  3 HADH     3.32 6.30e-150 1.05e-147
-#>  4 CD24    -3.77 6.80e-136 8.50e-134
-#>  5 PEMT     3.95 1.37e-126 1.37e-124
-#>  6 PMEPA1  -7.03 1.63e-124 1.36e-122
-#>  7 TACSTD2 -8.83 2.52e-117 1.80e-115
-#>  8 S100A10 -6.08 5.73e-111 3.58e-109
-#>  9 UCHL1    4.63 1.39e-107 7.72e-106
-#> 10 TMOD1    4.67 5.65e-103 2.82e-101
+#>    name     lfc      pval  adj_pval
+#>    <chr>  <dbl>     <dbl>     <dbl>
+#>  1 ERO1B   4.44 8.59e-285 4.30e-282
+#>  2 KRT7   -9.35 5.43e-212 1.36e-209
+#>  3 CPE     4.40 9.64e-193 1.61e-190
+#>  4 G6PC2   5.78 1.48e-185 1.85e-183
+#>  5 HADH    3.32 6.28e-150 6.28e-148
+#>  6 UCHL1   4.63 6.00e-149 5.00e-147
+#>  7 CD24   -3.77 6.79e-136 4.85e-134
+#>  8 PEMT    3.95 1.37e-126 8.55e-125
+#>  9 PMEPA1 -7.03 1.63e-124 9.05e-123
+#> 10 TMOD1   4.67 7.39e-122 3.69e-120
 ```
 
 ### Visualize results
@@ -412,63 +415,63 @@ sessionInfo()
 #>  [3] scRNAseq_2.26.0             SingleCellExperiment_1.34.0
 #>  [5] SummarizedExperiment_1.42.0 Biobase_2.72.0             
 #>  [7] GenomicRanges_1.64.0        Seqinfo_1.2.0              
-#>  [9] IRanges_2.46.0              S4Vectors_0.50.0           
-#> [11] BiocGenerics_0.58.0         generics_0.1.4             
+#>  [9] IRanges_2.46.0              S4Vectors_0.50.1           
+#> [11] BiocGenerics_0.58.1         generics_0.1.4             
 #> [13] MatrixGenerics_1.24.0       matrixStats_1.5.0          
 #> [15] devil_0.99.0               
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] DBI_1.3.0                 bitops_1.0-9             
 #>   [3] httr2_1.2.2               rlang_1.2.0              
-#>   [5] magrittr_2.0.5            gypsum_1.8.0             
-#>   [7] compiler_4.6.0            RSQLite_2.4.6            
-#>   [9] DelayedMatrixStats_1.34.0 GenomicFeatures_1.64.0   
-#>  [11] png_0.1-9                 systemfonts_1.3.2        
-#>  [13] vctrs_0.7.3               ProtGenerics_1.44.0      
-#>  [15] pkgconfig_2.0.3           crayon_1.5.3             
-#>  [17] fastmap_1.2.0             dbplyr_2.5.2             
-#>  [19] XVector_0.52.0            labeling_0.4.3           
-#>  [21] utf8_1.2.6                Rsamtools_2.28.0         
-#>  [23] rmarkdown_2.31            UCSC.utils_1.8.0         
-#>  [25] ragg_1.5.2                bit_4.6.0                
-#>  [27] xfun_0.57                 cachem_1.1.0             
-#>  [29] cigarillo_1.2.0           GenomeInfoDb_1.48.0      
-#>  [31] jsonlite_2.0.0            blob_1.3.0               
-#>  [33] rhdf5filters_1.24.0       DelayedArray_0.38.1      
-#>  [35] Rhdf5lib_2.0.0            BiocParallel_1.46.0      
-#>  [37] parallel_4.6.0            R6_2.6.1                 
-#>  [39] RColorBrewer_1.1-3        bslib_0.10.0             
-#>  [41] rtracklayer_1.72.0        jquerylib_0.1.4          
-#>  [43] Rcpp_1.1.1-1.1            knitr_1.51               
-#>  [45] tidyselect_1.2.1          abind_1.4-8              
-#>  [47] yaml_2.3.12               codetools_0.2-20         
-#>  [49] curl_7.1.0                lattice_0.22-9           
-#>  [51] alabaster.sce_1.12.0      tibble_3.3.1             
-#>  [53] S7_0.2.2                  withr_3.0.2              
-#>  [55] KEGGREST_1.52.0           evaluate_1.0.5           
-#>  [57] desc_1.4.3                BiocFileCache_3.2.0      
-#>  [59] alabaster.schemas_1.12.0  ExperimentHub_3.2.0      
-#>  [61] Biostrings_2.80.0         pillar_1.11.1            
-#>  [63] BiocManager_1.30.27       filelock_1.0.3           
-#>  [65] RCurl_1.98-1.18           ggplot2_4.0.3            
-#>  [67] BiocVersion_3.23.1        ensembldb_2.36.0         
-#>  [69] scales_1.4.0              sparseMatrixStats_1.24.0 
-#>  [71] alabaster.base_1.12.0     glue_1.8.1               
-#>  [73] alabaster.ranges_1.12.0   alabaster.matrix_1.12.0  
-#>  [75] lazyeval_0.2.3            tools_4.6.0              
-#>  [77] AnnotationHub_4.2.0       BiocIO_1.22.0            
-#>  [79] GenomicAlignments_1.48.0  fs_2.1.0                 
-#>  [81] XML_3.99-0.23             rhdf5_2.56.0             
-#>  [83] grid_4.6.0                AnnotationDbi_1.74.0     
-#>  [85] HDF5Array_1.40.0          restfulr_0.0.16          
-#>  [87] cli_3.6.6                 rappdirs_0.3.4           
-#>  [89] textshaping_1.0.5         S4Arrays_1.12.0          
-#>  [91] AnnotationFilter_1.36.0   gtable_0.3.6             
-#>  [93] alabaster.se_1.12.0       sass_0.4.10              
-#>  [95] digest_0.6.39             SparseArray_1.12.2       
-#>  [97] farver_2.1.2              rjson_0.2.23             
-#>  [99] memoise_2.0.1             htmltools_0.5.9          
-#> [101] pkgdown_2.2.0             lifecycle_1.0.5          
-#> [103] h5mread_1.4.0             httr_1.4.8               
-#> [105] bit64_4.8.0
+#>   [5] magrittr_2.0.5            otel_0.2.0               
+#>   [7] gypsum_1.8.0              compiler_4.6.0           
+#>   [9] RSQLite_3.53.1            DelayedMatrixStats_1.34.0
+#>  [11] GenomicFeatures_1.64.0    png_0.1-9                
+#>  [13] systemfonts_1.3.2         vctrs_0.7.3              
+#>  [15] ProtGenerics_1.44.0       pkgconfig_2.0.3          
+#>  [17] crayon_1.5.3              fastmap_1.2.0            
+#>  [19] dbplyr_2.5.2              XVector_0.52.0           
+#>  [21] labeling_0.4.3            utf8_1.2.6               
+#>  [23] Rsamtools_2.28.0          rmarkdown_2.31           
+#>  [25] UCSC.utils_1.8.0          ragg_1.5.2               
+#>  [27] bit_4.6.0                 xfun_0.58                
+#>  [29] cachem_1.1.0              cigarillo_1.2.0          
+#>  [31] GenomeInfoDb_1.48.0       jsonlite_2.0.0           
+#>  [33] blob_1.3.0                rhdf5filters_1.24.0      
+#>  [35] DelayedArray_0.38.2       Rhdf5lib_2.0.0           
+#>  [37] BiocParallel_1.46.0       parallel_4.6.0           
+#>  [39] R6_2.6.1                  RColorBrewer_1.1-3       
+#>  [41] bslib_0.11.0              rtracklayer_1.72.0       
+#>  [43] jquerylib_0.1.4           Rcpp_1.1.1-1.1           
+#>  [45] knitr_1.51                tidyselect_1.2.1         
+#>  [47] abind_1.4-8               yaml_2.3.12              
+#>  [49] codetools_0.2-20          curl_7.1.0               
+#>  [51] lattice_0.22-9            alabaster.sce_1.12.0     
+#>  [53] tibble_3.3.1              S7_0.2.2                 
+#>  [55] withr_3.0.2               KEGGREST_1.52.0          
+#>  [57] evaluate_1.0.5            desc_1.4.3               
+#>  [59] BiocFileCache_3.2.0       alabaster.schemas_1.12.0 
+#>  [61] ExperimentHub_3.2.0       Biostrings_2.80.1        
+#>  [63] pillar_1.11.1             BiocManager_1.30.27      
+#>  [65] filelock_1.0.3            RCurl_1.98-1.19          
+#>  [67] ggplot2_4.0.3             BiocVersion_3.23.1       
+#>  [69] ensembldb_2.36.1          scales_1.4.0             
+#>  [71] sparseMatrixStats_1.24.0  alabaster.base_1.12.0    
+#>  [73] alabaster.ranges_1.12.0   glue_1.8.1               
+#>  [75] alabaster.matrix_1.12.0   lazyeval_0.2.3           
+#>  [77] tools_4.6.0               AnnotationHub_4.2.0      
+#>  [79] BiocIO_1.22.0             GenomicAlignments_1.48.0 
+#>  [81] fs_2.1.0                  XML_3.99-0.23            
+#>  [83] rhdf5_2.56.0              grid_4.6.0               
+#>  [85] AnnotationDbi_1.74.0      HDF5Array_1.40.0         
+#>  [87] restfulr_0.0.16           cli_3.6.6                
+#>  [89] rappdirs_0.3.4            textshaping_1.0.5        
+#>  [91] S4Arrays_1.12.0           AnnotationFilter_1.36.0  
+#>  [93] gtable_0.3.6              alabaster.se_1.12.0      
+#>  [95] sass_0.4.10               digest_0.6.39            
+#>  [97] SparseArray_1.12.2        farver_2.1.2             
+#>  [99] rjson_0.2.23              memoise_2.0.1            
+#> [101] htmltools_0.5.9           pkgdown_2.2.0            
+#> [103] lifecycle_1.0.5           h5mread_1.4.0            
+#> [105] httr_1.4.8                bit64_4.8.2
 ```

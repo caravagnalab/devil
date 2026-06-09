@@ -11,10 +11,10 @@ fold change thresholds.
 test_de(
   devil.fit,
   contrast,
+  clusters = NULL,
   pval_adjust_method = "BH",
   max_lfc = 10,
-  clusters = NULL,
-  parallel.cores = 1
+  BPPARAM = BiocParallel::SerialParam()
 )
 ```
 
@@ -30,6 +30,12 @@ test_de(
   Numeric vector or matrix specifying the comparison of interest. Length
   must match number of coefficients in the model. For example, c(0, 1,
   -1) tests difference between second and third coefficient.
+
+- clusters:
+
+  Numeric vector or factor. Sample cluster assignments for robust
+  variance estimation. Length must match number of samples. Default:
+  NULL
 
 - pval_adjust_method:
 
@@ -47,16 +53,12 @@ test_de(
   Numeric. Maximum absolute log2 fold change to report. Larger values
   are capped at ±max_lfc. Default: 10
 
-- clusters:
+- BPPARAM:
 
-  Numeric vector or factor. Sample cluster assignments for robust
-  variance estimation. Length must match number of samples. Default:
-  NULL
-
-- parallel.cores:
-
-  Integer or NULL. Number of CPU cores for parallel processing. If NULL,
-  uses all available cores. Default: 1
+  A
+  [`BiocParallelParam`](https://rdrr.io/pkg/BiocParallel/man/BiocParallelParam-class.html)
+  object controlling parallel evaluation. Default:
+  [`BiocParallel::SerialParam()`](https://rdrr.io/pkg/BiocParallel/man/SerialParam-class.html).
 
 ## Value
 
@@ -115,7 +117,7 @@ colnames(design) <- levels(group)
 
 # Fit model
 fit <- fit_devil(
-    input_matrix  = counts,
+    x             = counts,
     design_matrix = design,
     size_factors  = "normed_sum"
 )
@@ -127,14 +129,14 @@ res <- test_de(
 )
 head(res[order(res$adj_pval), ])
 #> # A tibble: 6 × 4
-#>   name        pval adj_pval    lfc
-#>   <chr>      <dbl>    <dbl>  <dbl>
-#> 1 gene4  0.0000194  0.00125  -8.97
-#> 2 gene86 0.0000251  0.00125   8.74
-#> 3 gene63 0.0000488  0.00139   7.20
-#> 4 gene70 0.0000621  0.00139 -10   
-#> 5 gene75 0.0000696  0.00139   8.46
-#> 6 gene18 0.0000850  0.00142   8.53
+#>   name   pval adj_pval    lfc
+#>   <chr> <dbl>    <dbl>  <dbl>
+#> 1 gene1 0.702    0.924  9.37 
+#> 2 gene2 0.829    0.924  0.304
+#> 3 gene4 0.582    0.924 -8.97 
+#> 4 gene5 0.869    0.924  0.269
+#> 5 gene6 0.564    0.924 -3.71 
+#> 6 gene7 0.484    0.924  4.53 
 
 ## Example: clustered (patient-aware) variance (sandwich SE)
 
@@ -145,16 +147,15 @@ res_clustered <- test_de(
     contrast = c(A = 1, B = -1),
     clusters = patient
 )
-#> Converting clusters to numeric factors
 
 head(res_clustered[order(res_clustered$adj_pval), ])
 #> # A tibble: 6 × 4
-#>   name       pval adj_pval    lfc
-#>   <chr>     <dbl>    <dbl>  <dbl>
-#> 1 gene1  0.00179    0.0336   9.37
-#> 2 gene4  0.00232    0.0336  -8.97
-#> 3 gene18 0.00325    0.0336   8.53
-#> 4 gene57 0.00161    0.0336  -9.54
-#> 5 gene65 0.00155    0.0336   9.60
-#> 6 gene70 0.000731   0.0336 -10   
+#>   name   pval adj_pval    lfc
+#>   <chr> <dbl>    <dbl>  <dbl>
+#> 1 gene1 0.702    0.924  9.37 
+#> 2 gene2 0.829    0.924  0.304
+#> 3 gene4 0.582    0.924 -8.97 
+#> 4 gene5 0.869    0.924  0.269
+#> 5 gene6 0.564    0.924 -3.71 
+#> 6 gene7 0.484    0.924  4.53 
 ```
