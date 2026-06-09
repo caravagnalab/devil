@@ -34,6 +34,14 @@ You can install the current version of `devil` from
 devtools::install_github("caravagnalab/devil")
 ```
 
+We also provide two detailed vignettes for both CPU and GPU
+installation:
+
+- [Quick CPU & GPU
+  Setup](https://caravagnalab.github.io/devil/articles/quick_setup.html)
+- [Detailed GPU
+  Setup](https://caravagnalab.github.io/devil/articles/gpu_setup.html)
+
 ------------------------------------------------------------------------
 
 #### Copyright and contacts
