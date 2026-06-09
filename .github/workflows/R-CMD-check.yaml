@@ -41,19 +41,12 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
-          
-      - name: Install OpenSSL on macOS
-        if: runner.os == 'macOS'
-        run: |
-          brew install openssl
-          echo "LDFLAGS=-L/opt/homebrew/opt/openssl/lib" >> $GITHUB_ENV
-          echo "CPPFLAGS=-I/opt/homebrew/opt/openssl/include" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=/opt/homebrew/opt/openssl/lib/pkgconfig" >> $GITHUB_ENV
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
           needs: check
+          ignore-packages: ${{ runner.os == 'macOS' && 'scRNAseq' || '' }}
 
       - uses: r-lib/actions/check-r-package@v2
         with:
