@@ -7,6 +7,10 @@
 
 <!-- badges: start -->
 
+[![R-CMD-check](https://github.com/caravagnalab/devil/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/caravagnalab/devil/actions/workflows/R-CMD-check.yaml)
+[![BiocCheck](https://github.com/caravagnalab/devil/actions/workflows/bioc-check.yaml/badge.svg)](https://github.com/caravagnalab/devil/actions/workflows/bioc-check.yaml)
+[![test-coverage](https://github.com/caravagnalab/devil/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/caravagnalab/devil/actions/workflows/test-coverage.yaml)
+[![pkgdown](https://github.com/caravagnalab/devil/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/caravagnalab/devil/actions/workflows/pkgdown.yaml)
 <!-- badges: end -->
 
 `devil` is an R package for differential expression analysis in
@@ -28,23 +32,6 @@ You can install the current version of `devil` from
 
 ``` r
 devtools::install_github("caravagnalab/devil")
-```
-
-## Example
-
-This is a basic example which shows you how to fit the expression for a
-single gene observed in 1000 cells.
-
-``` r
-library(devil)
-x <- t(as.matrix(rnbinom(1000, 1, .1)))
-fit <- devil::fit_devil(x, design_matrix = matrix(1, ncol = 1, nrow = 1000), verbose = T, size_factors = NULL, overdispersion = "MOM")
-#> ==> Initializing parameters
-#> Initialize theta
-#> Initialize beta
-#> Fitting expression coefficients and overdispersion
-#> Aggregating results
-test <- devil::test_de(fit, contrast = c(1))
 ```
 
 ------------------------------------------------------------------------
