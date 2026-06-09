@@ -27,3 +27,4 @@ inst/doc
 /Meta/
 *.BiocCheck
 inst/doc
+..Rcheck
