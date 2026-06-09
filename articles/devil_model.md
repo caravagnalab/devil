@@ -242,7 +242,7 @@ system.time({
 #> Fitting expression coefficients and overdispersion
 #> Aggregating results
 #>    user  system elapsed 
-#>   0.197   0.296   0.163
+#>   0.176   0.295   0.160
 
 system.time({
     fit_cpu_new <- fit_devil(
@@ -265,7 +265,7 @@ system.time({
 #> Fitting expression coefficients and overdispersion
 #> Aggregating results
 #>    user  system elapsed 
-#>   0.428   0.785   0.318
+#>   0.404   0.774   0.318
 ```
 
 #### Examining Iteration Counts
