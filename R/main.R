@@ -181,6 +181,11 @@ fit_devil <- function(
   # - Resolve input matrix from x (matrix, SummarizedExperiment, or SingleCellExperiment)
   input_matrix <- .extract_matrix_from_x(x, assay.type)
 
+  # Coerce sparse design matrix to dense — C++ backend requires a dense numeric matrix
+  if (is(design_matrix, "sparseMatrix")) {
+    design_matrix <- as.matrix(design_matrix)
+  }
+
   # - Input parameters ----
   gene_names <- rownames(input_matrix)
   ngenes     <- nrow(input_matrix)
@@ -330,10 +335,10 @@ gpu_fit <- function(
   message("Fit beta, using CUDA acceleration")
   start_time <- Sys.time()
   
-  res_main <- run_gpu(input_matrix[seq_len(genes_batch), , drop = FALSE], batch_size)
-  
+  res_main <- run_gpu(as.matrix(input_matrix[seq_len(genes_batch), , drop = FALSE]), batch_size)
+
   if (extra_genes > 0) {
-    res_extra <- run_gpu(input_matrix[(genes_batch + 1):ngenes, , drop = FALSE], extra_genes)
+    res_extra <- run_gpu(as.matrix(input_matrix[(genes_batch + 1):ngenes, , drop = FALSE]), extra_genes)
   }
   
   message("[TIMING] Beta fit (GPU): ", difftime(Sys.time(), start_time, units = "secs"), " secs")
@@ -408,16 +413,44 @@ cpu_fit <- function(
     beta_0 <- init_beta(input_matrix, design_matrix, offset_vector)
   }
   
+  # Fast C++ path for sparse count matrices with MOM or Poisson overdispersion.
+  # Keeps the matrix in sparse format; materialises one dense gene row at a time.
+  if (is(input_matrix, "sparseMatrix") &&
+      (overdispersion == "MOM" || isFALSE(overdispersion))) {
+    if (verbose) message("Fitting expression coefficients and overdispersion (sparse C++ path)")
+    res <- cpu_fit_sparse_cpp(
+      sparse_count_matrix    = input_matrix,
+      design_matrix          = design_matrix,
+      offset_vector          = offset_vector,
+      init_dispersion        = dispersion_init,
+      beta_init              = beta_0,
+      fit_mom                = (overdispersion == "MOM"),
+      cluster_blocks_indexes = cluster_blocks_indexes,
+      max_iter               = max_iter,
+      tolerance              = tolerance,
+      n_threads              = 1L
+    )
+    rownames(res$beta) <- rownames(input_matrix)
+    res$iterations <- list(
+      beta_iters  = res$iter,
+      theta_iters = rep(0L, ngenes)
+    )
+    res$iter <- NULL
+    return(res)
+  }
+
   if (verbose) message("Fitting expression coefficients and overdispersion")
-  
+
   results_list <- BiocParallel::bplapply(
     X       = seq_len(ngenes),
     BPPARAM = BPPARAM,
     FUN     = function(i) {
-      
+      # Extract gene row as a dense vector (handles both dense and sparse input_matrix)
+      y_i <- as.numeric(input_matrix[i, ])
+
       # Step A: Fit beta
       fit <- beta_fit(
-        y        = input_matrix[i, ],
+        y        = y_i,
         X        = design_matrix,
         mu_beta  = beta_0[i, ],
         off      = offset_vector,
@@ -434,7 +467,7 @@ cpu_fit <- function(
         curr_theta <- fit_dispersion(
           beta                    = curr_beta,
           design_matrix,
-          input_matrix[i, ],
+          y_i,
           offset_vector,
           tolerance               = tolerance,
           max_iter                = max_iter,
@@ -442,7 +475,7 @@ cpu_fit <- function(
         )
       } else if (overdispersion %in% c("new", "I")) {
         od_res <- fit_overdispersion_cppp(
-          y        = input_matrix[i, ],
+          y        = y_i,
           X        = design_matrix,
           mu_beta  = curr_beta,
           off      = offset_vector,
@@ -454,7 +487,7 @@ cpu_fit <- function(
         curr_theta_iters <- as.integer(od_res$kappa_iters)
       } else if (overdispersion == "MOM") {
         curr_theta <- estimate_mom_dispersion_cpp(
-          count_matrix  = matrix(input_matrix[i, ], nrow = 1),
+          count_matrix  = matrix(y_i, nrow = 1),
           design_matrix = design_matrix,
           beta_matrix   = matrix(curr_beta, nrow = 1),
           sf            = exp_offset
@@ -471,7 +504,7 @@ cpu_fit <- function(
       bread  <- compute_hessian(
         beta           = curr_beta,
         overdispersion = curr_theta,
-        y              = input_matrix[i, ],
+        y              = y_i,
         design_matrix  = design_matrix,
         size_factors   = exp_offset
       )
@@ -482,7 +515,7 @@ cpu_fit <- function(
       if (!is.null(cluster_blocks_indexes)) {
         meat_clust <- compute_clustered_meat_fast(
           design_matrix          = design_matrix,
-          y                      = input_matrix[i, ],
+          y                      = y_i,
           beta                   = curr_beta,
           overdispersion         = curr_theta,
           size_factors           = exp_offset,

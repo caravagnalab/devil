@@ -395,6 +395,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpu_fit_sparse_cpp
+Rcpp::List cpu_fit_sparse_cpp(SEXP sparse_count_matrix, Eigen::MatrixXd design_matrix, Eigen::VectorXd offset_vector, Eigen::VectorXd init_dispersion, Eigen::MatrixXd beta_init, bool fit_mom, Rcpp::Nullable<Rcpp::IntegerVector> cluster_blocks_indexes, int max_iter, double tolerance, int n_threads);
+RcppExport SEXP _devil_cpu_fit_sparse_cpp(SEXP sparse_count_matrixSEXP, SEXP design_matrixSEXP, SEXP offset_vectorSEXP, SEXP init_dispersionSEXP, SEXP beta_initSEXP, SEXP fit_momSEXP, SEXP cluster_blocks_indexesSEXP, SEXP max_iterSEXP, SEXP toleranceSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type sparse_count_matrix(sparse_count_matrixSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type design_matrix(design_matrixSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type offset_vector(offset_vectorSEXP);
+    Rcpp::traits::input_parameter< Eigen::VectorXd >::type init_dispersion(init_dispersionSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type beta_init(beta_initSEXP);
+    Rcpp::traits::input_parameter< bool >::type fit_mom(fit_momSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::IntegerVector> >::type cluster_blocks_indexes(cluster_blocks_indexesSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpu_fit_sparse_cpp(sparse_count_matrix, design_matrix, offset_vector, init_dispersion, beta_init, fit_mom, cluster_blocks_indexes, max_iter, tolerance, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // compute_hessian
 Eigen::MatrixXd compute_hessian(const Eigen::VectorXd& beta, const double overdispersion, const Eigen::VectorXd& y, const Eigen::MatrixXd& design_matrix, const Eigen::VectorXd& size_factors);
 RcppExport SEXP _devil_compute_hessian(SEXP betaSEXP, SEXP overdispersionSEXP, SEXP ySEXP, SEXP design_matrixSEXP, SEXP size_factorsSEXP) {
@@ -499,6 +519,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_devil_conventional_loglikelihood_fast", (DL_FUNC) &_devil_conventional_loglikelihood_fast, 7},
     {"_devil_conventional_score_function_fast", (DL_FUNC) &_devil_conventional_score_function_fast, 7},
     {"_devil_conventional_deriv_score_function_fast", (DL_FUNC) &_devil_conventional_deriv_score_function_fast, 7},
+    {"_devil_cpu_fit_sparse_cpp", (DL_FUNC) &_devil_cpu_fit_sparse_cpp, 10},
     {"_devil_compute_hessian", (DL_FUNC) &_devil_compute_hessian, 5},
     {"_devil_compute_scores", (DL_FUNC) &_devil_compute_scores, 5},
     {"_devil_compute_clustered_meat", (DL_FUNC) &_devil_compute_clustered_meat, 6},

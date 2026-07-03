@@ -11,6 +11,7 @@
 #'
 #' @keywords internal
 init_beta <- function(y, design_matrix, offset_matrix) {
+    if (is(y, "sparseMatrix")) y <- as.matrix(y)
     qrx <- qr(design_matrix)
     Q <- qr.Q(qrx)[seq_len(nrow(design_matrix)), , drop = FALSE]
     R <- qr.R(qrx)

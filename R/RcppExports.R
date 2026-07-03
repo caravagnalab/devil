@@ -101,6 +101,24 @@ conventional_deriv_score_function_fast <- function(y, mu, log_theta, model_matri
     .Call('_devil_conventional_deriv_score_function_fast', PACKAGE = 'devil', y, mu, log_theta, model_matrix, do_cr_adj, unique_counts, count_frequencies)
 }
 
+#' Fit NB model for all genes using a sparse count matrix (CPU)
+#'
+#' @param sparse_count_matrix A dgCMatrix (genes x cells).
+#' @param design_matrix Dense numeric matrix (cells x predictors).
+#' @param offset_vector Numeric vector of length ncells.
+#' @param init_dispersion Numeric vector of initial overdispersion per gene.
+#' @param beta_init Numeric matrix of initial beta coefficients (genes x predictors).
+#' @param fit_mom Logical: TRUE for MOM overdispersion, FALSE for Poisson (theta=0).
+#' @param cluster_blocks_indexes Integer vector of cumulative cluster end indices, or NULL.
+#' @param max_iter Maximum IRLS iterations.
+#' @param tolerance Convergence tolerance.
+#' @param n_threads Number of OpenMP threads (default 1).
+#' @return A list with beta, theta, iter, beta_sandwiches_null, beta_sandwiches.
+#' @keywords internal
+cpu_fit_sparse_cpp <- function(sparse_count_matrix, design_matrix, offset_vector, init_dispersion, beta_init, fit_mom, cluster_blocks_indexes, max_iter, tolerance, n_threads = 1L) {
+    .Call('_devil_cpu_fit_sparse_cpp', PACKAGE = 'devil', sparse_count_matrix, design_matrix, offset_vector, init_dispersion, beta_init, fit_mom, cluster_blocks_indexes, max_iter, tolerance, n_threads)
+}
+
 compute_hessian <- function(beta, overdispersion, y, design_matrix, size_factors) {
     .Call('_devil_compute_hessian', PACKAGE = 'devil', beta, overdispersion, y, design_matrix, size_factors)
 }
