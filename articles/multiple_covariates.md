@@ -532,7 +532,7 @@ differential expression analysis while accounting for overdispersion.
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -568,24 +568,24 @@ sessionInfo()
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] DBI_1.3.0                 bitops_1.0-9             
-#>   [3] httr2_1.2.2               rlang_1.2.0              
+#>   [3] httr2_1.2.3               rlang_1.2.0              
 #>   [5] magrittr_2.0.5            otel_0.2.0               
-#>   [7] gypsum_1.8.0              compiler_4.6.0           
-#>   [9] RSQLite_3.53.1            DelayedMatrixStats_1.34.0
+#>   [7] gypsum_1.8.0              compiler_4.6.1           
+#>   [9] RSQLite_3.53.3            DelayedMatrixStats_1.34.0
 #>  [11] png_0.1-9                 systemfonts_1.3.2        
 #>  [13] vctrs_0.7.3               ProtGenerics_1.44.0      
 #>  [15] pkgconfig_2.0.3           crayon_1.5.3             
-#>  [17] fastmap_1.2.0             dbplyr_2.5.2             
+#>  [17] fastmap_1.2.0             dbplyr_2.6.0             
 #>  [19] XVector_0.52.0            labeling_0.4.3           
 #>  [21] utf8_1.2.6                Rsamtools_2.28.0         
 #>  [23] rmarkdown_2.31            UCSC.utils_1.8.0         
 #>  [25] ragg_1.5.2                purrr_1.2.2              
-#>  [27] bit_4.6.0                 xfun_0.58                
+#>  [27] bit_4.6.0                 xfun_0.59                
 #>  [29] cachem_1.1.0              cigarillo_1.2.0          
 #>  [31] GenomeInfoDb_1.48.0       jsonlite_2.0.0           
 #>  [33] blob_1.3.0                rhdf5filters_1.24.0      
 #>  [35] DelayedArray_0.38.2       Rhdf5lib_2.0.0           
-#>  [37] BiocParallel_1.46.0       parallel_4.6.0           
+#>  [37] BiocParallel_1.46.0       parallel_4.6.1           
 #>  [39] R6_2.6.1                  RColorBrewer_1.1-3       
 #>  [41] bslib_0.11.0              rtracklayer_1.72.0       
 #>  [43] jquerylib_0.1.4           Rcpp_1.1.1-1.1           
@@ -593,8 +593,8 @@ sessionInfo()
 #>  [47] abind_1.4-8               yaml_2.3.12              
 #>  [49] codetools_0.2-20          curl_7.1.0               
 #>  [51] lattice_0.22-9            alabaster.sce_1.12.0     
-#>  [53] tibble_3.3.1              withr_3.0.2              
-#>  [55] S7_0.2.2                  KEGGREST_1.52.0          
+#>  [53] tibble_3.3.1              withr_3.0.3              
+#>  [55] S7_0.2.2                  KEGGREST_1.52.2          
 #>  [57] evaluate_1.0.5            desc_1.4.3               
 #>  [59] BiocFileCache_3.2.0       alabaster.schemas_1.12.0 
 #>  [61] ExperimentHub_3.2.0       Biostrings_2.80.1        
@@ -604,12 +604,12 @@ sessionInfo()
 #>  [69] scales_1.4.0              alabaster.base_1.12.0    
 #>  [71] alabaster.ranges_1.12.0   glue_1.8.1               
 #>  [73] pheatmap_1.0.13           alabaster.matrix_1.12.0  
-#>  [75] lazyeval_0.2.3            tools_4.6.0              
-#>  [77] AnnotationHub_4.2.0       BiocIO_1.22.0            
+#>  [75] lazyeval_0.2.3            tools_4.6.1              
+#>  [77] AnnotationHub_4.2.1       BiocIO_1.22.0            
 #>  [79] GenomicAlignments_1.48.0  fs_2.1.0                 
 #>  [81] XML_3.99-0.23             rhdf5_2.56.0             
-#>  [83] grid_4.6.0                HDF5Array_1.40.0         
-#>  [85] restfulr_0.0.16           cli_3.6.6                
+#>  [83] grid_4.6.1                HDF5Array_1.40.0         
+#>  [85] restfulr_0.0.17           cli_3.6.6                
 #>  [87] rappdirs_0.3.4            textshaping_1.0.5        
 #>  [89] viridisLite_0.4.3         S4Arrays_1.12.0          
 #>  [91] gtable_0.3.6              alabaster.se_1.12.0      

@@ -445,7 +445,7 @@ This vignette demonstrated:
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -487,31 +487,31 @@ sessionInfo()
 #>  [13] Rsamtools_2.28.0          DelayedMatrixStats_1.34.0
 #>  [15] RCurl_1.98-1.19           rstatix_0.7.3            
 #>  [17] htmltools_0.5.9           S4Arrays_1.12.0          
-#>  [19] AnnotationHub_4.2.0       curl_7.1.0               
+#>  [19] AnnotationHub_4.2.1       curl_7.1.0               
 #>  [21] broom_1.0.13              Rhdf5lib_2.0.0           
 #>  [23] SparseArray_1.12.2        Formula_1.2-5            
 #>  [25] rhdf5_2.56.0              sass_0.4.10              
 #>  [27] alabaster.base_1.12.0     bslib_0.11.0             
 #>  [29] desc_1.4.3                alabaster.sce_1.12.0     
-#>  [31] httr2_1.2.2               cachem_1.1.0             
+#>  [31] httr2_1.2.3               cachem_1.1.0             
 #>  [33] GenomicAlignments_1.48.0  lifecycle_1.0.5          
 #>  [35] pkgconfig_2.0.3           R6_2.6.1                 
 #>  [37] fastmap_1.2.0             digest_0.6.39            
 #>  [39] AnnotationDbi_1.74.0      ExperimentHub_3.2.0      
-#>  [41] textshaping_1.0.5         RSQLite_3.53.1           
+#>  [41] textshaping_1.0.5         RSQLite_3.53.3           
 #>  [43] labeling_0.4.3            filelock_1.0.3           
 #>  [45] httr_1.4.8                abind_1.4-8              
-#>  [47] compiler_4.6.0            bit64_4.8.2              
-#>  [49] withr_3.0.2               S7_0.2.2                 
+#>  [47] compiler_4.6.1            bit64_4.8.2              
+#>  [49] withr_3.0.3               S7_0.2.2                 
 #>  [51] backports_1.5.1           BiocParallel_1.46.0      
 #>  [53] carData_3.0-6             DBI_1.3.0                
 #>  [55] HDF5Array_1.40.0          alabaster.ranges_1.12.0  
 #>  [57] alabaster.schemas_1.12.0  ggsignif_0.6.4           
 #>  [59] rappdirs_0.3.4            DelayedArray_0.38.2      
-#>  [61] rjson_0.2.23              tools_4.6.0              
+#>  [61] rjson_0.2.23              tools_4.6.1              
 #>  [63] otel_0.2.0                glue_1.8.1               
-#>  [65] h5mread_1.4.0             restfulr_0.0.16          
-#>  [67] rhdf5filters_1.24.0       grid_4.6.0               
+#>  [65] h5mread_1.4.0             restfulr_0.0.17          
+#>  [67] rhdf5filters_1.24.0       grid_4.6.1               
 #>  [69] gtable_0.3.6              ensembldb_2.36.1         
 #>  [71] utf8_1.2.6                car_3.1-5                
 #>  [73] XVector_0.52.0            BiocVersion_3.23.1       
@@ -519,7 +519,7 @@ sessionInfo()
 #>  [77] lattice_0.22-9            rtracklayer_1.72.0       
 #>  [79] bit_4.6.0                 tidyselect_1.2.1         
 #>  [81] Biostrings_2.80.1         knitr_1.51               
-#>  [83] ProtGenerics_1.44.0       xfun_0.58                
+#>  [83] ProtGenerics_1.44.0       xfun_0.59                
 #>  [85] UCSC.utils_1.8.0          lazyeval_0.2.3           
 #>  [87] yaml_2.3.12               evaluate_1.0.5           
 #>  [89] codetools_0.2-20          cigarillo_1.2.0          
@@ -527,12 +527,12 @@ sessionInfo()
 #>  [93] BiocManager_1.30.27       cli_3.6.6                
 #>  [95] systemfonts_1.3.2         jquerylib_0.1.4          
 #>  [97] Rcpp_1.1.1-1.1            GenomeInfoDb_1.48.0      
-#>  [99] dbplyr_2.5.2              png_0.1-9                
-#> [101] XML_3.99-0.23             parallel_4.6.0           
+#>  [99] dbplyr_2.6.0              png_0.1-9                
+#> [101] XML_3.99-0.23             parallel_4.6.1           
 #> [103] pkgdown_2.2.0             blob_1.3.0               
 #> [105] AnnotationFilter_1.36.0   sparseMatrixStats_1.24.0 
 #> [107] bitops_1.0-9              alabaster.se_1.12.0      
 #> [109] scales_1.4.0              purrr_1.2.2              
 #> [111] crayon_1.5.3              rlang_1.2.0              
-#> [113] cowplot_1.2.0             KEGGREST_1.52.0
+#> [113] cowplot_1.2.0             KEGGREST_1.52.2
 ```

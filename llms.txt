@@ -1,16 +1,29 @@
 # devil
 
 `devil` is an R package for differential expression analysis in
-single-cell RNA sequencing (scRNA-seq) data. It supports both single-
-and multi-patient experimental designs, implementing robust statistical
-methods to identify differentially expressed genes while accounting for
-technical and biological variability.
+single-cell RNA sequencing (scRNA-seq) data. It implements the
+statistical model described in [Santacatterina, Tosato et
+al](https://doi.org/10.1038/s41467-026-74451-9). It supports both
+single- and multi-patient experimental designs, implementing robust
+statistical methods to identify differentially expressed genes while
+accounting for technical and biological variability.
 
 Key features are:
 
 1.  Flexible experimental design support (single/multiple patients)
 2.  Robust statistical testing framework
 3.  Efficient implementation for large-scale datasets
+
+#### Citation
+
+If you use `devil`, please cite:
+
+- G. Santacatterina, N. Tosato, S. Milite, K. Davydzenka, E. Insaghi, G.
+  Sanguinetti, S. Cozzini, L. Egidi, G. Caravagna. *Scalable, fast and
+  accurate differential gene expression testing from millions of cells
+  of multiple patients.* Nat Commun (2026).
+
+[![](https://img.shields.io/badge/doi-10.1038/s41592--018--0108--x-red.svg)](https://doi.org/10.1038/s41467-026-74451-9)
 
 ## Installation
 

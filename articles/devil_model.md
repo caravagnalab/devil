@@ -242,7 +242,7 @@ system.time({
 #> Fitting expression coefficients and overdispersion
 #> Aggregating results
 #>    user  system elapsed 
-#>   0.192   0.304   0.168
+#>   0.093   0.010   0.103
 
 system.time({
     fit_cpu_new <- fit_devil(
@@ -265,7 +265,7 @@ system.time({
 #> Fitting expression coefficients and overdispersion
 #> Aggregating results
 #>    user  system elapsed 
-#>   0.439   0.786   0.320
+#>   0.244   0.546   0.222
 ```
 
 #### Examining Iteration Counts
@@ -403,9 +403,9 @@ time_proper <- system.time({
 })
 
 print(paste("Rough init:", round(time_rough["elapsed"], 2), "sec"))
-#> [1] "Rough init: 0.09 sec"
+#> [1] "Rough init: 0.07 sec"
 print(paste("Proper init:", round(time_proper["elapsed"], 2), "sec"))
-#> [1] "Proper init: 0.14 sec"
+#> [1] "Proper init: 0.08 sec"
 
 # Check if results are similar
 cor(fit_rough$beta[, 2], fit_proper$beta[, 2])
@@ -460,7 +460,7 @@ genes.
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -485,16 +485,16 @@ sessionInfo()
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] SummarizedExperiment_1.42.0 gtable_0.3.6               
-#>  [3] xfun_0.58                   bslib_0.11.0               
+#>  [3] xfun_0.59                   bslib_0.11.0               
 #>  [5] Biobase_2.72.0              lattice_0.22-9             
-#>  [7] vctrs_0.7.3                 tools_4.6.0                
-#>  [9] generics_0.1.4              stats4_4.6.0               
-#> [11] parallel_4.6.0              tibble_3.3.1               
+#>  [7] vctrs_0.7.3                 tools_4.6.1                
+#>  [9] generics_0.1.4              stats4_4.6.1               
+#> [11] parallel_4.6.1              tibble_3.3.1               
 #> [13] pkgconfig_2.0.3             Matrix_1.7-5               
 #> [15] RColorBrewer_1.1-3          S7_0.2.2                   
 #> [17] desc_1.4.3                  S4Vectors_0.50.1           
 #> [19] sparseMatrixStats_1.24.0    lifecycle_1.0.5            
-#> [21] compiler_4.6.0              farver_2.1.2               
+#> [21] compiler_4.6.1              farver_2.1.2               
 #> [23] textshaping_1.0.5           Seqinfo_1.2.0              
 #> [25] codetools_0.2-20            htmltools_0.5.9            
 #> [27] sass_0.4.10                 yaml_2.3.12                
@@ -504,10 +504,10 @@ sessionInfo()
 #> [35] abind_1.4-8                 nlme_3.1-169               
 #> [37] tidyselect_1.2.1            digest_0.6.39              
 #> [39] purrr_1.2.2                 labeling_0.4.3             
-#> [41] splines_4.6.0               fastmap_1.2.0              
-#> [43] grid_4.6.0                  cli_3.6.6                  
+#> [41] splines_4.6.1               fastmap_1.2.0              
+#> [43] grid_4.6.1                  cli_3.6.6                  
 #> [45] SparseArray_1.12.2          magrittr_2.0.5             
-#> [47] S4Arrays_1.12.0             withr_3.0.2                
+#> [47] S4Arrays_1.12.0             withr_3.0.3                
 #> [49] DelayedMatrixStats_1.34.0   scales_1.4.0               
 #> [51] rmarkdown_2.31              XVector_0.52.0             
 #> [53] matrixStats_1.5.0           otel_0.2.0                 
