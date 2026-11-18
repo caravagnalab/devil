@@ -99,7 +99,7 @@ normed_sum_sf <- function(Y) {
 #' @keywords internal
 psinorm_sf <- function(Y) {
   # Use log1p(Y) if Y contains counts to handle zeros and improve precision
-  logY <- log1p(Y)
+  logY <- log1p(if (is(Y, "sparseMatrix")) as.matrix(Y) else Y)
 
   # 2. Use specialized column-wise functions from DelayedMatrixStats
   m_log <- DelayedMatrixStats::colMins(logY)
